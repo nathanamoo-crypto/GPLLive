@@ -1,12 +1,12 @@
-// src/screens/HomeScreen.tsx
-// TODO: Build match feed UI — fixtures, results, match cards
+// src/screens/VoteScreen.tsx
+// TODO: Build MOTM voting UI — player list, vote submission, percentages
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function HomeScreen(): React.JSX.Element {
+export default function VoteScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Home Screen</Text>
+      <Text style={styles.text}>Vote Screen</Text>
     </View>
   );
 }

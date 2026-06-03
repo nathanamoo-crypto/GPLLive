@@ -1,12 +1,12 @@
-// src/screens/LoginScreen.tsx
-// TODO: Build full login UI — form, validation, authService call
+// src/screens/RegisterScreen.tsx
+// TODO: Build full registration UI — form, validation, authService call
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function LoginScreen(): React.JSX.Element {
+export default function RegisterScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Login Screen</Text>
+      <Text style={styles.text}>Register Screen</Text>
     </View>
   );
 }
