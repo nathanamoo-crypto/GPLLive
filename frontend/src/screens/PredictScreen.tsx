@@ -1,12 +1,12 @@
-// src/screens/HomeScreen.tsx
-// TODO: Build match feed UI — fixtures, results, match cards
+// src/screens/PredictScreen.tsx
+// TODO: Build predictions UI — submit predictions, view leaderboard
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function HomeScreen(): React.JSX.Element {
+export default function PredictScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Home Screen</Text>
+      <Text style={styles.text}>Predict Screen</Text>
     </View>
   );
 }
