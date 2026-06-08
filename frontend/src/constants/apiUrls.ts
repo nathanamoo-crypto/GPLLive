@@ -15,7 +15,14 @@
 /**
  * auth-service
  * Handles: user registration, login, JWT issuance & refresh
- * Endpoints: POST /auth/register  |  POST /auth/login
+ * Endpoints:
+ *   POST /auth/register
+ *   POST /auth/login
+ *   GET  /auth/users/me
+ *   PATCH /auth/users/me
+ *
+ * INTEGRATION: When Augustine shares the Railway URL, replace localhost below.
+ * Example: export const AUTH_URL = 'https://gpl-auth.up.railway.app';
  */
 export const AUTH_URL = 'http://localhost:8081';
 

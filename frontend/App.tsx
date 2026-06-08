@@ -1,5 +1,11 @@
-import AppNavigator from './src/navigation/AppNavigator';
+import React from 'react';
+import AppProviders from './src/app/AppProviders';
+import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
-  return <AppNavigator />;
+  return (
+    <AppProviders>
+      <RootNavigator />
+    </AppProviders>
+  );
 }
