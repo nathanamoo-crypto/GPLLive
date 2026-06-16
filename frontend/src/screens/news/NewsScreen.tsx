@@ -1,5 +1,10 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { NewsStackParamList } from '../../navigation/NewsStack';
+import { Colors } from '../../constants/colors';
 
 const categories = ['All', 'GPL', 'Black Stars', 'AFCON', 'Transfers'];
 const articles = [
@@ -7,7 +12,11 @@ const articles = [
   { id: 'a2', title: 'Black Stars squad named for upcoming qualifiers', category: 'Black Stars' },
 ];
 
+type NavigationProp = NativeStackNavigationProp<NewsStackParamList>;
+
 export default function NewsScreen() {
+  const navigation = useNavigation<NavigationProp>();
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -24,13 +33,16 @@ export default function NewsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.articleCard}>
+          <TouchableOpacity
+            style={styles.articleCard}
+            onPress={() => navigation.navigate('NewsDetail', { articleId: item.id })}
+          >
             <View style={styles.thumbnail} />
             <View style={styles.articleText}>
               <Text style={styles.articleCategory}>{item.category}</Text>
               <Text style={styles.articleTitle}>{item.title}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>

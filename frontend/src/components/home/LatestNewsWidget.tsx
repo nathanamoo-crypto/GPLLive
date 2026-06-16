@@ -1,15 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
 import { DUMMY_NEWS } from '../../constants/homeDummyData';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
+
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function LatestNewsWidget() {
+  const navigation = useNavigation<NavigationProp>();
+
   return (
     <View style={styles.widget}>
       <Text style={styles.widgetTitle}>Latest News</Text>
       {DUMMY_NEWS.map((article) => (
-        <View key={article.id} style={styles.newsItem}>
+        <TouchableOpacity
+          key={article.id}
+          style={styles.newsItem}
+          onPress={() => navigation.navigate('NewsDetail', { articleId: article.id })}
+        >
           <View style={styles.newsImage} />
           <View style={styles.newsText}>
             <Text style={styles.newsCategory}>{article.category}</Text>
@@ -18,7 +29,7 @@ export default function LatestNewsWidget() {
               {article.source} · {article.time}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
       ))}
     </View>
   );

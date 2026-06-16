@@ -8,3 +8,11 @@ export type OnboardingStackParamList = AuthFlowParamList & {
 };
 
 export type AuthStackParamList = AuthFlowParamList;
+
+export type MatchDetailsParams = {
+  matchId: string;
+};
+
+export type NewsDetailParams = {
+  articleId: string;
+};
