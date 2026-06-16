@@ -1,22 +1,33 @@
 import React, { useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import MatchCard from '../shared/MatchCard';
 import { Colors } from '../../constants/colors';
 import { Match } from '../../types';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 interface TodayMatchesWidgetProps {
   matches: Match[];
 }
 
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
+
 export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps) {
+  const navigation = useNavigation<NavigationProp>();
+
   const renderItem = useCallback(
     ({ item }: { item: Match }) => (
       <View style={styles.matchCardWrapper}>
-        <MatchCard match={item} testID={`match-card-${item.id}`} />
+        <MatchCard
+          match={item}
+          testID={`match-card-${item.id}`}
+          onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
+        />
       </View>
     ),
-    []
+    [navigation]
   );
 
   const keyExtractor = useCallback((item: Match) => item.id, []);
