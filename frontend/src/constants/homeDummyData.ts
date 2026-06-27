@@ -1,5 +1,8 @@
 import { Match, Standing, LeaderboardEntry, Article, Notification } from '../types';
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /matches/live
+ */
 export const DUMMY_MATCHES: Match[] = [
   {
     id: 'match-1',
@@ -28,6 +31,9 @@ export const DUMMY_MATCHES: Match[] = [
   },
 ];
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /notifications
+ */
 export const DUMMY_NOTIFICATIONS: Notification[] = [
   {
     id: 'notif-1',
@@ -55,12 +61,18 @@ export const DUMMY_NOTIFICATIONS: Notification[] = [
   },
 ];
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /news
+ */
 export const DUMMY_NEWS: Array<Pick<Article, 'id' | 'headline' | 'source' | 'category'> & { time: string }> = [
   { id: 'news-1', headline: 'Kotoko secure narrow win in derby', source: 'Ghana Sports', category: 'GPL', time: '2h ago' },
   { id: 'news-2', headline: 'Hearts target top four finish after strong start', source: 'GPL Daily', category: 'GPL', time: '4h ago' },
   { id: 'news-3', headline: 'Medeama extend unbeaten run with late equaliser', source: 'Football Ghana', category: 'GPL', time: '6h ago' },
 ];
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /standings
+ */
 export const DUMMY_STANDINGS: Standing[] = [
   {
     position: 1,
@@ -119,6 +131,9 @@ export const DUMMY_STANDINGS: Standing[] = [
   },
 ];
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /predictions/leaderboard
+ */
 export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
   {
     rank: 1,
@@ -152,6 +167,9 @@ export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
   },
 ];
 
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /fantasy/team
+ */
 export const DUMMY_FANTASY = {
   hasSquad: true,
   teamName: 'GPL All Stars',

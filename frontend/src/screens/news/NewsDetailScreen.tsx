@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,7 +94,14 @@ export default function NewsDetailScreen() {
       </ScrollView>
 
       {/* Share Button (Floating) */}
-      <TouchableOpacity style={[styles.shareButton, { bottom: insets.bottom + 20 }]}>
+      <TouchableOpacity
+        style={[styles.shareButton, { bottom: insets.bottom + 20 }]}
+        onPress={async () => {
+          try {
+            await Share.share({ message: MOCK_ARTICLE.headline + '\n\n' + MOCK_ARTICLE.url });
+          } catch { /* user cancelled */ }
+        }}
+      >
         <Ionicons name="share-social-outline" size={24} color={Colors.textInverse} />
       </TouchableOpacity>
     </View>
@@ -103,7 +111,7 @@ export default function NewsDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   imageHeader: { width: width, height: 250, backgroundColor: Colors.border },
-  imagePlaceholder: { flex: 1, backgroundColor: '#333' },
+  imagePlaceholder: { flex: 1, backgroundColor: Colors.surface },
   backButton: {
     position: 'absolute',
     left: 16,
@@ -119,7 +127,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

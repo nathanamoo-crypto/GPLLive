@@ -1,3 +1,7 @@
+/**
+ * TODO: Replace `submitAll` mock with real API call.
+ * See APIDocs.md → Predictions section.
+ */
 import { create } from 'zustand';
 import { Prediction, PredictionState } from '../types';
 

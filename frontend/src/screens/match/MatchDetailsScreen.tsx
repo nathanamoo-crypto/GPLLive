@@ -136,7 +136,7 @@ export default function MatchDetailsScreen() {
                     <Ionicons
                       name={event.type === 'goal' ? 'football' : 'square'}
                       size={16}
-                      color={event.type === 'goal' ? Colors.textPrimary : '#FFD700'}
+                      color={event.type === 'goal' ? Colors.textPrimary : Colors.fantasyGold}
                     />
                   </View>
                   <Text style={[styles.eventPlayer, { textAlign: event.side === 'home' ? 'left' : 'right', flex: 1 }]}>
