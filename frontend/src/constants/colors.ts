@@ -1,15 +1,15 @@
 export const Colors = {
   primary: '#1A7C3E',
-  primaryLight: '#E8F5EE',
+  primaryLight: '#0D2818',
   accent: '#F5A623',
 
-  background: '#F7F8FA',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F0F2F5',
+  background: '#0D1117',
+  surface: '#161B22',
+  surfaceAlt: '#1C2333',
 
-  textPrimary: '#0D1117',
-  textSecondary: '#5A6472',
-  textTertiary: '#9AA3AF',
+  textPrimary: '#E6EDF3',
+  textSecondary: '#8B949E',
+  textTertiary: '#6E7681',
   textInverse: '#FFFFFF',
 
   live: '#E8253A',
@@ -17,12 +17,16 @@ export const Colors = {
   draw: '#F39C12',
   loss: '#E74C3C',
 
-  tagFE: { bg: '#EAF3DE', text: '#27500A' },
-  tagBE: { bg: '#FAECE7', text: '#712B13' },
-  tagDB: { bg: '#E6F1FB', text: '#0C447C' },
-  tag3P: { bg: '#EEEDFE', text: '#3C3489' },
-  tagAdmin: { bg: '#FAEEDA', text: '#633806' },
+  fantasyGold: '#FFD700',
+  pitchGrass: '#2E7D32',
+  bench: '#6E7681',
 
-  border: '#E3E7ED',
-  borderLight: '#F0F2F5',
+  tagFE: { bg: '#1A2E14', text: '#7CC56C' },
+  tagBE: { bg: '#2E1A14', text: '#E07A6A' },
+  tagDB: { bg: '#142A3E', text: '#6AAAE0' },
+  tag3P: { bg: '#1E1A3E', text: '#A07AD0' },
+  tagAdmin: { bg: '#3E2A14', text: '#E0A060' },
+
+  border: '#2A2F3A',
+  borderLight: '#21262D',
 };

@@ -1,10 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
 import { DUMMY_FANTASY } from '../../constants/homeDummyData';
 
 export default function FantasySnapshotWidget() {
+  const navigation = useNavigation();
+
+  const handleNavigateToFantasy = () => {
+    navigation.dispatch(
+      CommonActions.navigate({ name: 'Fantasy' })
+    );
+  };
+
   return (
     <View style={styles.widget}>
       <Text style={styles.widgetTitle}>Fantasy Snapshot</Text>
@@ -23,9 +33,9 @@ export default function FantasySnapshotWidget() {
           </View>
         </>
       ) : (
-        <View style={styles.cta}>
+        <TouchableOpacity style={styles.cta} onPress={handleNavigateToFantasy} activeOpacity={0.7}>
           <Text style={styles.ctaText}>Create your fantasy team</Text>
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );

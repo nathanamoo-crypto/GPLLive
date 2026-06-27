@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     justifyContent: 'center',
   },
-  continueButtonDisabled: { backgroundColor: '#A8C7B0' },
+  continueButtonDisabled: { backgroundColor: Colors.border },
   continueText: { color: Colors.textInverse, fontWeight: '700', fontSize: 15 },
   errorText: {
     color: Colors.live,

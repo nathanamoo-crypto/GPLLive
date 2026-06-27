@@ -61,6 +61,11 @@ export interface FantasyTeam {
   totalPoints: number;
   weekPoints: number;
   overallRank: number;
+  viceCaptainId?: string;
+  startingPlayerIds?: string[];
+  formation?: string;
+  isLocked?: boolean;
+  deadline?: string;
 }
 
 export interface Prediction {
@@ -168,11 +173,19 @@ export interface FantasyState {
   hasSquad: boolean;
   draftPlayers: FantasyPlayer[];
   draftCaptainId: string | null;
+  draftViceCaptainId: string | null;
+  draftStartingPlayerIds: string[];
+  draftFormation: string;
   budget: number;
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
   setCaptain: (playerId: string) => void;
+  setViceCaptain: (playerId: string) => void;
+  setStartingXI: (playerIds: string[]) => void;
+  setFormation: (formation: string) => void;
   submitSquad: (teamName: string) => Promise<void>;
+  lockTeamForGameweek: () => void;
+  unlockTeam: () => void;
   resetDraft: () => void;
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,35 +13,68 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { usePredictionStore } from '../../store/predictionStore';
-import type { Match } from '../../types';
+import { CLUB_COLORS, CLUB_LOOKUP } from '../../constants/clubs';
+import type { LeaderboardEntry, Match } from '../../types';
 
 /**
- * MOCK DATA SECTION
- * -----------------
- * This data will be replaced by an API call once the backend is ready.
+ * TODO: Replace with API call — see APIDocs.md → GET /predictions/fixtures
  */
 const MOCK_FIXTURES: Match[] = [
   {
     id: 'f1',
-    homeClub: { id: 'kotoko', name: 'Asante Kotoko', shortName: 'Kotoko' },
-    awayClub: { id: 'hearts', name: 'Hearts of Oak', shortName: 'Hearts' },
+    homeClub: CLUB_LOOKUP['kotoko'],
+    awayClub: CLUB_LOOKUP['hearts'],
     status: 'scheduled',
     kickoffTime: new Date().toISOString(),
     venue: 'Baba Yara Stadium',
+    round: 24,
+    gameweek: 24,
+    homeScore: null,
+    awayScore: null,
   } as Match,
   {
     id: 'f2',
-    homeClub: { id: 'bechem', name: 'Bechem United', shortName: 'Bechem' },
-    awayClub: { id: 'aduana', name: 'Aduana Stars', shortName: 'Aduana' },
+    homeClub: CLUB_LOOKUP['medeama'],
+    awayClub: CLUB_LOOKUP['dreams'],
     status: 'scheduled',
     kickoffTime: new Date().toISOString(),
-    venue: 'Bechem Park',
+    venue: 'Tarkwa Stadium',
+    round: 24,
+    gameweek: 24,
+    homeScore: null,
+    awayScore: null,
+  } as Match,
+  {
+    id: 'f3',
+    homeClub: CLUB_LOOKUP['bibiani'],
+    awayClub: CLUB_LOOKUP['rtu'],
+    status: 'scheduled',
+    kickoffTime: new Date().toISOString(),
+    venue: 'Bibiani Park',
+    round: 24,
+    gameweek: 24,
+    homeScore: null,
+    awayScore: null,
   } as Match,
 ];
+
+/**
+ * TODO: Replace with API call — see APIDocs.md → GET /predictions/leaderboard
+ */
+const MOCK_PREDICT_LEADERBOARD: LeaderboardEntry[] = [
+  { rank: 1, rankChange: 2, userId: 'u1', username: 'PredictPro', club: CLUB_LOOKUP['kotoko'], totalPoints: 124, weekPoints: 18, isCurrentUser: false },
+  { rank: 2, rankChange: -1, userId: 'u2', username: 'ScoreMaster', club: CLUB_LOOKUP['hearts'], totalPoints: 118, weekPoints: 14, isCurrentUser: false },
+  { rank: 3, rankChange: 0, userId: 'u3', username: 'ExactGuess', club: CLUB_LOOKUP['medeama'], totalPoints: 112, weekPoints: 20, isCurrentUser: false },
+  { rank: 4, rankChange: 4, userId: 'u4', username: 'OutcomeKing', club: CLUB_LOOKUP['dreams'], totalPoints: 98, weekPoints: 22, isCurrentUser: false },
+  { rank: 42, rankChange: -3, userId: 'user-1', username: 'GPL Fan', club: CLUB_LOOKUP['kotoko'], totalPoints: 64, weekPoints: 10, isCurrentUser: true },
+];
+
+type PredictTab = 'predictions' | 'leaderboard';
 
 export default function PredictRoot() {
   const insets = useSafeAreaInsets();
   const { predictions, setPrediction, setExactScore, submitAll } = usePredictionStore();
+  const [activeTab, setActiveTab] = useState<PredictTab>('predictions');
 
   const handleScoreChange = (fixtureId: string, home: string, away: string) => {
     const h = parseInt(home) || 0;
@@ -62,7 +95,7 @@ export default function PredictRoot() {
     }
 
     try {
-      await submitAll(24); // Gameweek 24
+      await submitAll(24);
       Alert.alert('Success', 'Your predictions have been locked in!');
     } catch (error) {
       Alert.alert('Error', 'Failed to submit predictions.');
@@ -76,75 +109,139 @@ export default function PredictRoot() {
         <Text style={styles.headerSubtitle}>Gameweek 24</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.infoBox}>
-          Predict the exact score for each match. You get 5 points for exact score, 2 points for correct outcome.
-        </Text>
+      {/* Tabs */}
+      <View style={styles.tabRow}>
+        {(['predictions', 'leaderboard'] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Ionicons
+              name={tab === 'predictions' ? 'football-outline' : 'trophy-outline'}
+              size={16}
+              color={activeTab === tab ? Colors.textInverse : Colors.textSecondary}
+            />
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab === 'predictions' ? 'Predictions' : 'Leaderboard'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {MOCK_FIXTURES.map((fixture) => {
-          const prediction = predictions[fixture.id] || {};
-          const isLocked = prediction.locked;
+      {activeTab === 'predictions' ? (
+        <>
+          <ScrollView contentContainerStyle={styles.content}>
+            <Text style={styles.infoBox}>
+              Predict the exact score for each match. 5 pts for exact score, 2 pts for correct outcome.
+            </Text>
 
-          return (
-            <View key={fixture.id} style={styles.matchCard}>
-              <View style={styles.teamsRow}>
-                <View style={styles.teamInfo}>
-                  <Text style={styles.teamName}>{fixture.homeClub.shortName}</Text>
+            {MOCK_FIXTURES.map((fixture) => {
+              const prediction = predictions[fixture.id] || {};
+              const isLocked = prediction.locked;
+
+              return (
+                <View key={fixture.id} style={styles.matchCard}>
+                  <View style={styles.teamsRow}>
+                    <View style={styles.teamInfo}>
+                      <View style={[styles.clubDot, { backgroundColor: CLUB_COLORS[fixture.homeClub?.id] || Colors.primary }]} />
+                      <Text style={styles.teamName}>{fixture.homeClub?.shortName ?? 'Home'}</Text>
+                    </View>
+
+                    <View style={styles.predictRow}>
+                      <TextInput
+                        style={[styles.scoreInput, isLocked && styles.disabledInput]}
+                        keyboardType="numeric"
+                        maxLength={1}
+                        value={prediction.exactHomeGoals?.toString() ?? ''}
+                        onChangeText={(val) => handleScoreChange(fixture.id, val, prediction.exactAwayGoals?.toString() ?? '0')}
+                        editable={!isLocked}
+                        placeholder="0"
+                        placeholderTextColor={Colors.textTertiary}
+                      />
+                      <Text style={styles.vsText}>-</Text>
+                      <TextInput
+                        style={[styles.scoreInput, isLocked && styles.disabledInput]}
+                        keyboardType="numeric"
+                        maxLength={1}
+                        value={prediction.exactAwayGoals?.toString() ?? ''}
+                        onChangeText={(val) => handleScoreChange(fixture.id, prediction.exactHomeGoals?.toString() ?? '0', val)}
+                        editable={!isLocked}
+                        placeholder="0"
+                        placeholderTextColor={Colors.textTertiary}
+                      />
+                    </View>
+
+                    <View style={[styles.teamInfo, styles.teamInfoRight]}>
+                      <Text style={styles.teamName}>{fixture.awayClub?.shortName ?? 'Away'}</Text>
+                      <View style={[styles.clubDot, { backgroundColor: CLUB_COLORS[fixture.awayClub?.id] || Colors.textTertiary }]} />
+                    </View>
+                  </View>
+
+                  <View style={styles.outcomeRow}>
+                    {(['home', 'draw', 'away'] as const).map((outcome) => (
+                      <TouchableOpacity
+                        key={outcome}
+                        style={[
+                          styles.outcomeButton,
+                          prediction.outcome === outcome && styles.outcomeButtonActive,
+                          isLocked && styles.disabledButton,
+                        ]}
+                        onPress={() => !isLocked && setPrediction(fixture.id, outcome)}
+                        disabled={isLocked}
+                      >
+                        <Text style={[styles.outcomeLabel, prediction.outcome === outcome && styles.outcomeLabelActive]}>
+                          {outcome === 'home' ? 'Home Win' : outcome === 'draw' ? 'Draw' : 'Away Win'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
+              );
+            })}
+          </ScrollView>
 
-                <View style={styles.predictRow}>
-                  <TextInput
-                    style={[styles.scoreInput, isLocked && styles.disabledInput]}
-                    keyboardType="numeric"
-                    maxLength={1}
-                    value={prediction.exactHomeGoals?.toString() ?? ''}
-                    onChangeText={(val) => handleScoreChange(fixture.id, val, prediction.exactAwayGoals?.toString() ?? '0')}
-                    editable={!isLocked}
-                    placeholder="0"
-                  />
-                  <Text style={styles.vsText}>-</Text>
-                  <TextInput
-                    style={[styles.scoreInput, isLocked && styles.disabledInput]}
-                    keyboardType="numeric"
-                    maxLength={1}
-                    value={prediction.exactAwayGoals?.toString() ?? ''}
-                    onChangeText={(val) => handleScoreChange(fixture.id, prediction.exactHomeGoals?.toString() ?? '0', val)}
-                    editable={!isLocked}
-                    placeholder="0"
-                  />
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            <Text style={styles.submitText}>Submit Predictions</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.sectionLabel}>Prediction League Standings</Text>
+          {MOCK_PREDICT_LEADERBOARD.map((entry) => {
+            const initials = entry.club?.shortName?.slice(0, 2).toUpperCase() ?? '??';
+            const rankColor =
+              entry.rankChange > 0 ? Colors.win :
+              entry.rankChange < 0 ? Colors.live :
+              Colors.textTertiary;
+            const rankIcon =
+              entry.rankChange > 0 ? 'arrow-up' :
+              entry.rankChange < 0 ? 'arrow-down' :
+              'remove';
+
+            return (
+              <View key={entry.userId} style={[styles.leaderboardRow, entry.isCurrentUser && styles.leaderboardRowCurrent]}>
+                <Text style={styles.leaderboardRank}>#{entry.rank}</Text>
+                <View style={[styles.leaderboardAvatar, { backgroundColor: entry.club ? (CLUB_COLORS[entry.club.id] || Colors.primary) : Colors.primary }]}>
+                  <Text style={styles.leaderboardAvatarText}>{initials}</Text>
                 </View>
-
-                <View style={[styles.teamInfo, { alignItems: 'flex-end' }]}>
-                  <Text style={styles.teamName}>{fixture.awayClub.shortName}</Text>
+                <View style={styles.leaderboardInfo}>
+                  <Text style={styles.leaderboardName}>{entry.username}</Text>
+                  {entry.club && <Text style={styles.leaderboardClub}>{entry.club.shortName}</Text>}
+                </View>
+                <View style={styles.leaderboardPointsWrap}>
+                  <Text style={styles.leaderboardPoints}>{entry.totalPoints}</Text>
+                  <Text style={styles.leaderboardPointsLabel}>pts</Text>
+                </View>
+                <View style={[styles.leaderboardChange, { backgroundColor: rankColor + '20' }]}>
+                  <Ionicons name={rankIcon as any} size={12} color={rankColor} />
+                  <Text style={[styles.leaderboardChangeText, { color: rankColor }]}>{Math.abs(entry.rankChange)}</Text>
                 </View>
               </View>
-
-              <View style={styles.outcomeRow}>
-                {(['home', 'draw', 'away'] as const).map((outcome) => (
-                  <TouchableOpacity
-                    key={outcome}
-                    style={[
-                      styles.outcomeButton,
-                      prediction.outcome === outcome && styles.outcomeButtonActive,
-                      isLocked && styles.disabledButton,
-                    ]}
-                    onPress={() => !isLocked && setPrediction(fixture.id, outcome)}
-                    disabled={isLocked}
-                  >
-                    <Text style={[styles.outcomeLabel, prediction.outcome === outcome && styles.outcomeLabelActive]}>
-                      {outcome === 'home' ? 'Home Win' : outcome === 'draw' ? 'Draw' : 'Away Win'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Submit Predictions</Text>
-      </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -154,11 +251,39 @@ const styles = StyleSheet.create({
   header: { padding: 20, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
   headerTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
   headerSubtitle: { fontSize: 16, color: Colors.primary, fontWeight: '700', marginTop: 4 },
-  content: { padding: 16 },
+  content: { padding: 16, paddingBottom: 40 },
+
+  // Tabs
+  tabRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceAlt,
+  },
+  tabActive: { backgroundColor: Colors.primary },
+  tabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  tabTextActive: { color: Colors.textInverse },
+
+  sectionLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14 },
   infoBox: { backgroundColor: Colors.tagFE.bg, padding: 12, borderRadius: 12, color: Colors.primary, fontSize: 13, fontWeight: '600', marginBottom: 20 },
   matchCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
   teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  teamInfo: { flex: 1 },
+  teamInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  teamInfoRight: { justifyContent: 'flex-end' },
+  clubDot: { width: 8, height: 8, borderRadius: 4 },
   teamName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   predictRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scoreInput: { width: 40, height: 45, backgroundColor: Colors.background, borderRadius: 8, textAlign: 'center', fontSize: 20, fontWeight: '800', color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border },
@@ -172,4 +297,29 @@ const styles = StyleSheet.create({
   submitText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
   disabledInput: { backgroundColor: Colors.border, color: Colors.textTertiary },
   disabledButton: { opacity: 0.6 },
+
+  // Leaderboard
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    padding: 12,
+    borderRadius: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  leaderboardRowCurrent: { borderColor: Colors.primary },
+  leaderboardRank: { width: 36, fontSize: 13, fontWeight: '700', color: Colors.textTertiary },
+  leaderboardAvatar: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  leaderboardAvatarText: { fontSize: 12, fontWeight: '800', color: Colors.textInverse },
+  leaderboardInfo: { flex: 1 },
+  leaderboardName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  leaderboardClub: { fontSize: 11, color: Colors.textTertiary, marginTop: 1 },
+  leaderboardPointsWrap: { alignItems: 'center' },
+  leaderboardPoints: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
+  leaderboardPointsLabel: { fontSize: 9, color: Colors.textTertiary },
+  leaderboardChange: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  leaderboardChangeText: { fontSize: 11, fontWeight: '700' },
 });

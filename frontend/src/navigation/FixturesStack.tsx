@@ -2,11 +2,13 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import FixturesRoot from '../screens/fixtures/FixturesRoot';
+import LeagueTableScreen from '../screens/fixtures/LeagueTableScreen';
 import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
-import type { MatchDetailsParams } from './types';
+import type { MatchDetailsParams, LeagueTableParams } from './types';
 
 export type FixturesStackParamList = {
   FixturesRoot: undefined;
+  LeagueTable: LeagueTableParams | undefined;
   MatchDetails: MatchDetailsParams;
 };
 
@@ -16,6 +18,7 @@ export default function FixturesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="FixturesRoot" component={FixturesRoot} />
+      <Stack.Screen name="LeagueTable" component={LeagueTableScreen} />
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
     </Stack.Navigator>
   );
