@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { Colors } from '../../constants/colors';
+import { fonts } from '../../constants/layout';
 import { Match } from '../../types';
 
 interface MatchCardProps {
@@ -19,10 +20,10 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
 
   const statusColor =
     match.status === 'live'
-      ? Colors.live
+      ? Colors.red
       : match.status === 'ft'
-        ? Colors.textTertiary
-        : Colors.primary;
+        ? Colors.grey2
+        : Colors.yellow;
 
   const statusText =
     match.status === 'live'
@@ -78,7 +79,7 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statusText: {
-    color: Colors.textInverse,
+    color: Colors.white,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -109,20 +110,20 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   badgeLabel: {
-    color: Colors.primary,
+    color: Colors.yellow,
     fontSize: 11,
     fontWeight: '800',
   },
   clubName: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: Colors.white,
     textAlign: 'center',
   },
   scoreBlock: {
@@ -131,13 +132,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   score: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    fontFamily: fonts.display,
+    color: Colors.white,
   },
   vs: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.grey1,
   },
 });

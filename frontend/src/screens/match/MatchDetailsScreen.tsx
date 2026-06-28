@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
-import { getScrollBottomPadding } from '../../constants/layout';
+import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import type { Match, MatchEvent } from '../../types';
 import { getMatchDetails, getMatchEvents } from '../../services/matchService';
 
@@ -71,7 +71,7 @@ export default function MatchDetailsScreen() {
       {/* Header with Back Button */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={Colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Match Details</Text>
         <View style={{ width: 40 }} /> 
@@ -136,7 +136,7 @@ export default function MatchDetailsScreen() {
                     <Ionicons
                       name={event.type === 'goal' ? 'football' : 'square'}
                       size={16}
-                      color={event.type === 'goal' ? Colors.textPrimary : Colors.fantasyGold}
+                      color={event.type === 'goal' ? Colors.white : Colors.yellow}
                     />
                   </View>
                   <Text style={[styles.eventPlayer, { textAlign: event.side === 'home' ? 'left' : 'right', flex: 1 }]}>
@@ -165,7 +165,7 @@ export default function MatchDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white, fontFamily: fonts.display, textTransform: 'uppercase' },
   scoreboard: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
@@ -187,31 +187,31 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   teamContainer: { alignItems: 'center', width: '35%' },
-  badgePlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.border, marginBottom: 8 },
-  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.textPrimary },
+  badgePlaceholder: { width: 64, height: 64, borderRadius: radius.avatar, backgroundColor: Colors.border, marginBottom: 8 },
+  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.white },
   scoreContainer: { alignItems: 'center' },
-  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.textPrimary },
+  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.white },
   liveBadge: {
-    backgroundColor: Colors.live,
+    backgroundColor: Colors.red,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radius.badge,
     marginTop: 8,
   },
-  liveText: { color: Colors.textInverse, fontSize: 12, fontWeight: '700' },
+  liveText: { color: Colors.white, fontSize: 12, fontWeight: '700' },
   venueInfo: { padding: 16, alignItems: 'center' },
-  venueText: { fontSize: 14, color: Colors.textSecondary },
-  gameweekText: { fontSize: 12, color: Colors.textTertiary, marginTop: 4 },
+  venueText: { fontSize: 14, color: Colors.grey1 },
+  gameweekText: { fontSize: 12, color: Colors.grey2, marginTop: 4 },
   tabBar: { flexDirection: 'row', backgroundColor: Colors.surface, paddingHorizontal: 16 },
   tabItem: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: Colors.primary },
-  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.textTertiary },
-  tabLabelActive: { color: Colors.primary },
+  tabItemActive: { borderBottomColor: Colors.yellow },
+  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.grey2 },
+  tabLabelActive: { color: Colors.yellow },
   content: { padding: 16 },
   eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
+  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.grey1 },
   eventIcon: { width: 30, alignItems: 'center' },
-  eventPlayer: { fontSize: 14, color: Colors.textPrimary },
+  eventPlayer: { fontSize: 14, color: Colors.white },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
-  placeholderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  placeholderText: { fontSize: 14, color: Colors.grey1, textAlign: 'center' },
 });

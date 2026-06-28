@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { DUMMY_NEWS } from '../../constants/homeDummyData';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
@@ -38,21 +39,21 @@ export default function LatestNewsWidget() {
 const styles = StyleSheet.create({
   widget: {
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 16,
   },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
   newsItem: { flexDirection: 'row', marginBottom: 14, alignItems: 'center' },
   newsImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
-    backgroundColor: Colors.tagFE.bg,
+    borderRadius: radius.card,
+    backgroundColor: Colors.surface2,
     marginRight: 12,
   },
   newsText: { flex: 1 },
-  newsCategory: { fontSize: 11, fontWeight: '700', color: Colors.primary, marginBottom: 4 },
-  newsTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  newsMeta: { fontSize: 12, color: Colors.textTertiary, marginTop: 4 },
+  newsCategory: { fontSize: 11, fontFamily: fonts.bodyBold, color: Colors.yellow, marginBottom: 4 },
+  newsTitle: { fontSize: 14, fontFamily: fonts.bodyBold, color: Colors.white },
+  newsMeta: { fontSize: 12, fontFamily: fonts.body, color: Colors.grey2, marginTop: 4 },
 });

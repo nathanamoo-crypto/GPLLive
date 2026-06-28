@@ -8,12 +8,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'danger' | 'outline';
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -29,17 +30,16 @@ export default function PrimaryButton({
   fullWidth = true,
 }: PrimaryButtonProps) {
   const bgColor =
-    variant === 'primary' ? Colors.primary :
-    variant === 'secondary' ? Colors.surfaceAlt :
-    variant === 'danger' ? Colors.live :
-    'transparent';
+    variant === 'primary' ? Colors.yellow :
+    variant === 'danger' ? Colors.red :
+    Colors.surface2;
 
   const txtColor =
-    variant === 'ghost' ? Colors.textPrimary :
-    Colors.textInverse;
+    variant === 'primary' ? '#000000' :
+    Colors.white;
 
   const borderStyle =
-    variant === 'secondary' || variant === 'ghost'
+    variant === 'outline'
       ? { borderWidth: 1, borderColor: Colors.border }
       : {};
 
@@ -76,7 +76,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 14,
+    borderRadius: radius.button,
+    width: '100%',
   },
   fullWidth: {
     width: '100%',
@@ -87,5 +88,8 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     fontWeight: '800',
+    fontFamily: fonts.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
   },
 });

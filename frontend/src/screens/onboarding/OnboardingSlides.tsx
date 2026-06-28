@@ -14,6 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import type { OnboardingStackParamList } from '../../navigation/types';
 
 const slides = [
@@ -129,35 +130,40 @@ export default function OnboardingSlides() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   list: { flex: 1 },
   header: { alignItems: 'flex-end', paddingHorizontal: 16 },
-  skipText: { color: Colors.primary, fontSize: 14, fontWeight: '700' },
+  skipText: { color: Colors.yellow, fontSize: 14, fontWeight: '700' },
   slide: { width, paddingHorizontal: 24, alignItems: 'center' },
   illustration: {
     width: width - 72,
     height: 300,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface2,
     borderRadius: 24,
     marginBottom: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   illustrationLabel: {
     fontSize: 42,
     fontWeight: '800',
-    color: Colors.primary,
+    fontFamily: fonts.display,
+    color: Colors.yellow,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
+    fontFamily: fonts.display,
     textAlign: 'center',
-    color: Colors.textPrimary,
+    color: Colors.white,
+    textTransform: 'uppercase',
     marginBottom: 14,
   },
   description: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.grey1,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -167,15 +173,27 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.grey2,
     marginHorizontal: 4,
   },
-  dotActive: { backgroundColor: Colors.primary },
+  dotActive: {
+    width: 24,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.yellow,
+  },
   primaryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: radius.button,
     alignItems: 'center',
   },
-  primaryButtonText: { color: Colors.textInverse, fontWeight: '700', fontSize: 15 },
+  primaryButtonText: {
+    color: '#000000',
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 15,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
 });

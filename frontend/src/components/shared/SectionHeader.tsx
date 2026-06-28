@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { fonts } from '../../constants/layout';
 
 interface SectionHeaderProps {
   title: string;
@@ -14,7 +15,7 @@ interface SectionHeaderProps {
 export default function SectionHeader({
   title,
   icon,
-  iconColor = Colors.fantasyGold,
+  iconColor = Colors.yellow,
   actionLabel,
   onAction,
 }: SectionHeaderProps) {
@@ -31,7 +32,7 @@ export default function SectionHeader({
       {actionLabel && onAction && (
         <TouchableOpacity onPress={onAction} style={styles.action}>
           <Text style={styles.actionText}>{actionLabel}</Text>
-          <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+          <Ionicons name="chevron-forward" size={14} color={Colors.yellow} />
         </TouchableOpacity>
       )}
     </View>
@@ -58,9 +59,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    fontFamily: fonts.display,
+    color: Colors.yellow,
+    textTransform: 'uppercase',
+    letterSpacing: 0.08,
   },
   action: {
     flexDirection: 'row',
@@ -70,6 +74,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.primary,
+    color: Colors.yellow,
   },
 });

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CommonActions } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { DUMMY_FANTASY } from '../../constants/homeDummyData';
 
 export default function FantasySnapshotWidget() {
@@ -44,27 +45,27 @@ export default function FantasySnapshotWidget() {
 const styles = StyleSheet.create({
   widget: {
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 16,
   },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
-  teamName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12 },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
+  teamName: { fontSize: 18, fontFamily: fonts.display, color: Colors.white, marginBottom: 12 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statBlock: {
     flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 12,
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.card,
     padding: 12,
     marginRight: 8,
   },
-  statLabel: { fontSize: 12, color: Colors.textSecondary, marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '800', color: Colors.primary },
+  statLabel: { fontSize: 12, fontFamily: fonts.body, color: Colors.grey1, marginBottom: 4 },
+  statValue: { fontSize: 18, fontFamily: fonts.bodyBold, color: Colors.yellow },
   cta: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
+    backgroundColor: Colors.yellow,
+    borderRadius: radius.button,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  ctaText: { color: Colors.textInverse, fontWeight: '700' },
+  ctaText: { color: Colors.black, fontFamily: fonts.bodyBold, fontSize: 14 },
 });
