@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeStack from './HomeStack';
@@ -23,6 +24,7 @@ export type MainTabParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
+  const insets = useSafeAreaInsets();
   const matches = useMatches();
   const hasLiveMatch = matches.some((match) => match.status === 'live');
 
@@ -31,7 +33,7 @@ export default function MainTabNavigator() {
       initialRouteName="Home"
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }],
         tabBarActiveTintColor: '#F5C518',
         tabBarInactiveTintColor: '#4B5563',
         tabBarLabelStyle: styles.tabBarLabel,

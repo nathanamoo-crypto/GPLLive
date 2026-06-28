@@ -105,65 +105,108 @@ export default function FixturesRoot() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<FixturesNavProp>();
   const [filter, setFilter] = useState<string>('All');
-  const [showStandings, setShowStandings] = useState(false);
+  const [activeTab, setActiveTab] = useState<'fixtures' | 'table'>('fixtures');
+
+  const gameweeks = useMemo(() => {
+    const gws = [...new Set(MOCK_MATCHES.map((m) => m.gameweek))].sort((a, b) => b - a);
+    return gws.length > 0 ? gws : [24];
+  }, []);
+
+  const [currentGameweek, setCurrentGameweek] = useState(gameweeks[0]);
+
+  const goPrevGameweek = () => {
+    const idx = gameweeks.indexOf(currentGameweek);
+    if (idx < gameweeks.length - 1) setCurrentGameweek(gameweeks[idx + 1]);
+  };
+
+  const goNextGameweek = () => {
+    const idx = gameweeks.indexOf(currentGameweek);
+    if (idx > 0) setCurrentGameweek(gameweeks[idx - 1]);
+  };
+
+  const gwMatches = useMemo(
+    () => MOCK_MATCHES.filter((m) => m.gameweek === currentGameweek),
+    [currentGameweek],
+  );
 
   const filtered = useMemo(() => {
-    if (filter === 'All') return MOCK_MATCHES;
-    if (filter === 'Live') return MOCK_MATCHES.filter((m) => m.status === 'live');
-    if (filter === 'Scheduled') return MOCK_MATCHES.filter((m) => m.status === 'scheduled');
-    return MOCK_MATCHES.filter((m) => m.status === 'ft');
-  }, [filter]);
+    if (filter === 'All') return gwMatches;
+    if (filter === 'Live') return gwMatches.filter((m) => m.status === 'live');
+    if (filter === 'Scheduled') return gwMatches.filter((m) => m.status === 'scheduled');
+    return gwMatches.filter((m) => m.status === 'ft');
+  }, [filter, gwMatches]);
 
-  const formatKickoff = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  };
+  const gameweekDate = useMemo(() => {
+    if (gwMatches.length === 0) return '';
+    const dates = gwMatches.map((m) => new Date(m.kickoffTime));
+    const min = new Date(Math.min(...dates.map(Number)));
+    const max = new Date(Math.max(...dates.map(Number)));
+    if (min.toDateString() === max.toDateString()) {
+      return min.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return `${min.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${max.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  }, [gwMatches]);
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return 'Today';
-    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  };
+  const isCurrentGw = currentGameweek === gameweeks[0];
 
   return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.tableButton}
-          onPress={() => setShowStandings(!showStandings)}
+          onPress={goPrevGameweek}
+          disabled={currentGameweek === gameweeks[gameweeks.length - 1]}
         >
           <Ionicons
             name="chevron-back"
-            size={18}
-            color={Colors.grey1}
+            size={20}
+            color={currentGameweek === gameweeks[gameweeks.length - 1] ? Colors.surface2 : Colors.grey1}
           />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>MATCHDAY 24</Text>
-          <View style={styles.currentBadge}>
-            <Text style={styles.currentBadgeText}>CURRENT</Text>
-          </View>
+          <Text style={styles.headerTitle}>MATCHDAY {currentGameweek}</Text>
+          {isCurrentGw && (
+            <View style={styles.currentBadge}>
+              <Text style={styles.currentBadgeText}>CURRENT</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity
           style={styles.tableButton}
-          onPress={() => setShowStandings(!showStandings)}
+          onPress={goNextGameweek}
+          disabled={currentGameweek === gameweeks[0]}
         >
           <Ionicons
             name="chevron-forward"
-            size={18}
-            color={Colors.grey1}
+            size={20}
+            color={currentGameweek === gameweeks[0] ? Colors.surface2 : Colors.grey1}
           />
         </TouchableOpacity>
       </View>
-      <Text style={styles.dateSubtitle}>Sunday, 28 June 2026</Text>
+      {activeTab === 'fixtures' && gameweekDate ? (
+        <Text style={styles.dateSubtitle}>{gameweekDate}</Text>
+      ) : null}
 
-      {showStandings ? (
-        <StandingsView />
-      ) : (
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'fixtures' && styles.tabActive]}
+          onPress={() => setActiveTab('fixtures')}
+        >
+          <Text style={[styles.tabText, activeTab === 'fixtures' && styles.tabTextActive]}>
+            Fixtures
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'table' && styles.tabActive]}
+          onPress={() => setActiveTab('table')}
+        >
+          <Text style={[styles.tabText, activeTab === 'table' && styles.tabTextActive]}>
+            Table
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'fixtures' ? (
         <>
           <ScrollView
             horizontal
@@ -210,6 +253,8 @@ export default function FixturesRoot() {
             )}
           </ScrollView>
         </>
+      ) : (
+        <StandingsView />
       )}
     </View>
   );
@@ -325,6 +370,35 @@ const styles = StyleSheet.create({
   },
   tableButton: {
     padding: 8,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.surface2,
+    padding: 3,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActive: {
+    backgroundColor: Colors.yellow,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    color: Colors.grey1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
+  tabTextActive: {
+    color: '#000000',
   },
   filterRow: { backgroundColor: Colors.black, borderBottomWidth: 1, borderBottomColor: Colors.border },
   filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 6 },
