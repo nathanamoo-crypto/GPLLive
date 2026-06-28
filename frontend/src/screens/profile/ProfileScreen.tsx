@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 
@@ -84,37 +85,52 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   content: { paddingHorizontal: 24 },
-  heading: { fontSize: 24, fontWeight: '800', marginBottom: 24, color: Colors.textPrimary },
+  heading: {
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    marginBottom: 24,
+    color: Colors.white,
+    textTransform: 'uppercase',
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
     padding: 20,
-    borderRadius: 20,
+    borderRadius: radius.card,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
   },
-  avatarText: { color: Colors.textInverse, fontSize: 24, fontWeight: '800' },
+  avatarText: { color: '#000000', fontSize: 24, fontWeight: '800' },
   cardText: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  subtext: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
-  section: { backgroundColor: Colors.surface, borderRadius: 20, padding: 16 },
+  name: { fontSize: 18, fontWeight: '700', color: Colors.white },
+  subtext: { fontSize: 14, color: Colors.grey1, marginTop: 4 },
+  section: {
+    backgroundColor: Colors.surface,
+    borderRadius: radius.card,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   option: {
     paddingVertical: 14,
     borderBottomColor: Colors.border,
     borderBottomWidth: 1,
   },
   optionLast: { borderBottomWidth: 0 },
-  optionText: { fontSize: 16, color: Colors.textPrimary },
-  logoutText: { color: Colors.live, fontWeight: '700' },
+  optionText: { fontSize: 16, color: Colors.white },
+  logoutText: { color: Colors.red, fontWeight: '700' },
 });

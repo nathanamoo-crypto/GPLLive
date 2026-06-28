@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { GPL_CLUBS } from '../../constants/clubs';
-import { getScrollBottomPadding } from '../../constants/layout';
+import { fonts, getScrollBottomPadding } from '../../constants/layout';
 
 type SortKey = 'pts' | 'gd' | 'w';
 
@@ -150,27 +150,33 @@ export default function LeagueTableScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.black,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  sortRow: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+  },
+  sortRow: { backgroundColor: Colors.black, borderBottomWidth: 1, borderBottomColor: Colors.border },
   sortContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   sortChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceAlt,
+    borderRadius: 9999,
+    backgroundColor: Colors.surface2,
+    borderWidth: 1,
+    borderColor: Colors.border,
     marginRight: 8,
   },
-  sortChipActive: { backgroundColor: Colors.primary },
-  sortText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  sortTextActive: { color: Colors.textInverse },
+  sortChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
+  sortText: { fontSize: 13, fontWeight: '600', color: Colors.grey1 },
+  sortTextActive: { color: '#000000', fontWeight: '700' },
   tableHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -179,30 +185,38 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  th: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase' },
+  th: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    color: Colors.grey2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.08,
+  },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 12, paddingBottom: 40 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.surface2,
   },
-  rowAlt: { backgroundColor: Colors.surfaceAlt },
-  rowTop: { backgroundColor: 'rgba(255,215,0,0.06)' },
-  cell: { fontSize: 13, color: Colors.textSecondary },
-  cellGd: { fontSize: 13, fontWeight: '700', color: Colors.textTertiary },
-  cellPts: { fontSize: 16, fontWeight: '900', color: Colors.fantasyGold },
-  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.textTertiary, fontFamily: 'monospace' },
-  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  rowAlt: { backgroundColor: Colors.surface2 },
+  rowTop: { borderLeftWidth: 3, borderLeftColor: Colors.yellow, paddingLeft: 8 },
+  cell: { fontSize: 12, color: Colors.grey1, textAlign: 'center' },
+  cellGd: { fontSize: 12, fontWeight: '700', color: Colors.grey2, textAlign: 'center' },
+  cellPts: { fontSize: 16, fontWeight: '800', color: Colors.fantasyGold, fontFamily: fonts.display, textAlign: 'center' },
+  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
+  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
   badgeSmall: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.primary },
+  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.yellow },
 });

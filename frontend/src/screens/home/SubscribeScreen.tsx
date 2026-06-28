@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
@@ -27,9 +28,6 @@ interface Plan {
   features: string[];
 }
 
-/**
- * TODO: Replace with API call — see APIDocs.md → GET /subscriptions
- */
 const PLANS: Plan[] = [
   {
     id: 'monthly',
@@ -83,12 +81,11 @@ export default function SubscribeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+      {/* Close button */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.closeText}>Not now</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Subscribe</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -99,7 +96,13 @@ export default function SubscribeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>Upgrade Your Experience</Text>
+        {/* Crown icon */}
+        <View style={styles.crownIconWrap}>
+          <Text style={styles.crownEmoji}>👑</Text>
+        </View>
+
+        <Text style={styles.proLabel}>GPL LIVE PRO</Text>
+        <Text style={styles.screenTitle}>GO BEHIND THE SCENES WITH YOUR CLUB</Text>
         <Text style={styles.screenSub}>Unlock premium features for your favourite club</Text>
 
         {PLANS.map((plan) => {
@@ -117,8 +120,8 @@ export default function SubscribeScreen() {
                 </View>
               )}
               <View style={styles.planHeader}>
-                <View style={styles.planIconWrap}>
-                  <Ionicons name={plan.icon} size={24} color={Colors.fantasyGold} />
+                <View style={[styles.planIconWrap, active && styles.planIconWrapActive]}>
+                  <Ionicons name={plan.icon} size={24} color={active ? '#000000' : Colors.yellow} />
                 </View>
                 <View style={styles.planInfo}>
                   <Text style={styles.planName}>{plan.name}</Text>
@@ -129,7 +132,9 @@ export default function SubscribeScreen() {
               <View style={styles.featureList}>
                 {plan.features.map((f, i) => (
                   <View key={i} style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
+                    <View style={styles.featureIconWrap}>
+                      <Ionicons name="checkmark-circle" size={14} color={Colors.yellow} />
+                    </View>
                     <Text style={styles.featureText}>{f}</Text>
                   </View>
                 ))}
@@ -144,10 +149,13 @@ export default function SubscribeScreen() {
           style={styles.cta}
           onPress={() => navigation.navigate('Payment')}
         >
-          <Ionicons name="card-outline" size={20} color={Colors.textInverse} />
+          <Text style={styles.crownCta}>👑</Text>
           <Text style={styles.ctaText}>
-            Subscribe {activePlan ? `- ${activePlan.price}` : ''}
+            SUBSCRIBE NOW {activePlan ? `- ${activePlan.price}` : ''}
           </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.laterButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.laterText}>Maybe later</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -155,41 +163,64 @@ export default function SubscribeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
+  container: { flex: 1, backgroundColor: Colors.black },
+  headerBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingVertical: 12,
   },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  closeText: { color: Colors.grey1, fontSize: 14 },
   list: { flex: 1 },
-  listContent: { padding: 20 },
-  screenTitle: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
-  screenSub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 24 },
+  listContent: { padding: 20, alignItems: 'center' },
+  crownIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  crownEmoji: { fontSize: 32 },
+  proLabel: {
+    color: Colors.yellow,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    letterSpacing: 0.1,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  screenSub: { fontSize: 13, color: Colors.grey1, marginBottom: 24, textAlign: 'center' },
   planCard: {
-    padding: 20,
-    borderRadius: 16,
+    width: '100%',
+    padding: 14,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    marginBottom: 14,
+    backgroundColor: Colors.surface2,
+    marginBottom: 8,
     position: 'relative',
   },
   planCardActive: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(26,124,62,0.06)',
+    borderColor: Colors.yellow,
   },
   popularBadge: {
     position: 'absolute',
     top: -10,
     right: 16,
-    backgroundColor: Colors.fantasyGold,
+    backgroundColor: Colors.yellow,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -202,34 +233,53 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   planIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,215,0,0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  planIconWrapActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
+  planInfo: { flex: 1 },
+  planName: { fontSize: 14, fontWeight: '600', color: Colors.white },
+  planPeriod: { fontSize: 12, color: Colors.grey2, marginTop: 2 },
+  planPrice: { fontSize: 20, fontWeight: '800', color: Colors.yellow },
+  featureList: { gap: 8 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  featureIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  planInfo: { flex: 1 },
-  planName: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  planPeriod: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
-  planPrice: { fontSize: 20, fontWeight: '800', color: Colors.fantasyGold },
-  featureList: { gap: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  featureText: { fontSize: 13, color: Colors.textSecondary },
+  featureText: { fontSize: 13, color: Colors.grey1 },
   footer: {
     padding: 20,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    alignItems: 'center',
   },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: radius.button,
+    width: '100%',
   },
-  ctaText: { color: Colors.textInverse, fontSize: 16, fontWeight: '700' },
+  crownCta: { fontSize: 18 },
+  ctaText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
+  laterButton: { marginTop: 12 },
+  laterText: { color: Colors.grey1, fontSize: 13, textAlign: 'center' },
 });

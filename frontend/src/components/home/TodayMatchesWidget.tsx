@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import MatchCard from '../shared/MatchCard';
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { Match } from '../../types';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
@@ -57,18 +58,18 @@ export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps)
 const styles = StyleSheet.create({
   widget: {
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 16,
   },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
   horizontalList: { paddingVertical: 4 },
   matchCardWrapper: { marginRight: 14 },
   emptyState: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 14,
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.card,
     padding: 20,
     alignItems: 'center',
   },
-  emptyText: { color: Colors.textSecondary, fontWeight: '600' },
+  emptyText: { color: Colors.grey1, fontFamily: fonts.body, fontSize: 14 },
 });

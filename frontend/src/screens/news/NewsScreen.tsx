@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { NewsStackParamList } from '../../navigation/NewsStack';
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 
 const categories = ['All', 'GPL', 'Black Stars', 'AFCON', 'Transfers'];
 const articles = [
@@ -50,14 +51,14 @@ export default function NewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 8 },
-  categoryChip: { backgroundColor: Colors.surface, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, marginRight: 8, marginBottom: 8 },
-  categoryLabel: { color: Colors.primary, fontWeight: '700' },
+  categoryChip: { backgroundColor: Colors.surface, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.pill, marginRight: 8, marginBottom: 8 },
+  categoryLabel: { color: Colors.yellow, fontWeight: '700', fontFamily: fonts.display, textTransform: 'uppercase' },
   list: { paddingBottom: 80 },
-  articleCard: { backgroundColor: Colors.surface, marginHorizontal: 16, marginBottom: 16, borderRadius: 18, overflow: 'hidden' },
-  thumbnail: { height: 160, backgroundColor: Colors.primaryLight },
+  articleCard: { backgroundColor: Colors.surface, marginHorizontal: 16, marginBottom: 16, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
+  thumbnail: { height: 160, backgroundColor: Colors.surface2 },
   articleText: { padding: 16 },
-  articleCategory: { fontSize: 11, color: Colors.primary, marginBottom: 8, fontWeight: '700' },
-  articleTitle: { fontSize: 16, color: Colors.textPrimary, fontWeight: '800' },
+  articleCategory: { fontSize: 11, color: Colors.yellow, marginBottom: 8, fontWeight: '700', fontFamily: fonts.display, textTransform: 'uppercase' },
+  articleTitle: { fontSize: 16, color: Colors.white, fontWeight: '800' },
 });

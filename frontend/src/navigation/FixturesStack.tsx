@@ -16,7 +16,12 @@ const Stack = createNativeStackNavigator<FixturesStackParamList>();
 
 export default function FixturesStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#0A0A0A' },
+        animation: 'slide_from_right',
+      }}>
       <Stack.Screen name="FixturesRoot" component={FixturesRoot} />
       <Stack.Screen name="LeagueTable" component={LeagueTableScreen} />
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />

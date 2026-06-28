@@ -9,7 +9,7 @@ interface JerseyChipProps {
   size?: 'sm' | 'md';
 }
 
-export default function JerseyChip({ player, color = Colors.primary, size = 'sm' }: JerseyChipProps) {
+export default function JerseyChip({ player, color = Colors.yellow, size = 'sm' }: JerseyChipProps) {
   const lastName = player.name.split(' ').pop() || player.name;
   return (
     <View style={[styles.chip, { backgroundColor: color }, size === 'md' && styles.chipMd]}>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   text: {
-    color: Colors.textInverse,
+    color: Colors.white,
     fontSize: 11,
     fontWeight: '700',
   },

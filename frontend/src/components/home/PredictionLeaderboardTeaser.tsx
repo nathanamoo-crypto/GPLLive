@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { DUMMY_LEADERBOARD } from '../../constants/homeDummyData';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -25,20 +26,20 @@ export default function PredictionLeaderboardTeaser() {
 const styles = StyleSheet.create({
   widget: {
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 16,
   },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
-  subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12 },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 4 },
+  subtitle: { fontSize: 13, fontFamily: fonts.body, color: Colors.grey1, marginBottom: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: Colors.border,
   },
   medal: { width: 32, fontSize: 18 },
-  username: { flex: 1, fontSize: 14, color: Colors.textPrimary, fontWeight: '600' },
-  points: { fontSize: 14, fontWeight: '700', color: Colors.win },
+  username: { flex: 1, fontSize: 14, fontFamily: fonts.body, color: Colors.white },
+  points: { fontSize: 14, fontFamily: fonts.bodyBold, color: Colors.yellow },
 });

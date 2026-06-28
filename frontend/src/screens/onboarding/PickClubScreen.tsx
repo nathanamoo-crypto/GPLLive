@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { GPL_CLUBS } from '../../constants/clubs';
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { getAuthErrorMessage } from '../../utils/authValidation';
 
 export default function PickClubScreen() {
@@ -60,7 +61,13 @@ export default function PickClubScreen() {
         },
       ]}
     >
-      <Text style={styles.heading}>Which club do you support?</Text>
+      <View style={styles.stepDots}>
+        <View style={styles.stepDotActive} />
+        <View style={styles.stepDotInactive} />
+        <View style={styles.stepDotInactive} />
+      </View>
+
+      <Text style={styles.heading}>PICK YOUR CLUB</Text>
       <Text style={styles.subheading}>Choose one of the 18 GPL clubs.</Text>
 
       <FlatList
@@ -82,12 +89,14 @@ export default function PickClubScreen() {
               disabled={loading}
             >
               <View style={styles.badgePlaceholder}>
-                <Text style={styles.badgeText}>{item.shortName.slice(0, 2).toUpperCase()}</Text>
+                <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
+                  {item.shortName.slice(0, 2).toUpperCase()}
+                </Text>
               </View>
-              <Text style={styles.clubName}>{item.name}</Text>
+              <Text style={[styles.clubName, active && styles.clubNameActive]}>{item.name}</Text>
               {active ? (
                 <View style={styles.checkmark}>
-                  <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.yellow} />
                 </View>
               ) : null}
             </TouchableOpacity>
@@ -107,65 +116,133 @@ export default function PickClubScreen() {
         onPress={handleContinue}
       >
         {loading ? (
-          <ActivityIndicator color={Colors.textInverse} />
+          <ActivityIndicator color="#000000" />
         ) : (
-          <Text style={styles.continueText}>Continue</Text>
+          <Text style={styles.continueText}>
+            {selectedClub ? `CONTINUE AS A ${selectedClub.shortName.toUpperCase()} FAN` : 'SELECT A CLUB'}
+          </Text>
         )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.skipButton} onPress={() => completeOnboarding()}>
+        <Text style={styles.skipText}>Skip for now</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 24 },
-  heading: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  subheading: { fontSize: 14, color: Colors.textSecondary, marginBottom: 20 },
+  container: { flex: 1, backgroundColor: Colors.black, paddingHorizontal: 20 },
+  stepDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 24,
+  },
+  stepDotActive: {
+    width: 24,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.yellow,
+  },
+  stepDotInactive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.grey2,
+  },
+  heading: {
+    fontSize: 26,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subheading: {
+    fontSize: 13,
+    color: Colors.grey1,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
   grid: { paddingBottom: 24 },
   clubCard: {
     flex: 1,
-    margin: 8,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: Colors.surface,
+    margin: 6,
+    padding: 12,
+    borderRadius: radius.card,
+    backgroundColor: Colors.surface2,
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
     minWidth: 0,
+    aspectRatio: 1,
   },
   clubCardActive: {
-    borderColor: Colors.primary,
+    borderColor: Colors.yellow,
     borderWidth: 2,
   },
   badgePlaceholder: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  badgeText: { color: Colors.primary, fontWeight: '800' },
-  clubName: { textAlign: 'center', fontSize: 13, color: Colors.textPrimary, fontWeight: '600' },
-  checkmark: { marginTop: 8 },
+  badgeText: { color: Colors.white, fontWeight: '800', fontSize: 16 },
+  badgeTextActive: { color: Colors.yellow },
+  clubName: { textAlign: 'center', fontSize: 12, fontWeight: '600', color: Colors.white },
+  clubNameActive: { color: Colors.yellow },
+  checkmark: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: Colors.yellow,
+    borderRadius: 9999,
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   continueButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: radius.button,
     alignItems: 'center',
     minHeight: 52,
     justifyContent: 'center',
   },
   continueButtonDisabled: { backgroundColor: Colors.border },
-  continueText: { color: Colors.textInverse, fontWeight: '700', fontSize: 15 },
+  continueText: {
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: fonts.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
+  skipButton: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  skipText: {
+    color: Colors.grey1,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   errorText: {
-    color: Colors.live,
+    color: Colors.red,
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
   },
   successText: {
-    color: Colors.win,
+    color: Colors.green,
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',

@@ -10,6 +10,7 @@ import {
 
 import { DUMMY_NOTIFICATIONS } from '../../constants/homeDummyData';
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { Notification } from '../../types';
 
 export default function NotificationInboxScreen() {
@@ -56,38 +57,40 @@ export default function NotificationInboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
+  container: { flex: 1, backgroundColor: Colors.black, padding: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.white, fontFamily: fonts.display, textTransform: 'uppercase' },
   markButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     backgroundColor: Colors.surface,
-    borderRadius: 14,
+    borderRadius: radius.button,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  markButtonText: { color: Colors.primary, fontWeight: '700' },
+  markButtonText: { color: Colors.yellow, fontWeight: '700' },
   notificationItem: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  unreadItem: { borderColor: Colors.primary, borderWidth: 1 },
+  unreadItem: { borderColor: Colors.yellow, borderWidth: 1 },
   indicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     marginRight: 14,
   },
   indicatorSpacer: { width: 10, marginRight: 14 },
   notificationContent: { flex: 1 },
-  notificationTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  notificationBody: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
-  notificationTime: { fontSize: 11, color: Colors.textTertiary, marginTop: 6 },
-  emptyText: { textAlign: 'center', marginTop: 32, color: Colors.textTertiary },
+  notificationTitle: { fontSize: 15, fontWeight: '700', color: Colors.white },
+  notificationBody: { fontSize: 13, color: Colors.grey1, marginTop: 4 },
+  notificationTime: { fontSize: 11, color: Colors.grey2, marginTop: 6 },
+  emptyText: { textAlign: 'center', marginTop: 32, color: Colors.grey2 },
 });

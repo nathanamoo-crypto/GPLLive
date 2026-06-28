@@ -13,9 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { GPL_CLUBS } from '../../constants/clubs';
-import { getScrollBottomPadding } from '../../constants/layout';
+import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import type { Match } from '../../types';
 import type { FixturesStackParamList } from '../../navigation/FixturesStack';
+import FixtureRow from '../../components/shared/FixtureRow';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
 
@@ -129,23 +130,36 @@ export default function FixturesRoot() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Fixtures</Text>
         <TouchableOpacity
           style={styles.tableButton}
           onPress={() => setShowStandings(!showStandings)}
         >
           <Ionicons
-            name={showStandings ? 'calendar' : 'trophy'}
+            name="chevron-back"
             size={18}
-            color={Colors.textPrimary}
+            color={Colors.grey1}
           />
-          <Text style={styles.tableButtonText}>
-            {showStandings ? 'Fixtures' : 'Table'}
-          </Text>
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>MATCHDAY 24</Text>
+          <View style={styles.currentBadge}>
+            <Text style={styles.currentBadgeText}>CURRENT</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.tableButton}
+          onPress={() => setShowStandings(!showStandings)}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={Colors.grey1}
+          />
         </TouchableOpacity>
       </View>
+      <Text style={styles.dateSubtitle}>Sunday, 28 June 2026</Text>
 
       {showStandings ? (
         <StandingsView />
@@ -185,68 +199,13 @@ export default function FixturesRoot() {
               </View>
             ) : (
               filtered.map((match) => (
-                <TouchableOpacity
+                <FixtureRow
                   key={match.id}
-                  style={[
-                    styles.matchCard,
-                    match.status === 'live' && styles.matchCardLive,
-                  ]}
+                  match={match}
                   onPress={() =>
                     navigation.navigate('MatchDetails', { matchId: match.id })
                   }
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.matchHeader}>
-                    <View style={styles.dateRow}>
-                      <Text style={styles.dateText}>{formatDate(match.kickoffTime)}</Text>
-                      <Text style={styles.dot}>·</Text>
-                      <Text style={styles.venueText}>{match.venue}</Text>
-                    </View>
-                    {match.status === 'live' && (
-                      <View style={styles.liveBadge}>
-                        <View style={styles.liveDot} />
-                        <Text style={styles.liveText}>LIVE {match.liveMinute}'</Text>
-                      </View>
-                    )}
-                    {match.status === 'ft' && (
-                      <Text style={styles.ftText}>FT</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.scoreRow}>
-                    <View style={styles.teamBlock}>
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeLabel}>
-                          {match.homeClub.shortName.slice(0, 2)}
-                        </Text>
-                      </View>
-                      <Text style={styles.teamName} numberOfLines={1}>
-                        {match.homeClub.shortName}
-                      </Text>
-                    </View>
-
-                    <View style={styles.scoreBlock}>
-                      {match.homeScore !== null ? (
-                        <Text style={styles.scoreText}>
-                          {match.homeScore} - {match.awayScore}
-                        </Text>
-                      ) : (
-                        <Text style={styles.timeText}>{formatKickoff(match.kickoffTime)}</Text>
-                      )}
-                    </View>
-
-                    <View style={styles.teamBlock}>
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeLabel}>
-                          {match.awayClub.shortName.slice(0, 2)}
-                        </Text>
-                      </View>
-                      <Text style={styles.teamName} numberOfLines={1}>
-                        {match.awayClub.shortName}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                />
               ))
             )}
           </ScrollView>
@@ -325,90 +284,64 @@ function StandingsView() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.black },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingVertical: 12,
+    backgroundColor: Colors.black,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  tableButton: {
+  headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: 20,
+    gap: 8,
   },
-  tableButtonText: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  filterRow: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+  },
+  currentBadge: {
+    backgroundColor: Colors.red,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  currentBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.white,
+    textTransform: 'uppercase',
+  },
+  dateSubtitle: {
+    color: Colors.grey1,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  tableButton: {
+    padding: 8,
+  },
+  filterRow: { backgroundColor: Colors.black, borderBottomWidth: 1, borderBottomColor: Colors.border },
   filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 6 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: Colors.surface2,
     marginRight: 6,
   },
-  filterChipActive: { backgroundColor: Colors.primary },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  filterTextActive: { color: Colors.textInverse },
+  filterChipActive: { backgroundColor: Colors.yellow },
+  filterText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
+  filterTextActive: { color: '#000000' },
   list: { flex: 1 },
-  listContent: { padding: 12, gap: 8 },
-  matchCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  matchCardLive: { borderColor: Colors.live },
-  matchHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateText: { fontSize: 12, color: Colors.textTertiary, fontWeight: '600' },
-  dot: { color: Colors.textTertiary },
-  venueText: { fontSize: 12, color: Colors.textTertiary, flexShrink: 1 },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.live,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.textInverse },
-  liveText: { fontSize: 11, fontWeight: '700', color: Colors.textInverse },
-  ftText: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  teamBlock: { flex: 1, alignItems: 'center' },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  badgeLabel: { fontSize: 11, fontWeight: '800', color: Colors.primary },
-  teamName: { fontSize: 12, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center' },
-  scoreBlock: { paddingHorizontal: 8, alignItems: 'center', minWidth: 60 },
-  scoreText: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
-  timeText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  listContent: { padding: 16, gap: 8 },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 15, color: Colors.textTertiary },
+  emptyText: { fontSize: 15, color: Colors.grey2 },
   standingsContent: { padding: 16, paddingBottom: 40 },
   tableHead: {
     flexDirection: 'row',
@@ -419,7 +352,14 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     marginBottom: 4,
   },
-  th: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase' },
+  th: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    color: Colors.grey2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.08,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,19 +367,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
   },
-  rowAlt: { backgroundColor: Colors.surfaceAlt },
-  rowTop: { backgroundColor: 'rgba(255,215,0,0.06)' },
-  cell: { fontSize: 13, color: Colors.textSecondary },
+  rowAlt: { backgroundColor: Colors.surface2 },
+  rowTop: { backgroundColor: 'rgba(245,197,24,0.06)' },
+  cell: { fontSize: 13, color: Colors.grey1 },
   cellPts: { fontSize: 15, fontWeight: '900', color: Colors.fantasyGold },
-  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.textTertiary, fontFamily: 'monospace' },
-  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
+  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
   badgeSmall: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.primary },
+  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.yellow },
 });

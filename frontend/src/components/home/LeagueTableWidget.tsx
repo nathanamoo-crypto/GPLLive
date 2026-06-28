@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 import { DUMMY_STANDINGS } from '../../constants/homeDummyData';
 
 export default function LeagueTableWidget() {
@@ -29,15 +30,15 @@ export default function LeagueTableWidget() {
 const styles = StyleSheet.create({
   widget: {
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.card,
     padding: 16,
     marginBottom: 16,
   },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 10,
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.input,
     paddingVertical: 8,
     paddingHorizontal: 10,
     marginBottom: 8,
@@ -47,12 +48,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: Colors.border,
   },
-  headerCell: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  cell: { fontSize: 13, color: Colors.textPrimary },
+  headerCell: { fontSize: 12, fontFamily: fonts.bodyBold, color: Colors.yellow },
+  cell: { fontSize: 13, fontFamily: fonts.body, color: Colors.white },
   positionCell: { width: 36 },
   clubCell: { flex: 1, paddingRight: 8 },
   pointsCell: { width: 40, textAlign: 'right' },
-  pointsValue: { fontWeight: '700' },
+  pointsValue: { fontFamily: fonts.bodyBold },
 });

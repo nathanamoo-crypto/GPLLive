@@ -1,5 +1,4 @@
 export const Routes = {
-  root: 'Root',
   onboarding: {
     slides: 'Slides',
     registerLogin: 'RegisterLogin',
@@ -18,28 +17,30 @@ export const Routes = {
     profile: 'Profile',
   },
   home: {
+    feed: 'HomeFeed',
     notificationInbox: 'NotificationInbox',
-    matchDetail: 'MatchDetail',
+    subscribe: 'Subscribe',
+    payment: 'Payment',
+    search: 'Search',
+    matchDetail: 'MatchDetails',
+    newsDetail: 'NewsDetail',
   },
   fantasy: {
     root: 'FantasyRoot',
-    mySquad: 'MySquad',
-    leaderboard: 'FantasyLeaderboard',
-    squadBuilder: 'SquadBuilder',
   },
   predict: {
     root: 'PredictRoot',
-    fullLeaderboard: 'FullLeaderboard',
   },
   news: {
-    articleDetail: 'ArticleDetail',
+    feed: 'NewsFeed',
+    detail: 'NewsDetail',
   },
   fixtures: {
-    clubProfile: 'ClubProfile',
+    root: 'FixturesRoot',
+    leagueTable: 'LeagueTable',
+    matchDetails: 'MatchDetails',
   },
   profile: {
     root: 'ProfileRoot',
-    editProfile: 'EditProfile',
-    clubSubscription: 'ClubSubscription',
   },
 };

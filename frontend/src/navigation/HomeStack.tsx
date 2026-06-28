@@ -24,7 +24,12 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export default function HomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#0A0A0A' },
+        animation: 'slide_from_right',
+      }}>
       <Stack.Screen name="HomeFeed" component={HomeScreen} />
       <Stack.Screen name="NotificationInbox" component={NotificationInboxScreen} />
       <Stack.Screen name="Subscribe" component={SubscribeScreen} />

@@ -1,6 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+
+const DarkNavTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#0A0A0A',
+    card: '#111111',
+    border: '#2A2A2A',
+    primary: '#F5C518',
+    text: '#FFFFFF',
+  },
+};
 
 import SplashScreen from '../screens/onboarding/SplashScreen';
 import { useAuthStore } from '../store/authStore';
@@ -80,7 +92,7 @@ export default function RootNavigator() {
   };
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={DarkNavTheme}>
       <View style={styles.root}>
         {renderAppNavigator()}
         {showSplash ? (

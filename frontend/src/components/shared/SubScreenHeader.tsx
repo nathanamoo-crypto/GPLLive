@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { fonts } from '../../constants/layout';
 
 interface SubScreenHeaderProps {
   title: string;
@@ -20,12 +21,12 @@ export default function SubScreenHeader({ title, actionIcon, onAction }: SubScre
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+        <Ionicons name="arrow-back" size={22} color={Colors.grey1} />
       </TouchableOpacity>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
       {actionIcon ? (
         <TouchableOpacity style={styles.actionButton} onPress={onAction}>
-          <Ionicons name={actionIcon} size={22} color={Colors.textPrimary} />
+          <Ionicons name={actionIcon} size={22} color={Colors.grey1} />
         </TouchableOpacity>
       ) : (
         <View style={styles.spacer} />
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.black,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -48,7 +49,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -56,7 +56,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
     textAlign: 'center',
     marginHorizontal: 12,
   },
@@ -64,7 +67,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -12,7 +12,12 @@ import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
+  Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import {
+  BarlowCondensed_700Bold,
+  BarlowCondensed_800ExtraBold,
+} from '@expo-google-fonts/barlow-condensed';
 
 import { Colors } from '../constants/colors';
 
@@ -32,6 +37,9 @@ export default function AppProviders({ children }: { children: React.ReactNode }
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    Inter_700Bold,
+    'BarlowCondensed-Bold': BarlowCondensed_700Bold,
+    'BarlowCondensed-ExtraBold': BarlowCondensed_800ExtraBold,
   });
 
   if (!fontsLoaded) {

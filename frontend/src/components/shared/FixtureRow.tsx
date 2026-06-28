@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { fonts } from '../../constants/layout';
 import { Match } from '../../types';
 import Badge from './Badge';
 
@@ -22,23 +22,17 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
   const hasScore = match.homeScore !== null && match.awayScore !== null;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.row, isLive && styles.rowLive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.teamRow}>
         <View style={styles.teamWrap}>
-          <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
           <Text style={styles.teamName} numberOfLines={1}>{match.homeClub.shortName}</Text>
         </View>
 
         <View style={styles.scoreWrap}>
-          {isLive && (
-            <View style={styles.liveRow}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveLabel}>LIVE</Text>
-            </View>
-          )}
-          {isFT && !hasScore ? (
-            <Badge label="FT" variant="status" />
-          ) : null}
           <View style={styles.scoreRow}>
             <Text style={[styles.score, (isLive || isFT) && styles.scorePlayed]}>
               {hasScore ? match.homeScore : '-'}
@@ -52,14 +46,18 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
 
         <View style={[styles.teamWrap, styles.teamWrapRight]}>
           <Text style={styles.teamName} numberOfLines={1}>{match.awayClub.shortName}</Text>
-          <View style={[styles.dot, { backgroundColor: Colors.textTertiary }]} />
         </View>
       </View>
 
       {!isLive && !isFT && (
         <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={12} color={Colors.textTertiary} />
-          <Text style={styles.timeText}>{timeStr}</Text>
+          <Badge label={timeStr} variant="upcoming" />
+        </View>
+      )}
+
+      {isFT && (
+        <View style={styles.timeRow}>
+          <Badge label="FT" variant="ft" />
         </View>
       )}
 
@@ -75,11 +73,16 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
 const styles = StyleSheet.create({
   row: {
     backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rowLive: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.red,
   },
   teamRow: {
     flexDirection: 'row',
@@ -95,36 +98,14 @@ const styles = StyleSheet.create({
   teamWrapRight: {
     justifyContent: 'flex-end',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   teamName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.white,
   },
   scoreWrap: {
     alignItems: 'center',
     minWidth: 80,
-  },
-  liveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.live,
-  },
-  liveLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.live,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -132,32 +113,29 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   score: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textTertiary,
+    fontFamily: fonts.display,
+    color: Colors.grey2,
   },
   scorePlayed: {
-    color: Colors.textPrimary,
+    color: Colors.white,
   },
   scoreSep: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textTertiary,
+    color: Colors.grey2,
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    marginTop: 8,
-  },
-  timeText: {
-    fontSize: 11,
-    color: Colors.textTertiary,
+    marginTop: 6,
   },
   liveMinute: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.live,
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.red,
   },
 });

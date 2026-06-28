@@ -10,7 +10,7 @@ interface IconChipProps {
   size?: number;
 }
 
-export default function IconChip({ icon, label, color = Colors.primary, size = 14 }: IconChipProps) {
+export default function IconChip({ icon, label, color = Colors.yellow, size = 14 }: IconChipProps) {
   return (
     <View style={styles.chip}>
       <Ionicons name={icon} size={size} color={color} />
@@ -26,11 +26,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: 20,
+    backgroundColor: Colors.surface2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: Colors.white,
   },
 });

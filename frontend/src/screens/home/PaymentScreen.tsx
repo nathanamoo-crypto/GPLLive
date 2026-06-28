@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
 
 type PaymentMethod = 'card' | 'mobile';
 
@@ -26,32 +27,25 @@ export default function PaymentScreen() {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
 
-  /**
-   * TODO: Replace with API call — see APIDocs.md → POST /subscriptions/payment
-   */
   const handlePay = () => {
     setProcessing(true);
     setTimeout(() => {
       setProcessing(false);
       setDone(true);
-      setTimeout(() => navigation.goBack(), 2000);
     }, 2000);
   };
 
   if (done) {
     return (
-      <View
-        style={[
-          styles.container,
-          { paddingTop: insets.top },
-          styles.doneContainer,
-        ]}
-      >
+      <View style={[styles.container, styles.doneContainer]}>
         <View style={styles.doneIconWrap}>
-          <Ionicons name="checkmark-circle" size={64} color={Colors.primary} />
+          <Text style={styles.doneCheckmark}>✓</Text>
         </View>
-        <Text style={styles.doneTitle}>Payment Successful!</Text>
+        <Text style={styles.doneTitle}>YOU'RE IN, PRO MEMBER</Text>
         <Text style={styles.doneSub}>Welcome to GPL Live Premium</Text>
+        <TouchableOpacity style={styles.startButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.startButtonText}>START EXPLORING</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -60,53 +54,50 @@ export default function PaymentScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+          <Ionicons name="arrow-back" size={22} color={Colors.grey1} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment</Text>
+        <Text style={styles.headerTitle}>PAYMENT METHOD</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.screenTitle}>Choose Payment Method</Text>
+        <Text style={styles.screenTitle}>CHOOSE HOW TO PAY</Text>
 
-        <View style={styles.methodRow}>
-          <TouchableOpacity
-            style={[styles.methodBtn, method === 'card' && styles.methodBtnActive]}
-            onPress={() => setMethod('card')}
-          >
-            <Ionicons
-              name="card"
-              size={20}
-              color={method === 'card' ? Colors.primary : Colors.textTertiary}
-            />
-            <Text
-              style={[
-                styles.methodText,
-                method === 'card' && styles.methodTextActive,
-              ]}
-            >
-              Card
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.methodBtn, method === 'mobile' && styles.methodBtnActive]}
-            onPress={() => setMethod('mobile')}
-          >
-            <Ionicons
-              name="phone-portrait"
-              size={20}
-              color={method === 'mobile' ? Colors.primary : Colors.textTertiary}
-            />
-            <Text
-              style={[
-                styles.methodText,
-                method === 'mobile' && styles.methodTextActive,
-              ]}
-            >
-              Mobile Money
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.methodBtn, method === 'card' && styles.methodBtnActive]}
+          onPress={() => setMethod('card')}
+        >
+          <View style={styles.radioWrap}>
+            <View style={[styles.radioOuter, method === 'card' && styles.radioOuterActive]}>
+              {method === 'card' && <View style={styles.radioInner} />}
+            </View>
+          </View>
+          <View style={styles.methodIconWrap}>
+            <Ionicons name="card" size={20} color={Colors.grey1} />
+          </View>
+          <View style={styles.methodInfo}>
+            <Text style={styles.methodName}>Card Payment</Text>
+            <Text style={styles.methodSub}>Credit or debit card</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.methodBtn, method === 'mobile' && styles.methodBtnActive]}
+          onPress={() => setMethod('mobile')}
+        >
+          <View style={styles.radioWrap}>
+            <View style={[styles.radioOuter, method === 'mobile' && styles.radioOuterActive]}>
+              {method === 'mobile' && <View style={styles.radioInner} />}
+            </View>
+          </View>
+          <View style={styles.methodIconWrap}>
+            <Ionicons name="phone-portrait" size={20} color={Colors.grey1} />
+          </View>
+          <View style={styles.methodInfo}>
+            <Text style={styles.methodName}>Mobile Money</Text>
+            <Text style={styles.methodSub}>MTN / Vodafone / AirtelTigo</Text>
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.form}>
           {method === 'card' ? (
@@ -116,7 +107,7 @@ export default function PaymentScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="4242 4242 4242 4242"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={Colors.grey2}
                   value={cardNum}
                   onChangeText={(t) =>
                     setCardNum(
@@ -136,7 +127,7 @@ export default function PaymentScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="MM/YY"
-                    placeholderTextColor={Colors.textTertiary}
+                    placeholderTextColor={Colors.grey2}
                     value={expiry}
                     onChangeText={(t) =>
                       setExpiry(
@@ -154,7 +145,7 @@ export default function PaymentScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="123"
-                    placeholderTextColor={Colors.textTertiary}
+                    placeholderTextColor={Colors.grey2}
                     value={cvv}
                     onChangeText={(t) => setCvv(t.replace(/\D/g, '').slice(0, 3))}
                     secureTextEntry
@@ -169,7 +160,7 @@ export default function PaymentScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="054 000 0000"
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={Colors.grey2}
                 value={phone}
                 onChangeText={(t) => setPhone(t.replace(/\D/g, '').slice(0, 10))}
                 keyboardType="phone-pad"
@@ -178,9 +169,9 @@ export default function PaymentScreen() {
           )}
         </View>
 
-        <View style={styles.secureRow}>
-          <Ionicons name="lock-closed" size={14} color={Colors.textTertiary} />
-          <Text style={styles.secureText}>Secured with 256-bit encryption</Text>
+        <View style={styles.dueRow}>
+          <Text style={styles.dueLabel}>Due today (7-day trial)</Text>
+          <Text style={styles.dueAmount}>¢0.00</Text>
         </View>
       </View>
 
@@ -191,94 +182,185 @@ export default function PaymentScreen() {
           disabled={processing}
         >
           {processing ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color="#000000" />
           ) : (
             <>
-              <Ionicons name="lock-closed" size={18} color={Colors.textInverse} />
-              <Text style={styles.ctaText}>Pay Now</Text>
+              <Text style={styles.lockIcon}>🔒</Text>
+              <Text style={styles.ctaText}>CONFIRM & START TRIAL</Text>
             </>
           )}
         </TouchableOpacity>
+        <Text style={styles.finePrint}>Cancel anytime. No questions asked.</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  doneContainer: { alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: Colors.black },
+  doneContainer: { alignItems: 'center', justifyContent: 'center', padding: 40 },
   doneIconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(26,124,62,0.15)',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.yellow,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
-  doneTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  doneSub: { fontSize: 15, color: Colors.textSecondary },
+  doneCheckmark: { color: '#000000', fontSize: 32, fontWeight: '800' },
+  doneTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  doneSub: { fontSize: 13, color: Colors.grey1, textAlign: 'center' },
+  startButton: {
+    marginTop: 32,
+    backgroundColor: Colors.yellow,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: radius.button,
+  },
+  startButtonText: {
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: fonts.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.black,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
   content: { flex: 1, padding: 20 },
-  screenTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 24 },
-  methodRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  screenTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    color: Colors.grey1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.1,
+    marginBottom: 12,
+  },
   methodBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  methodBtnActive: { borderColor: Colors.primary, backgroundColor: 'rgba(26,124,62,0.08)' },
-  methodText: { fontSize: 14, fontWeight: '600', color: Colors.textTertiary },
-  methodTextActive: { color: Colors.primary, fontWeight: '700' },
-  form: { gap: 16, marginBottom: 24 },
-  field: { marginBottom: 4 },
-  label: { fontSize: 13, color: Colors.textSecondary, marginBottom: 8, fontWeight: '600' },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
+    gap: 12,
     padding: 16,
-    fontSize: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: Colors.border,
-    color: Colors.textPrimary,
+    backgroundColor: Colors.surface,
+    marginBottom: 10,
+  },
+  methodBtnActive: { borderColor: Colors.yellow, backgroundColor: Colors.surface2 },
+  radioWrap: { width: 24, alignItems: 'center' },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.grey2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOuterActive: { borderColor: Colors.yellow },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.yellow,
+  },
+  methodIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: Colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  methodInfo: { flex: 1 },
+  methodName: { fontSize: 15, fontWeight: '700', color: Colors.white },
+  methodSub: { fontSize: 12, color: Colors.grey1, marginTop: 2 },
+  form: { gap: 16, marginBottom: 24, marginTop: 20 },
+  field: { marginBottom: 4 },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fonts.display,
+    color: Colors.grey1,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.1,
+  },
+  input: {
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.input,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 14,
+    color: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   row2: { flexDirection: 'row', gap: 12 },
-  secureRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  secureText: { fontSize: 12, color: Colors.textTertiary },
+  dueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.input,
+    padding: 14,
+  },
+  dueLabel: { color: Colors.grey1, fontSize: 13 },
+  dueAmount: { color: Colors.white, fontWeight: '700', fontSize: 15 },
   footer: {
     padding: 20,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    alignItems: 'center',
   },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.yellow,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: radius.button,
+    width: '100%',
     minHeight: 52,
   },
   ctaProcessing: { opacity: 0.8 },
-  ctaText: { color: Colors.textInverse, fontSize: 16, fontWeight: '700' },
+  lockIcon: { fontSize: 18 },
+  ctaText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+  },
+  finePrint: { color: Colors.grey2, fontSize: 11, textAlign: 'center', marginTop: 10 },
 });

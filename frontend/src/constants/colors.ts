@@ -1,32 +1,54 @@
 export const Colors = {
-  primary: '#1A7C3E',
-  primaryLight: '#0D2818',
-  accent: '#F5A623',
+  // Backgrounds
+  black:     '#0A0A0A',
+  surface:   '#111111',
+  surface2:  '#1A1A1A',
+  border:    '#2A2A2A',
 
-  background: '#0D1117',
-  surface: '#161B22',
-  surfaceAlt: '#1C2333',
+  // Brand accents
+  yellow:    '#F5C518',
+  yellowDim: '#BF9A10',
+  red:       '#D0021B',
+  green:     '#22C55E',
 
-  textPrimary: '#E6EDF3',
-  textSecondary: '#8B949E',
-  textTertiary: '#6E7681',
-  textInverse: '#FFFFFF',
+  // Text
+  white:     '#FFFFFF',
+  grey1:     '#9CA3AF',
+  grey2:     '#4B5563',
 
-  live: '#E8253A',
-  win: '#27AE60',
-  draw: '#F39C12',
-  loss: '#E74C3C',
+  // Semantic aliases
+  primary:      '#F5C518',
+  background:   '#0A0A0A',
+  card:         '#111111',
+  text:         '#FFFFFF',
+  textMuted:    '#9CA3AF',
+  textDisabled: '#4B5563',
+  danger:       '#D0021B',
+  success:      '#22C55E',
+  inputBg:      '#1A1A1A',
+  borderColor:  '#2A2A2A',
 
-  fantasyGold: '#FFD700',
-  pitchGrass: '#2E7D32',
-  bench: '#6E7681',
+  // Backward-compat aliases
+  primaryLight: '#1A1A1A',
+  accent:       '#F5C518',
+  surfaceAlt:   '#1A1A1A',
+  textPrimary:  '#FFFFFF',
+  textSecondary: '#9CA3AF',
+  textTertiary: '#4B5563',
+  textInverse:  '#0A0A0A',
+  live:         '#D0021B',
+  win:          '#22C55E',
+  draw:         '#F5C518',
+  loss:         '#D0021B',
+  fantasyGold:  '#F5C518',
+  pitchGrass:   '#22C55E',
+  bench:        '#4B5563',
+  borderLight:  '#2A2A2A',
 
+  // Tag objects (preserved)
   tagFE: { bg: '#1A2E14', text: '#7CC56C' },
   tagBE: { bg: '#2E1A14', text: '#E07A6A' },
   tagDB: { bg: '#142A3E', text: '#6AAAE0' },
   tag3P: { bg: '#1E1A3E', text: '#A07AD0' },
   tagAdmin: { bg: '#3E2A14', text: '#E0A060' },
-
-  border: '#2A2F3A',
-  borderLight: '#21262D',
 };

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
     "@expo-google-fonts/inter": "^0.3.0",
     "@expo-google-fonts/nunito": "^0.3.0",
     "@expo/vector-icons": "^15.0.3",
