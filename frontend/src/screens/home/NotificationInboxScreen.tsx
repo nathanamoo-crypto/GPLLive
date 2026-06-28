@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DUMMY_NOTIFICATIONS } from '../../constants/homeDummyData';
 import { Colors } from '../../constants/colors';
@@ -14,6 +15,7 @@ import { fonts, radius } from '../../constants/layout';
 import { Notification } from '../../types';
 
 export default function NotificationInboxScreen() {
+  const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<Notification[]>(DUMMY_NOTIFICATIONS);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -28,7 +30,7 @@ export default function NotificationInboxScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
         <TouchableOpacity onPress={markAllRead} style={styles.markButton}>
@@ -57,7 +59,7 @@ export default function NotificationInboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black, padding: 16 },
+  container: { flex: 1, backgroundColor: Colors.black, paddingHorizontal: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '800', color: Colors.white, fontFamily: fonts.display, textTransform: 'uppercase' },
   markButton: {
