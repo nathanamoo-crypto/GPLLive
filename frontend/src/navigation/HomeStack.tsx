@@ -1,0 +1,42 @@
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import HomeScreen from '../screens/home/HomeScreen';
+import NotificationInboxScreen from '../screens/home/NotificationInboxScreen';
+import SubscribeScreen from '../screens/home/SubscribeScreen';
+import PaymentScreen from '../screens/home/PaymentScreen';
+import SearchScreen from '../screens/home/SearchScreen';
+import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
+import NewsDetailScreen from '../screens/news/NewsDetailScreen';
+import type { MatchDetailsParams, NewsDetailParams } from './types';
+
+export type HomeStackParamList = {
+  HomeFeed: undefined;
+  NotificationInbox: undefined;
+  Subscribe: undefined;
+  Payment: undefined;
+  Search: undefined;
+  MatchDetails: MatchDetailsParams;
+  NewsDetail: NewsDetailParams;
+};
+
+const Stack = createNativeStackNavigator<HomeStackParamList>();
+
+export default function HomeStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#0A0A0A' },
+        animation: 'slide_from_right',
+      }}>
+      <Stack.Screen name="HomeFeed" component={HomeScreen} />
+      <Stack.Screen name="NotificationInbox" component={NotificationInboxScreen} />
+      <Stack.Screen name="Subscribe" component={SubscribeScreen} />
+      <Stack.Screen name="Payment" component={PaymentScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
+      <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
+    </Stack.Navigator>
+  );
+}
