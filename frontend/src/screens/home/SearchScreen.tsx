@@ -63,7 +63,7 @@ export default function SearchScreen() {
     return items;
   }, [query, filter]);
 
-  const typeConfig: Record<string, { icon: string; color: string }> = {
+  const typeConfig: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
     player: { icon: 'shield', color: Colors.yellow },
     club: { icon: 'people', color: Colors.yellow },
     news: { icon: 'newspaper', color: '#4169E1' },
@@ -173,7 +173,7 @@ export default function SearchScreen() {
                 }}
               >
                 <View style={[styles.resultIcon, { backgroundColor: cfg.color + '18' }]}>
-                  <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
+                  <Ionicons name={cfg.icon} size={18} color={cfg.color} />
                 </View>
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultLabel}>{r.label}</Text>

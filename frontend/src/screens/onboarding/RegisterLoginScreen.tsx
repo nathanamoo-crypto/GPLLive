@@ -18,7 +18,6 @@ import { useAuthStore } from '../../store/authStore';
 import { getAuthErrorMessage, validateEmail, validatePassword } from '../../utils/authValidation';
 import type { AuthFlowParamList } from '../../navigation/types';
 import { Colors } from '../../constants/colors';
-import { fonts } from '../../constants/layout';
 import { authFormStyles as styles } from './authFormStyles';
 
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
@@ -149,16 +148,8 @@ export default function RegisterLoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <View style={{ backgroundColor: Colors.yellow, borderRadius: 8, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            <Text style={{ fontFamily: fonts.display, fontWeight: '800', fontSize: 18, color: '#000000' }}>GL</Text>
-          </View>
-          <Text style={{ fontFamily: fonts.display, fontSize: 20, fontWeight: '800', color: Colors.white }}>
-            GPL <Text style={{ color: Colors.yellow }}>LIVE</Text>
-          </Text>
-        </View>
-        <Text style={styles.heading}>{mode === 'register' ? 'JOIN THE TERRACES' : 'WELCOME BACK'}</Text>
-        <Text style={styles.subheading}>{mode === 'register' ? 'Create an account to get started.' : 'Sign in to continue.'}</Text>
+        <Text style={styles.heading}>Welcome to GPL Live</Text>
+        <Text style={styles.subheading}>Sign in or create an account to continue.</Text>
 
         <View style={styles.tabRow}>
           <TouchableOpacity

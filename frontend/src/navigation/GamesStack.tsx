@@ -2,9 +2,11 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import GamesRoot from '../screens/games/GamesRoot';
+import MyTeamScreen from '../screens/fantasy/MyTeamScreen';
 
 export type GamesStackParamList = {
   GamesRoot: { defaultTab?: 'fantasy' | 'predictions' } | undefined;
+  MyTeam: undefined;
 };
 
 const Stack = createNativeStackNavigator<GamesStackParamList>();
@@ -18,6 +20,7 @@ export default function GamesStack() {
         animation: 'slide_from_right',
       }}>
       <Stack.Screen name="GamesRoot" component={GamesRoot} />
+      <Stack.Screen name="MyTeam" component={MyTeamScreen} />
     </Stack.Navigator>
   );
 }

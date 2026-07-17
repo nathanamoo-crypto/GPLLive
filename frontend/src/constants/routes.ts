@@ -27,6 +27,7 @@ export const Routes = {
   },
   games: {
     root: 'GamesRoot',
+    myTeam: 'MyTeam',
   },
   table: {
     root: 'LeagueTable',

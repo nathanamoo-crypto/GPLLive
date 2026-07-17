@@ -13,13 +13,7 @@ interface AuthStackProps {
 
 export default function AuthStack({ initialRouteName = 'RegisterLogin' }: AuthStackProps) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#0A0A0A' },
-        animation: 'slide_from_right',
-      }}
-      initialRouteName={initialRouteName}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
       <Stack.Screen name="RegisterLogin" component={RegisterLoginScreen} />
       <Stack.Screen name="PickClub" component={PickClubScreen} />
     </Stack.Navigator>

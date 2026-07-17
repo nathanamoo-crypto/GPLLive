@@ -13,9 +13,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export const fetchPlayers = async (position?: string): Promise<Player[]> => {
+export const fetchPlayers = async (position?: string, signal?: AbortSignal): Promise<Player[]> => {
   const params = position ? `?position=${position}` : '';
-  return request<Player[]>(`/fantasy/players${params}`);
+  return request<Player[]>(`/fantasy/players${params}`, { signal });
 };
 
 export interface SaveSquadPayload {

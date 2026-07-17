@@ -1,14 +1,49 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 
+interface MenuItem {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  accent?: boolean;
+}
+
+function MenuGroup({ title, items }: { title?: string; items: MenuItem[] }) {
+  return (
+    <View style={styles.section}>
+      {title && <Text style={styles.sectionTitle}>{title}</Text>}
+      <View style={styles.sectionContent}>
+        {items.map((item, idx) => (
+          <TouchableOpacity
+            key={item.label}
+            style={[styles.option, idx === items.length - 1 && styles.optionLast]}
+            onPress={item.onPress}
+          >
+            <View style={styles.optionLeft}>
+              <Ionicons name={item.icon} size={18} color={item.accent ? Colors.yellow : Colors.grey1} />
+              <Text style={[styles.optionText, item.accent && styles.optionTextAccent]}>
+                {item.label}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.grey2} />
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const resetOnboarding = useAuthStore((state) => state.resetOnboarding);
@@ -16,28 +51,24 @@ export default function ProfileScreen() {
   const handleLogOut = useCallback(() => {
     Alert.alert('Log out?', 'You will return to the login screen.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out',
-        style: 'destructive',
-        onPress: () => {
-          void logout();
-        },
-      },
+      { text: 'Log out', style: 'destructive', onPress: () => { void logout(); } },
     ]);
   }, [logout]);
 
   const handleReplayOnboarding = useCallback(() => {
     Alert.alert('Replay onboarding?', 'This will show the splash and onboarding slides again.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Replay',
-        onPress: () => {
-          void logout();
-          resetOnboarding();
-        },
-      },
+      { text: 'Replay', onPress: () => { void logout(); resetOnboarding(); } },
     ]);
   }, [logout, resetOnboarding]);
+
+  const handleShare = useCallback(() => {
+    void Share.share({ message: 'Join me on GPL Live — the ultimate Ghana Premier League companion app!' });
+  }, []);
+
+  const showComingSoon = useCallback((feature: string) => {
+    Alert.alert('Coming Soon', `${feature} will be available in an upcoming update.`);
+  }, []);
 
   return (
     <ScrollView
@@ -52,6 +83,7 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.heading}>Profile</Text>
+
       <View style={styles.card}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -61,25 +93,47 @@ export default function ProfileScreen() {
         <View style={styles.cardText}>
           <Text style={styles.name}>{user?.username ?? 'GPL Fan'}</Text>
           <Text style={styles.subtext}>
-            Favourite club: {user?.favouriteClub?.name ?? 'Not selected'}
+            {user?.favouriteClub?.name ?? 'No club selected'}
           </Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.option}>
-          <Text style={styles.optionText}>Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.option}>
-          <Text style={styles.optionText}>Notifications</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.option} onPress={handleReplayOnboarding}>
-          <Text style={styles.optionText}>Replay onboarding</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.option, styles.optionLast]} onPress={handleLogOut}>
-          <Text style={[styles.optionText, styles.logoutText]}>Log out</Text>
-        </TouchableOpacity>
-      </View>
+      <MenuGroup
+        title="GPL Live Pro"
+        items={[
+          { icon: 'diamond-outline', label: 'Subscribe', onPress: () => navigation.navigate('Home', { screen: 'Subscribe' }) },
+          { icon: 'card-outline', label: 'Payment Methods', onPress: () => navigation.navigate('Home', { screen: 'Payment' }) },
+        ]}
+      />
+
+      <MenuGroup
+        title="Football"
+        items={[
+          { icon: 'calendar-outline', label: 'Fixtures', onPress: () => navigation.navigate('Fixtures') },
+          { icon: 'trophy-outline', label: 'League Table', onPress: () => navigation.navigate('Table') },
+          { icon: 'newspaper-outline', label: 'All News', onPress: () => navigation.navigate('News') },
+          { icon: 'search-outline', label: 'News Search', onPress: () => navigation.navigate('Home', { screen: 'Search' }) },
+        ]}
+      />
+
+      <MenuGroup
+        title="Games"
+        items={[
+          { icon: 'game-controller-outline', label: 'Fantasy League', onPress: () => navigation.navigate('Games') },
+          { icon: 'people-outline', label: 'My Team', onPress: () => navigation.navigate('Games', { screen: 'MyTeam' }), accent: true },
+          { icon: 'bulb-outline', label: 'Predictions', onPress: () => navigation.navigate('Games', { screen: 'GamesRoot', params: { defaultTab: 'predictions' } }) },
+        ]}
+      />
+
+      <MenuGroup
+        title="App"
+        items={[
+          { icon: 'notifications-outline', label: 'Notifications', onPress: () => navigation.navigate('Home', { screen: 'NotificationInbox' }) },
+          { icon: 'share-outline', label: 'Share GPL Live', onPress: handleShare },
+          { icon: 'refresh-outline', label: 'Replay Onboarding', onPress: handleReplayOnboarding },
+          { icon: 'log-out-outline', label: 'Log Out', onPress: handleLogOut },
+        ]}
+      />
     </ScrollView>
   );
 }
@@ -118,19 +172,34 @@ const styles = StyleSheet.create({
   cardText: { flex: 1 },
   name: { fontSize: 18, fontWeight: '700', color: Colors.white },
   subtext: { fontSize: 14, color: Colors.grey1, marginTop: 4 },
-  section: {
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 11,
+    fontFamily: fonts.bodySemiBold,
+    color: Colors.grey2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.08,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  sectionContent: {
     backgroundColor: Colors.surface,
     borderRadius: radius.card,
-    padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
   option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomColor: Colors.border,
     borderBottomWidth: 1,
   },
   optionLast: { borderBottomWidth: 0 },
-  optionText: { fontSize: 16, color: Colors.white },
-  logoutText: { color: Colors.red, fontWeight: '700' },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  optionText: { fontSize: 15, fontFamily: fonts.body, color: Colors.white },
+  optionTextAccent: { color: Colors.yellow, fontFamily: fonts.bodySemiBold },
 });

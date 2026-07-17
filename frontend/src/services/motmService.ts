@@ -49,10 +49,10 @@ function resolvePath(template: string, matchId: string): string {
   return template.replace(':matchId', matchId);
 }
 
-export async function getMotmCandidates(matchId: string): Promise<MotmCandidatesResponse> {
+export async function getMotmCandidates(matchId: string, signal?: AbortSignal): Promise<MotmCandidatesResponse> {
   const { data } = await api.get<MotmCandidatesResponse>(
     resolvePath(MOTMEndpoints.GET_CANDIDATES, matchId),
-    { baseURL: VOTE_URL },
+    { baseURL: VOTE_URL, signal },
   );
   return data;
 }
@@ -66,10 +66,10 @@ export async function submitMotmVote(matchId: string, playerId: string): Promise
   return data;
 }
 
-export async function getMotmResults(matchId: string): Promise<MotmResultsResponse> {
+export async function getMotmResults(matchId: string, signal?: AbortSignal): Promise<MotmResultsResponse> {
   const { data } = await api.get<MotmResultsResponse>(
     resolvePath(MOTMEndpoints.GET_RESULTS, matchId),
-    { baseURL: VOTE_URL },
+    { baseURL: VOTE_URL, signal },
   );
   return data;
 }
