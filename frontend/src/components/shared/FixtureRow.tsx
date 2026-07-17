@@ -18,7 +18,7 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
   });
 
   const isLive = match.status === 'live';
-  const isFT = match.status === 'ft';
+  const isFT = match.status === 'finished';
   const hasScore = match.homeScore !== null && match.awayScore !== null;
 
   return (

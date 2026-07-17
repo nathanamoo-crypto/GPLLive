@@ -67,7 +67,7 @@ const MOCK_MATCHES: Match[] = [
     awayClub: GPL_CLUBS[7],
     homeScore: 3,
     awayScore: 0,
-    status: 'ft',
+    status: 'finished',
     kickoffTime: new Date(Date.now() - 86400000).toISOString(),
     venue: 'Accra Sports Stadium',
     round: 23,
@@ -79,7 +79,7 @@ const MOCK_MATCHES: Match[] = [
     awayClub: GPL_CLUBS[9],
     homeScore: 1,
     awayScore: 1,
-    status: 'ft',
+    status: 'finished',
     kickoffTime: new Date(Date.now() - 86400000).toISOString(),
     venue: 'Tamale Stadium',
     round: 23,
@@ -91,7 +91,7 @@ const MOCK_MATCHES: Match[] = [
     awayClub: GPL_CLUBS[11],
     homeScore: 0,
     awayScore: 2,
-    status: 'ft',
+    status: 'finished',
     kickoffTime: new Date(Date.now() - 172800000).toISOString(),
     venue: 'Obuasi Stadium',
     round: 22,
@@ -133,7 +133,7 @@ export default function FixturesRoot() {
     if (filter === 'All') return gwMatches;
     if (filter === 'Live') return gwMatches.filter((m) => m.status === 'live');
     if (filter === 'Scheduled') return gwMatches.filter((m) => m.status === 'scheduled');
-    return gwMatches.filter((m) => m.status === 'ft');
+    return gwMatches.filter((m) => m.status === 'finished');
   }, [filter, gwMatches]);
 
   const gameweekDate = useMemo(() => {
