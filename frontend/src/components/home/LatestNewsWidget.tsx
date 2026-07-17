@@ -1,0 +1,59 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { Colors } from '../../constants/colors';
+import { fonts, radius } from '../../constants/layout';
+import { DUMMY_NEWS } from '../../constants/homeDummyData';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
+
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
+
+export default function LatestNewsWidget() {
+  const navigation = useNavigation<NavigationProp>();
+
+  return (
+    <View style={styles.widget}>
+      <Text style={styles.widgetTitle}>Latest News</Text>
+      {DUMMY_NEWS.map((article) => (
+        <TouchableOpacity
+          key={article.id}
+          style={styles.newsItem}
+          onPress={() => navigation.navigate('NewsDetail', { articleId: article.id })}
+        >
+          <View style={styles.newsImage} />
+          <View style={styles.newsText}>
+            <Text style={styles.newsCategory}>{article.category}</Text>
+            <Text style={styles.newsTitle}>{article.headline}</Text>
+            <Text style={styles.newsMeta}>
+              {article.source} · {article.time}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  widget: {
+    backgroundColor: Colors.surface,
+    borderRadius: radius.card,
+    padding: 16,
+    marginBottom: 16,
+  },
+  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
+  newsItem: { flexDirection: 'row', marginBottom: 14, alignItems: 'center' },
+  newsImage: {
+    width: 80,
+    height: 80,
+    borderRadius: radius.card,
+    backgroundColor: Colors.surface2,
+    marginRight: 12,
+  },
+  newsText: { flex: 1 },
+  newsCategory: { fontSize: 11, fontFamily: fonts.bodyBold, color: Colors.yellow, marginBottom: 4 },
+  newsTitle: { fontSize: 14, fontFamily: fonts.bodyBold, color: Colors.white },
+  newsMeta: { fontSize: 12, fontFamily: fonts.body, color: Colors.grey2, marginTop: 4 },
+});
