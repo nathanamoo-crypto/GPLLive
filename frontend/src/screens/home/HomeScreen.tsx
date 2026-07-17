@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,53 +41,64 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.logoRow}>
-          <View style={styles.glBadge}>
-            <Text style={styles.glBadgeText}>GL</Text>
-          </View>
-          <Text style={styles.logo}>
-            GPL <Text style={styles.logoLIVE}>LIVE</Text>
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Search')}
-          >
-            <Ionicons name="search" size={22} color={Colors.grey1} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('NotificationInbox')}
-          >
-            <Ionicons name="notifications-outline" size={22} color={Colors.grey1} />
-            {unreadCount > 0 ? (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadText}>{unreadCount}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
+  <View style={styles.container}>
+    <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
+      <View style={styles.logoRow}>
+        <Image
+          source={require('../../../assets/GplLogo1.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+
+        <Text style={styles.logo}>
+          GPL <Text style={styles.logoLIVE}>LIVE</Text>
+        </Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: getScrollBottomPadding(insets.bottom) },
-        ]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <TodayMatchesWidget matches={DUMMY_MATCHES} />
-        <LatestNewsWidget />
-        <LeagueTableWidget />
-        <FantasySnapshotWidget />
-        <PredictionLeaderboardTeaser />
-      </ScrollView>
+      <View style={styles.headerRight}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('Search')}
+        >
+          <Ionicons name="search" size={22} color={Colors.grey1} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('NotificationInbox')}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={22}
+            color={Colors.grey1}
+          />
+          {unreadCount > 0 ? (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{unreadCount}</Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
+      </View>
     </View>
-  );
+
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: getScrollBottomPadding(insets.bottom) },
+      ]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <TodayMatchesWidget matches={DUMMY_MATCHES} />
+      <LatestNewsWidget />
+      <LeagueTableWidget />
+      <FantasySnapshotWidget />
+      <PredictionLeaderboardTeaser />
+    </ScrollView>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -126,6 +138,11 @@ const styles = StyleSheet.create({
   },
   logoLIVE: {
     color: Colors.yellow,
+  },
+
+  logoImage: {
+  width: 38,
+  height: 38,
   },
   headerRight: {
     flexDirection: 'row',
