@@ -112,7 +112,7 @@ export default function MatchDetailsScreen() {
           <Text style={styles.gameweekText}>Round {MOCK_MATCH.round}</Text>
         </View>
 
-        {MOCK_MATCH.status === 'ft' && (
+        {MOCK_MATCH.status === 'finished' && (
           <TouchableOpacity
             style={styles.motmButton}
             onPress={() => navigation.navigate('MotmVote', { matchId: matchId || MOCK_MATCH.id })}

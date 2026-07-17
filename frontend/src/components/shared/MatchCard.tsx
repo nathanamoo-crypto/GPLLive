@@ -21,14 +21,14 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
   const statusColor =
     match.status === 'live'
       ? Colors.red
-      : match.status === 'ft'
+      : match.status === 'finished'
         ? Colors.grey2
         : Colors.yellow;
 
   const statusText =
     match.status === 'live'
       ? 'LIVE'
-      : match.status === 'ft'
+      : match.status === 'finished'
         ? 'FT'
         : timeStr;
 
