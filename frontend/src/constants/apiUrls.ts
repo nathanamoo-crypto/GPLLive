@@ -62,3 +62,14 @@ export const PREDICT_URL = 'http://localhost:8085';
  * Endpoints: POST /notifications/register  |  POST /notifications/send
  */
 export const NOTIFICATION_URL = 'http://localhost:8086';
+
+/**
+ * discussion-service
+ * Handles: match discussions, message posting, real-time commentary
+ * Endpoints: GET /discussions/:fixtureId  |  POST /discussions/:fixtureId
+ *
+ * INTEGRATION: When Augustine shares the Railway URL, replace localhost below.
+ * TODO: confirm real port/URL with backend — placeholder value, do not deploy
+ * without updating.
+ */
+export const DISCUSSION_URL = 'http://localhost:8087';

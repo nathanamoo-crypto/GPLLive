@@ -9,7 +9,8 @@ import SearchScreen from '../screens/home/SearchScreen';
 import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
 import NewsDetailScreen from '../screens/news/NewsDetailScreen';
 import MotmVoteScreen from '../screens/match/MotmVoteScreen';
-import type { MatchDetailsParams, NewsDetailParams, MotmVoteParams } from './types';
+import DiscussionScreen from '../screens/match/DiscussionScreen';
+import type { MatchDetailsParams, NewsDetailParams, MotmVoteParams, DiscussionParams } from './types';
 
 export type HomeStackParamList = {
   HomeFeed: undefined;
@@ -20,6 +21,7 @@ export type HomeStackParamList = {
   MatchDetails: MatchDetailsParams;
   NewsDetail: NewsDetailParams;
   MotmVote: MotmVoteParams;
+  Discussion: DiscussionParams;
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -40,6 +42,7 @@ export default function HomeStack() {
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
       <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <Stack.Screen name="MotmVote" component={MotmVoteScreen} />
+      <Stack.Screen name="Discussion" component={DiscussionScreen} />
     </Stack.Navigator>
   );
 }
