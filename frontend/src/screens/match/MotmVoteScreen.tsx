@@ -44,27 +44,32 @@ export default function MotmVoteScreen() {
   const [results, setResults] = useState<MotmResult[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadCandidates = useCallback(async () => {
+  const loadCandidates = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMotmCandidates(matchId);
+      const data = await getMotmCandidates(matchId, signal);
+      if (signal?.aborted) return;
       setCandidates(data.candidates);
       if (data.hasVoted) {
         setHasVoted(true);
         setVotedPlayerId(data.votedPlayerId ?? null);
-        const resultsData = await getMotmResults(matchId);
+        const resultsData = await getMotmResults(matchId, signal);
+        if (signal?.aborted) return;
         setResults(resultsData.results);
       }
     } catch {
+      if (signal?.aborted) return;
       setError('Failed to load candidates. Check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [matchId]);
 
   useEffect(() => {
-    loadCandidates();
+    const controller = new AbortController();
+    loadCandidates(controller.signal);
+    return () => controller.abort();
   }, [loadCandidates]);
 
   const handleSubmitVote = async () => {
@@ -102,7 +107,7 @@ export default function MotmVoteScreen() {
         <View style={styles.centeredMessage}>
           <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadCandidates}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => loadCandidates()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
