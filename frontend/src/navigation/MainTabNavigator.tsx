@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeStack from './HomeStack';
-import FantasyStack from './FantasyStack';
-import PredictStack from './PredictStack';
+import GamesStack from './GamesStack';
+import TableStack from './TableStack';
 import NewsStack from './NewsStack';
 import FixturesStack from './FixturesStack';
 import ProfileStack from './ProfileStack';
@@ -14,8 +14,8 @@ import { Colors } from '../constants/colors';
 
 export type MainTabParamList = {
   Home: undefined;
-  Fantasy: undefined;
-  Predict: undefined;
+  Games: undefined;
+  Table: undefined;
   News: undefined;
   Fixtures: undefined;
   Profile: undefined;
@@ -50,19 +50,19 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Fantasy"
-        component={FantasyStack}
+        name="Games"
+        component={GamesStack}
         options={{
-          tabBarLabel: 'Fantasy',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size || 24} color={color} />,
+          tabBarLabel: 'Games',
+          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" size={size || 24} color={color} />,
         }}
       />
       <Tab.Screen
-        name="Predict"
-        component={PredictStack}
+        name="Table"
+        component={TableStack}
         options={{
-          tabBarLabel: 'Predict',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox" size={size || 24} color={color} />,
+          tabBarLabel: 'Table',
+          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size || 24} color={color} />,
         }}
       />
       <Tab.Screen

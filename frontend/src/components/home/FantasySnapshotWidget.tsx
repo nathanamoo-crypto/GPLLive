@@ -12,7 +12,7 @@ export default function FantasySnapshotWidget() {
 
   const handleNavigateToFantasy = () => {
     navigation.dispatch(
-      CommonActions.navigate({ name: 'Fantasy' })
+      CommonActions.navigate({ name: 'Games', params: { screen: 'GamesRoot', params: { defaultTab: 'fantasy' } } })
     );
   };
 

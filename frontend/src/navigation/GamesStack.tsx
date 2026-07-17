@@ -1,15 +1,15 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import FantasyRoot from '../screens/fantasy/FantasyRoot';
+import GamesRoot from '../screens/games/GamesRoot';
 
-export type FantasyStackParamList = {
-  FantasyRoot: undefined;
+export type GamesStackParamList = {
+  GamesRoot: { defaultTab?: 'fantasy' | 'predictions' } | undefined;
 };
 
-const Stack = createNativeStackNavigator<FantasyStackParamList>();
+const Stack = createNativeStackNavigator<GamesStackParamList>();
 
-export default function FantasyStack() {
+export default function GamesStack() {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -17,7 +17,7 @@ export default function FantasyStack() {
         contentStyle: { backgroundColor: '#0A0A0A' },
         animation: 'slide_from_right',
       }}>
-      <Stack.Screen name="FantasyRoot" component={FantasyRoot} />
+      <Stack.Screen name="GamesRoot" component={GamesRoot} />
     </Stack.Navigator>
   );
 }
