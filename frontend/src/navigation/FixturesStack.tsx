@@ -3,11 +3,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import FixturesRoot from '../screens/fixtures/FixturesRoot';
 import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
-import type { MatchDetailsParams } from './types';
+import MotmVoteScreen from '../screens/match/MotmVoteScreen';
+import type { MatchDetailsParams, MotmVoteParams } from './types';
 
 export type FixturesStackParamList = {
   FixturesRoot: undefined;
   MatchDetails: MatchDetailsParams;
+  MotmVote: MotmVoteParams;
 };
 
 const Stack = createNativeStackNavigator<FixturesStackParamList>();
@@ -22,6 +24,7 @@ export default function FixturesStack() {
       }}>
       <Stack.Screen name="FixturesRoot" component={FixturesRoot} />
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
+      <Stack.Screen name="MotmVote" component={MotmVoteScreen} />
     </Stack.Navigator>
   );
 }
