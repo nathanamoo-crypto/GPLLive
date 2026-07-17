@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +18,7 @@ import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import type { Match } from '../../types';
 import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
+import { Logos } from '../../constants/logos';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
 
@@ -211,7 +213,7 @@ export default function FixturesRoot() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.filterRow}
+            style={{ flexGrow: 0 }}
             contentContainerStyle={styles.filterContent}
           >
             {FILTER_OPTIONS.map((opt) => (
@@ -262,7 +264,7 @@ export default function FixturesRoot() {
 
 function StandingsView() {
   const standings = useMemo(() => {
-    const clubs = GPL_CLUBS.slice(0, 10);
+    const clubs = GPL_CLUBS;
     return clubs.map((club, i) => ({
       position: i + 1,
       club,
@@ -308,11 +310,11 @@ function StandingsView() {
             {s.position}
           </Text>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={styles.badgeSmall}>
-              <Text style={styles.badgeSmallText}>
-                {s.club.shortName.slice(0, 2)}
-              </Text>
-            </View>
+            <Image
+            source={Logos[s.club.id]}
+            style={styles.clubLogo}
+            resizeMode="contain"
+            />
             <Text style={styles.cellClub} numberOfLines={1}>
               {s.club.shortName}
             </Text>
@@ -335,7 +337,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: Colors.black,
   },
   headerCenter: {
@@ -366,23 +368,23 @@ const styles = StyleSheet.create({
     color: Colors.grey1,
     fontSize: 12,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 6,
   },
   tableButton: {
     padding: 8,
   },
   tabRow: {
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    borderRadius: 8,
     backgroundColor: Colors.surface2,
-    padding: 3,
+    padding: 2,
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -400,20 +402,35 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: '#000000',
   },
-  filterRow: { backgroundColor: Colors.black, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 6 },
+  filterRow: {
+  height: 40,
+  marginBottom: 0,
+  backgroundColor: Colors.black,
+  borderBottomWidth: 0,
+  },
+  filterContent: {
+  paddingHorizontal: 12,
+  paddingVertical: 2,
+  gap: 4,
+  alignItems: 'center',
+  },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.surface2,
-    marginRight: 6,
+  paddingHorizontal: 22,
+  paddingVertical: 10,
+  borderRadius: 20,
+  backgroundColor: Colors.surface2,
+  marginRight: 6,
   },
   filterChipActive: { backgroundColor: Colors.yellow },
   filterText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
   filterTextActive: { color: '#000000' },
   list: { flex: 1 },
-  listContent: { padding: 16, gap: 8 },
+  listContent: {
+  paddingHorizontal: 12,
+  paddingTop: 0,
+  paddingBottom: 24,
+  gap: 6,
+  },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.grey2 },
   standingsContent: { padding: 16, paddingBottom: 40 },
@@ -447,13 +464,8 @@ const styles = StyleSheet.create({
   cellPts: { fontSize: 15, fontWeight: '900', color: Colors.fantasyGold },
   cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
   cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
-  badgeSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.yellow },
+  clubLogo: {
+  width: 24,
+  height: 24,
+},
 });

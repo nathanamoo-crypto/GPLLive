@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,10 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { GPL_CLUBS } from '../../constants/clubs';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
+import { Logos } from '../../constants/logos';
 
 type SortKey = 'pts' | 'gd' | 'w';
 
 interface StandingRow {
+  clubId: string;
   position: number;
   clubName: string;
   shortName: string;
@@ -28,6 +31,7 @@ interface StandingRow {
 }
 
 const MOCK_STANDINGS: StandingRow[] = GPL_CLUBS.map((club, i) => ({
+  clubId: club.id,
   position: i + 1,
   clubName: club.name,
   shortName: club.shortName,
@@ -58,10 +62,10 @@ export default function LeagueTableScreen() {
         <Text style={styles.headerTitle}>League Table</Text>
       </View>
 
-      <ScrollView
+      <View style={styles.sortRow}>
+        <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.sortRow}
         contentContainerStyle={styles.sortContent}
       >
         {([
@@ -80,6 +84,7 @@ export default function LeagueTableScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
       <View style={styles.tableHead}>
         <Text style={[styles.th, { width: 28 }]}>#</Text>
@@ -117,11 +122,13 @@ export default function LeagueTableScreen() {
                 {s.position}
               </Text>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={styles.badgeSmall}>
-                  <Text style={styles.badgeSmallText}>
-                    {s.shortName.slice(0, 2)}
-                  </Text>
-                </View>
+                <Image
+                  source={Logos[
+                    GPL_CLUBS.find(club => club.shortName === s.shortName)?.id ?? ''
+                  ]}
+                  style={styles.badgeSmall}
+                    resizeMode="contain"
+              />
                 <Text style={styles.cellClub} numberOfLines={1}>
                   {s.shortName}
                 </Text>
@@ -163,16 +170,26 @@ const styles = StyleSheet.create({
     color: Colors.white,
     textTransform: 'uppercase',
   },
-  sortRow: { backgroundColor: Colors.black, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  sortContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  sortRow: {
+  backgroundColor: Colors.black,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.border,
+  },
+  sortContent: {
+  paddingHorizontal: 16,
+  flexDirection: 'row',
+  alignItems: 'center',
+  },
   sortChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 9999,
-    backgroundColor: Colors.surface2,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: 8,
+  height: 40,
+  paddingHorizontal: 18,
+  borderRadius: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: Colors.surface2,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  marginRight: 10,
   },
   sortChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
   sortText: { fontSize: 13, fontWeight: '600', color: Colors.grey1 },
@@ -211,12 +228,8 @@ const styles = StyleSheet.create({
   cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
   cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
   badgeSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeSmallText: { fontSize: 9, fontWeight: '800', color: Colors.yellow },
+  width: 24,
+  height: 24,
+  marginRight: 4,
+},
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 
 import { Colors } from '../../constants/colors';
 import { fonts } from '../../constants/layout';
@@ -18,9 +18,11 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity }]}>
-        <View style={styles.glBadge}>
-          <Text style={styles.glBadgeText}>GL</Text>
-        </View>
+        <Image
+          source={require('../../../assets/GplLogo1.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.logoText}>
           GPL <Text style={styles.logoLIVE}>LIVE</Text>
         </Text>
@@ -39,22 +41,11 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
-  glBadge: {
-    backgroundColor: Colors.yellow,
-    borderRadius: 12,
-    width: 64,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  glBadgeText: {
-    fontFamily: fonts.display,
-    fontWeight: '800',
-    fontSize: 28,
-    color: '#000000',
-  },
-  logoText: {
+  logoImage: {
+  width: 140,
+  height: 140,
+  marginBottom: 20,
+  },logoText: {
     fontFamily: fonts.display,
     fontSize: 38,
     fontWeight: '800',

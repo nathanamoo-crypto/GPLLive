@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -150,32 +151,27 @@ export default function RegisterLoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <View style={{ backgroundColor: Colors.yellow, borderRadius: 8, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            <Text style={{ fontFamily: fonts.display, fontWeight: '800', fontSize: 18, color: '#000000' }}>GL</Text>
-          </View>
-          <Text style={{ fontFamily: fonts.display, fontSize: 20, fontWeight: '800', color: Colors.white }}>
-            GPL <Text style={{ color: Colors.yellow }}>LIVE</Text>
-          </Text>
-        </View>
-        <Text style={styles.heading}>{mode === 'register' ? 'JOIN THE TERRACES' : 'WELCOME BACK'}</Text>
-        <Text style={styles.subheading}>{mode === 'register' ? 'Create an account to get started.' : 'Sign in to continue.'}</Text>
+         <Image
+          source={require('../../../assets/GplLogo1.png')}
+            style={{
+                    width: 120,
+                    height: 120,
+                    marginBottom: 12,
+                  }}
+         resizeMode="contain"
+  />
 
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            onPress={() => setMode('register')}
-            style={[styles.tabButton, mode === 'register' && styles.tabActive]}
-            disabled={loading}
-          >
-            <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setMode('login')}
-            style={[styles.tabButton, mode === 'login' && styles.tabActive]}
-            disabled={loading}
-          >
-            <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Log In</Text>
-          </TouchableOpacity>
-        </View>
+  <Text
+    style={{
+      fontFamily: fonts.display,
+      fontSize: 20,
+      fontWeight: '800',
+      color: Colors.white,
+    }}
+  >
+    GPL <Text style={{ color: Colors.yellow }}>LIVE</Text>
+  </Text>
+</View>
 
         {mode === 'register' && (
           <View style={styles.field}>

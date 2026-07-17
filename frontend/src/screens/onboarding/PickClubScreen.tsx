@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { GPL_CLUBS } from '../../constants/clubs';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { getAuthErrorMessage } from '../../utils/authValidation';
+import { Logos } from '../../constants/logos';
 
 export default function PickClubScreen() {
   const insets = useSafeAreaInsets();
@@ -88,11 +90,12 @@ export default function PickClubScreen() {
               }}
               disabled={loading}
             >
-              <View style={styles.badgePlaceholder}>
-                <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
-                  {item.shortName.slice(0, 2).toUpperCase()}
-                </Text>
-              </View>
+              <Image
+                source={Logos[item.id]}
+                style={styles.badge}
+                resizeMode="contain"
+/>
+
               <Text style={[styles.clubName, active && styles.clubNameActive]}>{item.name}</Text>
               {active ? (
                 <View style={styles.checkmark}>
@@ -182,20 +185,15 @@ const styles = StyleSheet.create({
   clubCardActive: {
     borderColor: Colors.yellow,
     borderWidth: 2,
-  },
-  badgePlaceholder: {
+  }, 
+  
+  badge: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  badgeText: { color: Colors.white, fontWeight: '800', fontSize: 16 },
-  badgeTextActive: { color: Colors.yellow },
+
+
   clubName: { textAlign: 'center', fontSize: 12, fontWeight: '600', color: Colors.white },
   clubNameActive: { color: Colors.yellow },
   checkmark: {
