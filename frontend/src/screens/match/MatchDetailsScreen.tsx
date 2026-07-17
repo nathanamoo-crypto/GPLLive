@@ -10,10 +10,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
-import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
+import { getScrollBottomPadding } from '../../constants/layout';
 import type { Match, MatchEvent } from '../../types';
 import { getMatchDetails, getMatchEvents } from '../../services/matchService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
@@ -50,12 +51,13 @@ const MOCK_EVENTS: MatchEvent[] = [
   { id: 'e4', matchId: 'match-1', type: 'goal', minute: 58, playerName: 'Mbella', side: 'home' },
 ];
 
+type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
+
 export default function MatchDetailsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const route = useRoute();
-  // @ts-ignore
-  const { matchId } = route.params || {};
+  const route = useRoute<MatchDetailsRouteProp>();
+  const { matchId } = route.params;
 
   const [activeTab, setActiveTab] = useState<'events' | 'lineups' | 'stats'>('events');
 
@@ -73,7 +75,7 @@ export default function MatchDetailsScreen() {
       {/* Header with Back Button */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Match Details</Text>
         <View style={{ width: 40 }} /> 
@@ -112,15 +114,22 @@ export default function MatchDetailsScreen() {
           <Text style={styles.gameweekText}>Round {MOCK_MATCH.round}</Text>
         </View>
 
-        {MOCK_MATCH.status === 'finished' && (
+        <View style={styles.actionRow}>
           <TouchableOpacity
-            style={styles.motmButton}
-            onPress={() => navigation.navigate('MotmVote', { matchId: matchId || MOCK_MATCH.id })}
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('MotmVote', { matchId })}
           >
-            <Ionicons name="star" size={18} color={Colors.black} />
-            <Text style={styles.motmButtonText}>Vote Man of the Match</Text>
+            <Ionicons name="trophy" size={18} color={Colors.yellow} />
+            <Text style={styles.actionLabel}>Vote MOTM</Text>
           </TouchableOpacity>
-        )}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Discussion', { matchId })}
+          >
+            <Ionicons name="chatbubbles" size={18} color={Colors.yellow} />
+            <Text style={styles.actionLabel}>Discussion</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Tabs */}
         <View style={styles.tabBar}>
@@ -148,7 +157,7 @@ export default function MatchDetailsScreen() {
                     <Ionicons
                       name={event.type === 'goal' ? 'football' : 'square'}
                       size={16}
-                      color={event.type === 'goal' ? Colors.white : Colors.yellow}
+                      color={event.type === 'goal' ? Colors.textPrimary : '#FFD700'}
                     />
                   </View>
                   <Text style={[styles.eventPlayer, { textAlign: event.side === 'home' ? 'left' : 'right', flex: 1 }]}>
@@ -177,7 +186,7 @@ export default function MatchDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,7 +196,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white, fontFamily: fonts.display, textTransform: 'uppercase' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   scoreboard: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
@@ -199,50 +208,50 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   teamContainer: { alignItems: 'center', width: '35%' },
-  badgePlaceholder: { width: 64, height: 64, borderRadius: radius.avatar, backgroundColor: Colors.border, marginBottom: 8 },
-  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.white },
+  badgePlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.border, marginBottom: 8 },
+  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.textPrimary },
   scoreContainer: { alignItems: 'center' },
-  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.white },
+  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.textPrimary },
   liveBadge: {
-    backgroundColor: Colors.red,
+    backgroundColor: Colors.live,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: radius.badge,
+    borderRadius: 4,
     marginTop: 8,
   },
-  liveText: { color: Colors.white, fontSize: 12, fontWeight: '700' },
+  liveText: { color: Colors.textInverse, fontSize: 12, fontWeight: '700' },
   venueInfo: { padding: 16, alignItems: 'center' },
-  venueText: { fontSize: 14, color: Colors.grey1 },
-  gameweekText: { fontSize: 12, color: Colors.grey2, marginTop: 4 },
-  tabBar: { flexDirection: 'row', backgroundColor: Colors.surface, paddingHorizontal: 16 },
-  tabItem: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: Colors.yellow },
-  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.grey2 },
-  tabLabelActive: { color: Colors.yellow },
-  content: { padding: 16 },
-  eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.grey1 },
-  eventIcon: { width: 30, alignItems: 'center' },
-  eventPlayer: { fontSize: 14, color: Colors.white },
-  placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
-  placeholderText: { fontSize: 14, color: Colors.grey1, textAlign: 'center' },
-  motmButton: {
+  venueText: { fontSize: 14, color: Colors.textSecondary },
+  gameweekText: { fontSize: 12, color: Colors.textTertiary, marginTop: 4 },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
     gap: 8,
-    backgroundColor: Colors.yellow,
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 12,
-    paddingVertical: 12,
-    borderRadius: radius.button,
   },
-  motmButtonText: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.black,
-    textTransform: 'uppercase',
-  },
+  actionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  tabBar: { flexDirection: 'row', backgroundColor: Colors.surface, paddingHorizontal: 16 },
+  tabItem: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabItemActive: { borderBottomColor: Colors.primary },
+  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.textTertiary },
+  tabLabelActive: { color: Colors.primary },
+  content: { padding: 16 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
+  eventIcon: { width: 30, alignItems: 'center' },
+  eventPlayer: { fontSize: 14, color: Colors.textPrimary },
+  placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
+  placeholderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
 });

@@ -7,14 +7,13 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
-  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
-import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
+import { getScrollBottomPadding } from '../../constants/layout';
 import type { Article } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -65,7 +64,7 @@ export default function NewsDetailScreen() {
             onPress={() => navigation.goBack()}
             style={[styles.backButton, { top: insets.top + 10 }]}
           >
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
           </TouchableOpacity>
         </View>
 
@@ -94,56 +93,49 @@ export default function NewsDetailScreen() {
       </ScrollView>
 
       {/* Share Button (Floating) */}
-      <TouchableOpacity
-        style={[styles.shareButton, { bottom: insets.bottom + 20 }]}
-        onPress={async () => {
-          try {
-            await Share.share({ message: MOCK_ARTICLE.headline + '\n\n' + MOCK_ARTICLE.url });
-          } catch { /* user cancelled */ }
-        }}
-      >
-        <Ionicons name="share-social-outline" size={24} color={Colors.black} />
+      <TouchableOpacity style={[styles.shareButton, { bottom: insets.bottom + 20 }]}>
+        <Ionicons name="share-social-outline" size={24} color={Colors.textInverse} />
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+  container: { flex: 1, backgroundColor: Colors.background },
   imageHeader: { width: width, height: 250, backgroundColor: Colors.border },
-  imagePlaceholder: { flex: 1, backgroundColor: Colors.surface },
+  imagePlaceholder: { flex: 1, backgroundColor: '#333' },
   backButton: {
     position: 'absolute',
     left: 16,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: radius.button,
+    borderRadius: 20,
     padding: 8,
   },
   content: { padding: 20 },
-  category: { fontSize: 12, fontWeight: '800', color: Colors.yellow, marginBottom: 8, letterSpacing: 1, fontFamily: fonts.display, textTransform: 'uppercase' },
-  headline: { fontSize: 24, fontWeight: '800', color: Colors.white, marginBottom: 20, lineHeight: 32, fontFamily: fonts.display },
+  category: { fontSize: 12, fontWeight: '800', color: Colors.primary, marginBottom: 8, letterSpacing: 1 },
+  headline: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 20, lineHeight: 32 },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   authorBadge: {
     width: 40,
     height: 40,
-    borderRadius: radius.avatar,
+    borderRadius: 20,
     backgroundColor: Colors.yellow,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  authorText: { color: Colors.black, fontWeight: '700' },
-  authorName: { fontSize: 14, fontWeight: '700', color: Colors.white },
-  sourceText: { fontSize: 12, color: Colors.grey2, marginTop: 2 },
+  authorText: { color: Colors.textInverse, fontWeight: '700' },
+  authorName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  sourceText: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
   divider: { height: 1, backgroundColor: Colors.border, marginBottom: 24 },
-  body: { fontSize: 16, lineHeight: 26, color: Colors.white, letterSpacing: 0.3 },
+  body: { fontSize: 16, lineHeight: 26, color: Colors.textPrimary, letterSpacing: 0.3 },
   shareButton: {
     position: 'absolute',
     right: 20,
     width: 56,
     height: 56,
-    borderRadius: radius.avatar,
-    backgroundColor: Colors.yellow,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,

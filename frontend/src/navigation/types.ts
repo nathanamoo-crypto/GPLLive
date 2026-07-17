@@ -17,10 +17,12 @@ export type NewsDetailParams = {
   articleId: string;
 };
 
-export type LeagueTableParams = {
-  highlightClubId?: string;
-};
-
 export type MotmVoteParams = {
   matchId: string;
 };
+
+export type DiscussionParams = {
+  matchId: string;
+};
+
+export type LeagueTableParams = undefined;

@@ -1,0 +1,266 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Colors } from '../../constants/colors';
+import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
+import SubScreenHeader from '../../components/shared/SubScreenHeader';
+import {
+  getDiscussionMessages,
+  sendDiscussionMessage,
+} from '../../services/discussionService';
+import type { DiscussionMessage } from '../../services/discussionService';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
+
+type DiscussionRouteProp = RouteProp<HomeStackParamList, 'Discussion'>;
+
+function relativeTime(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export default function DiscussionScreen() {
+  const insets = useSafeAreaInsets();
+  const route = useRoute<DiscussionRouteProp>();
+  const { matchId } = route.params;
+
+  const [messages, setMessages] = useState<DiscussionMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadMessages = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getDiscussionMessages(matchId, signal);
+      if (signal?.aborted) return;
+      setMessages(data.messages);
+    } catch {
+      if (signal?.aborted) return;
+      setError('Failed to load discussion. Check your connection and try again.');
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadMessages(controller.signal);
+    return () => controller.abort();
+  }, [loadMessages]);
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!text) return;
+    setSubmitting(true);
+    try {
+      const data = await sendDiscussionMessage(matchId, text);
+      setMessages((prev) => [...prev, data.message]);
+      setInputText('');
+    } catch {
+      setError('Failed to send message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderMessage = ({ item }: { item: DiscussionMessage }) => (
+    <View style={styles.messageRow}>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>
+          {item.username.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+      <View style={styles.messageContent}>
+        <View style={styles.messageHeader}>
+          <Text style={styles.username}>{item.username}</Text>
+          <Text style={styles.timestamp}>{relativeTime(item.createdAt)}</Text>
+        </View>
+        <Text style={styles.messageText}>{item.message}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <SubScreenHeader title="Discussion" />
+
+        {loading && (
+          <View style={styles.centeredMessage}>
+            <ActivityIndicator size="large" color={Colors.yellow} />
+            <Text style={styles.loadingText}>Loading discussion...</Text>
+          </View>
+        )}
+
+        {!loading && error && (
+          <View style={styles.centeredMessage}>
+            <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && (
+          <>
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderMessage}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: getScrollBottomPadding(insets.bottom) },
+              ]}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="chatbubbles-outline" size={48} color={Colors.grey2} />
+                  <Text style={styles.emptyText}>
+                    No messages yet. Start the conversation!
+                  </Text>
+                </View>
+              }
+            />
+
+            <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type a message..."
+                placeholderTextColor={Colors.grey2}
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, (!inputText.trim() || submitting) && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={!inputText.trim() || submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color={Colors.black} />
+                ) : (
+                  <Ionicons name="send" size={18} color={Colors.black} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.black },
+
+  centeredMessage: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  loadingText: { fontSize: 14, color: Colors.grey1, marginTop: 12 },
+  errorText: { fontSize: 14, color: Colors.grey1, marginTop: 12, textAlign: 'center' },
+  retryButton: { marginTop: 16, backgroundColor: Colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
+  retryButtonText: { fontSize: 14, fontWeight: '800', color: Colors.black, fontFamily: fonts.display, textTransform: 'uppercase' },
+
+  listContent: { padding: 16 },
+
+  emptyContainer: { alignItems: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 14, color: Colors.grey2, marginTop: 12, textAlign: 'center' },
+
+  messageRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.yellow,
+  },
+  messageContent: { flex: 1 },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  username: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    color: Colors.white,
+  },
+  timestamp: {
+    fontSize: 11,
+    color: Colors.grey2,
+    marginLeft: 8,
+  },
+  messageText: {
+    fontSize: 14,
+    color: Colors.grey1,
+    lineHeight: 20,
+  },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.card,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.white,
+    maxHeight: 100,
+    marginRight: 10,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.4,
+  },
+});
