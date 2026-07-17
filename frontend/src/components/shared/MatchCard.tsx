@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 import { Colors } from '../../constants/colors';
 import { fonts } from '../../constants/layout';
 import { Match } from '../../types';
+import { Logos } from '../../constants/logos';
 
 interface MatchCardProps {
   match: Match;
@@ -45,9 +46,11 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
 
       <View style={styles.row}>
         <View style={styles.clubBlock}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeLabel}>{match.homeClub.shortName.slice(0, 2)}</Text>
-          </View>
+          <Image
+          source={Logos[match.homeClub.id]}
+          style={styles.clubLogo}
+          resizeMode="contain"
+          />
           <Text style={styles.clubName} numberOfLines={2}>
             {match.homeClub.name}
           </Text>
@@ -64,9 +67,11 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
         </View>
 
         <View style={styles.clubBlock}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeLabel}>{match.awayClub.shortName.slice(0, 2)}</Text>
-          </View>
+          <Image
+          source={Logos[match.awayClub.id]}
+          style={styles.clubLogo}
+          resizeMode="contain"
+        />
           <Text style={styles.clubName} numberOfLines={2}>
             {match.awayClub.name}
           </Text>
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
     width: 280,
   },
   statusChip: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -106,19 +111,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  badgeLabel: {
-    color: Colors.yellow,
-    fontSize: 11,
-    fontWeight: '800',
+  clubLogo: {
+  width: 38,
+  height: 38,
+  marginBottom: 8,
   },
   clubName: {
     fontSize: 12,
