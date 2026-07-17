@@ -10,11 +10,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import type { Match, MatchEvent } from '../../types';
 import { getMatchDetails, getMatchEvents } from '../../services/matchService';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 /*
 TEMP FIX: Service Layer Abstraction
@@ -50,7 +52,7 @@ const MOCK_EVENTS: MatchEvent[] = [
 
 export default function MatchDetailsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const route = useRoute();
   // @ts-ignore
   const { matchId } = route.params || {};
@@ -109,6 +111,16 @@ export default function MatchDetailsScreen() {
           <Text style={styles.venueText}>{MOCK_MATCH.venue}</Text>
           <Text style={styles.gameweekText}>Round {MOCK_MATCH.round}</Text>
         </View>
+
+        {MOCK_MATCH.status === 'ft' && (
+          <TouchableOpacity
+            style={styles.motmButton}
+            onPress={() => navigation.navigate('MotmVote', { matchId: matchId || MOCK_MATCH.id })}
+          >
+            <Ionicons name="star" size={18} color={Colors.black} />
+            <Text style={styles.motmButtonText}>Vote Man of the Match</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Tabs */}
         <View style={styles.tabBar}>
@@ -214,4 +226,23 @@ const styles = StyleSheet.create({
   eventPlayer: { fontSize: 14, color: Colors.white },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
   placeholderText: { fontSize: 14, color: Colors.grey1, textAlign: 'center' },
+  motmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.yellow,
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingVertical: 12,
+    borderRadius: radius.button,
+  },
+  motmButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: fonts.display,
+    color: Colors.black,
+    textTransform: 'uppercase',
+  },
 });

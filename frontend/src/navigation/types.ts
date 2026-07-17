@@ -20,3 +20,7 @@ export type NewsDetailParams = {
 export type LeagueTableParams = {
   highlightClubId?: string;
 };
+
+export type MotmVoteParams = {
+  matchId: string;
+};
