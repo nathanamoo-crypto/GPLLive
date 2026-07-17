@@ -73,9 +73,9 @@ export default function MoreScreen() {
     ]);
   };
 
-  const navigateToTabScreen = (tabName: string, screenName: string) => {
+  const navigateToTabScreen = (tabName: string, screenName: string, screenParams?: Record<string, unknown>) => {
     navigation.dispatch(
-      CommonActions.navigate({ name: tabName, params: { screen: screenName } })
+      CommonActions.navigate({ name: tabName, params: { screen: screenName, params: screenParams } })
     );
   };
 
@@ -120,21 +120,21 @@ export default function MoreScreen() {
         <MenuItem
           icon="trophy-outline"
           label="League Table"
-          onPress={() => navigateToTabScreen('Fixtures', 'LeagueTable')}
+          onPress={() => navigateToTabScreen('Table', 'LeagueTable')}
           color={Colors.yellow}
           iconBg="#1A2A3A"
         />
         <MenuItem
           icon="people-outline"
           label="Fantasy League"
-          onPress={() => navigateToTabScreen('Fantasy', 'FantasyRoot')}
+          onPress={() => navigateToTabScreen('Games', 'GamesRoot')}
           color={Colors.grey1}
           iconBg="#1A1A2A"
         />
         <MenuItem
           icon="checkbox-outline"
           label="Prediction League"
-          onPress={() => navigateToTabScreen('Predict', 'PredictRoot')}
+          onPress={() => navigateToTabScreen('Games', 'GamesRoot', { defaultTab: 'predictions' })}
           color={Colors.red}
           iconBg="#3A1A1A"
         />
