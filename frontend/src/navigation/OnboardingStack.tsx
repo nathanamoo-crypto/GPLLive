@@ -10,13 +10,7 @@ const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 
 export default function OnboardingStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#0A0A0A' },
-        animation: 'slide_from_right',
-      }}
-      initialRouteName="Slides">
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Slides">
       <Stack.Screen name="Slides" component={OnboardingSlides} />
       <Stack.Screen name="RegisterLogin" component={RegisterLoginScreen} />
       <Stack.Screen name="PickClub" component={PickClubScreen} />

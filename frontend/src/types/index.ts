@@ -18,6 +18,8 @@ export interface Club {
   shortName: string;
   badgeUrl: string;
   city: string;
+  stadium?: string;
+  stadiumCapacity?: number;
 }
 
 export interface Match {
