@@ -1,23 +1,48 @@
-import { Player, FantasyTeam } from '../types';
+import { Player, FantasyTeam, FormationKey } from '../types';
+import { FANTASY_URL } from '../constants/apiUrls';
 
-/**
- * MOCK FANTASY SERVICE
- * -------------------
- * This layer abstracts data fetching to make future API integration seamless.
- * 
- * TO REVERT/UPDATE: Replace mock returns with real 'api.post()' or 'api.get()' calls.
- */
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${FANTASY_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || `Request failed (${res.status})`);
+  }
+  return res.json();
+}
 
-// TODO: Replace with API call to /players
-export const fetchPlayers = async (): Promise<Player[]> => {
-  return [
-    { id: 'p1', name: 'Frank Etouga', position: 'FWD', price: 12.5, clubId: 'kotoko', club: { name: 'Asante Kotoko' } } as Player,
-    { id: 'p2', name: 'Gladson Awako', position: 'MID', price: 10.0, clubId: 'hearts', club: { name: 'Hearts of Oak' } } as Player,
-  ];
+export const fetchPlayers = async (position?: string): Promise<Player[]> => {
+  const params = position ? `?position=${position}` : '';
+  return request<Player[]>(`/fantasy/players${params}`);
 };
 
-// TODO: Replace with API call to /fantasy/squad
-export const saveFantasySquad = async (teamName: string, playerIds: string[]): Promise<void> => {
-  console.log('Saving squad to backend...', { teamName, playerIds });
-  await new Promise(resolve => setTimeout(resolve, 1000));
+export interface SaveSquadPayload {
+  teamName: string;
+  badgeId?: string;
+  captainId: string;
+  viceCaptainId?: string;
+  startingPlayerIds: string[];
+  formation: FormationKey;
+  playerIds: string[];
+}
+
+export const saveFantasySquad = async (data: SaveSquadPayload): Promise<{ team: FantasyTeam }> => {
+  return request<{ team: FantasyTeam }>('/fantasy/team', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const lockTeamForGameweek = async (): Promise<{ team: FantasyTeam }> => {
+  return request<{ team: FantasyTeam }>('/fantasy/team/lock', {
+    method: 'POST',
+  });
+};
+
+export const unlockTeam = async (): Promise<{ team: FantasyTeam }> => {
+  return request<{ team: FantasyTeam }>('/fantasy/team/lock', {
+    method: 'DELETE',
+  });
 };

@@ -44,6 +44,10 @@ export const Colors = {
   pitchGrass:   '#22C55E',
   bench:        '#4B5563',
   borderLight:  '#2A2A2A',
+  roleGk:       '#22C55E',
+  roleDef:      '#3B82F6',
+  roleMid:      '#A855F7',
+  roleFwd:      '#F97316',
 
   // Tag objects (preserved)
   tagFE: { bg: '#1A2E14', text: '#7CC56C' },

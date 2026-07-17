@@ -1,5 +1,13 @@
 export type MatchStatus = 'scheduled' | 'live' | 'ft' | 'postponed';
 export type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
+export type FormationKey = '4-3-3' | '4-4-2' | '3-4-3' | '4-5-1' | '3-5-2';
+
+export interface FormationDefinition {
+  label: FormationKey;
+  def: number;
+  mid: number;
+  fwd: number;
+}
 export type NewsCategory = 'GPL' | 'Black Stars' | 'AFCON' | 'Transfers';
 export type EventType = 'goal' | 'yellow_card' | 'red_card' | 'substitution';
 export type BadgeName = 'Prediction King' | 'Top Reactor' | 'Club Loyalist' | 'MOTM Master';
@@ -63,7 +71,7 @@ export interface FantasyTeam {
   overallRank: number;
   viceCaptainId?: string;
   startingPlayerIds?: string[];
-  formation?: string;
+  formation?: FormationKey;
   isLocked?: boolean;
   deadline?: string;
 }
@@ -175,18 +183,21 @@ export interface FantasyState {
   draftCaptainId: string | null;
   draftViceCaptainId: string | null;
   draftStartingPlayerIds: string[];
-  draftFormation: string;
+  draftFormation: FormationKey;
   budget: number;
+  loading: boolean;
+  error: string | null;
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
   setCaptain: (playerId: string) => void;
   setViceCaptain: (playerId: string) => void;
   setStartingXI: (playerIds: string[]) => void;
-  setFormation: (formation: string) => void;
+  setFormation: (formation: FormationKey) => void;
   submitSquad: (teamName: string) => Promise<void>;
-  lockTeamForGameweek: () => void;
-  unlockTeam: () => void;
+  lockTeamForGameweek: () => Promise<void>;
+  unlockTeam: () => Promise<void>;
   resetDraft: () => void;
+  clearError: () => void;
 }
 
 export interface PredictionState {

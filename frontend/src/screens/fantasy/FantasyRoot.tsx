@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,20 @@ import {
   FlatList,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
-import { useFantasyStore } from '../../store/fantasyStore';
+import { useFantasyStore, FORMATIONS, computeFormation } from '../../store/fantasyStore';
+import { fetchPlayers } from '../../services/fantasyService';
 import { GPL_CLUBS, CLUB_COLORS, CLUB_LOOKUP } from '../../constants/clubs';
-import type { FantasyPlayer, FantasyTeam, Player, Position, LeaderboardEntry } from '../../types';
+import type { FantasyPlayer, FantasyTeam, Player, Position, LeaderboardEntry, FormationKey } from '../../types';
 
-/**
- * MOCK DATA SECTION
- * -----------------
- * This data will be replaced by an API call once the backend is ready.
- */
 const ALL_CLUBS = GPL_CLUBS;
 
-/**
- * TODO: Replace with API call — see APIDocs.md → GET /fantasy/leaderboard
- */
 const MOCK_FANTASY_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 1, rankChange: 2, userId: 'u1', username: 'KotokoKing', club: CLUB_LOOKUP['kotoko'], totalPoints: 486, weekPoints: 54, isCurrentUser: false },
   { rank: 2, rankChange: -1, userId: 'u2', username: 'HeartsLoyal', club: CLUB_LOOKUP['hearts'], totalPoints: 472, weekPoints: 42, isCurrentUser: false },
@@ -38,80 +32,13 @@ const MOCK_FANTASY_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 129, rankChange: -1, userId: 'u6', username: 'RTU Riders', club: CLUB_LOOKUP['rtu'], totalPoints: 308, weekPoints: 41, isCurrentUser: false },
 ];
 
-/**
- * TODO: Replace with API call — see APIDocs.md → GET /fantasy/leagues
- */
 const MOCK_PRIVATE_LEAGUES = [
   { id: 'pl1', name: 'Kumasi Kings League', memberCount: 12, rank: 3, totalMembers: 12, code: 'KKL2024' },
   { id: 'pl2', name: 'Friends & Family', memberCount: 6, rank: 1, totalMembers: 6, code: 'FAM24' },
   { id: 'pl3', name: 'GPL Experts', memberCount: 24, rank: 8, totalMembers: 24, code: 'GPLXP' },
 ];
 
-const MOCK_PLAYERS: Player[] = [
-  // GK
-  { id: 'gk1', name: 'Richard Attah', position: 'GK', price: 6.0, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'gk2', name: 'Ibrahim Danlad', position: 'GK', price: 6.5, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'gk3', name: 'Felix Kyei', position: 'GK', price: 5.5, clubId: 'medeama', club: CLUB_LOOKUP['medeama'] },
-  { id: 'gk4', name: 'Stephen Diyou', position: 'GK', price: 5.0, clubId: 'dreams', club: CLUB_LOOKUP['dreams'] },
-  { id: 'gk5', name: 'Joseph Addo', position: 'GK', price: 4.5, clubId: 'legon', club: CLUB_LOOKUP['legon'] },
-  { id: 'gk6', name: 'William Esso', position: 'GK', price: 4.0, clubId: 'dwarfs', club: CLUB_LOOKUP['dwarfs'] },
-  // DEF
-  { id: 'def1', name: 'Imoro Ibrahim', position: 'DEF', price: 7.5, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'def2', name: 'Dennis Korsah', position: 'DEF', price: 7.0, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'def3', name: 'Christopher Nettey', position: 'DEF', price: 6.5, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'def4', name: 'Mohammed Alhassan', position: 'DEF', price: 6.0, clubId: 'medeama', club: CLUB_LOOKUP['medeama'] },
-  { id: 'def5', name: 'Sulemana Ibrahim', position: 'DEF', price: 5.5, clubId: 'dreams', club: CLUB_LOOKUP['dreams'] },
-  { id: 'def6', name: 'Eric Donkor', position: 'DEF', price: 5.5, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'def7', name: 'Zakaria Yakubu', position: 'DEF', price: 5.0, clubId: 'bibiani', club: CLUB_LOOKUP['bibiani'] },
-  { id: 'def8', name: 'Adams Yakubu', position: 'DEF', price: 5.0, clubId: 'dwarfs', club: CLUB_LOOKUP['dwarfs'] },
-  { id: 'def9', name: 'Awal Mohammed', position: 'DEF', price: 5.0, clubId: 'rtu', club: CLUB_LOOKUP['rtu'] },
-  { id: 'def10', name: 'Frank Boateng', position: 'DEF', price: 4.5, clubId: 'cerro', club: CLUB_LOOKUP['cerro'] },
-  { id: 'def11', name: 'Samuel Paintsil', position: 'DEF', price: 4.5, clubId: 'legon', club: CLUB_LOOKUP['legon'] },
-  { id: 'def12', name: 'Daniel Nimarko', position: 'DEF', price: 4.0, clubId: 'ashgold', club: CLUB_LOOKUP['ashgold'] },
-  { id: 'def13', name: 'David Odoom', position: 'DEF', price: 4.0, clubId: 'elmina', club: CLUB_LOOKUP['elmina'] },
-  { id: 'def14', name: 'Eric Boadi', position: 'DEF', price: 4.5, clubId: 'karela', club: CLUB_LOOKUP['karela'] },
-  { id: 'def15', name: 'Joseph Kwadwo', position: 'DEF', price: 4.0, clubId: 'mighty', club: CLUB_LOOKUP['mighty'] },
-  // MID
-  { id: 'mid1', name: 'Gladson Awako', position: 'MID', price: 10.0, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'mid2', name: 'Augustine Okrah', position: 'MID', price: 9.5, clubId: 'cerro', club: CLUB_LOOKUP['cerro'] },
-  { id: 'mid3', name: 'Justice Blay', position: 'MID', price: 9.0, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'mid4', name: 'David Abagna', position: 'MID', price: 9.0, clubId: 'rtu', club: CLUB_LOOKUP['rtu'] },
-  { id: 'mid5', name: 'Seth Tweneboah', position: 'MID', price: 8.5, clubId: 'medeama', club: CLUB_LOOKUP['medeama'] },
-  { id: 'mid6', name: 'Bashiru Gamboda', position: 'MID', price: 8.0, clubId: 'dreams', club: CLUB_LOOKUP['dreams'] },
-  { id: 'mid7', name: 'Emmanuel Agyeman', position: 'MID', price: 7.5, clubId: 'bibiani', club: CLUB_LOOKUP['bibiani'] },
-  { id: 'mid8', name: 'Fataw Salifu', position: 'MID', price: 7.5, clubId: 'dwarfs', club: CLUB_LOOKUP['dwarfs'] },
-  { id: 'mid9', name: 'Michael Ampadu', position: 'MID', price: 7.0, clubId: 'legon', club: CLUB_LOOKUP['legon'] },
-  { id: 'mid10', name: 'Stephen Amankona', position: 'MID', price: 7.0, clubId: 'cerro', club: CLUB_LOOKUP['cerro'] },
-  { id: 'mid11', name: 'Enock Morrison', position: 'MID', price: 6.5, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'mid12', name: 'Benjamin Tweneboah', position: 'MID', price: 6.5, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'mid13', name: 'Micheal Acheampong', position: 'MID', price: 6.0, clubId: 'karela', club: CLUB_LOOKUP['karela'] },
-  { id: 'mid14', name: 'Charles Dwamena', position: 'MID', price: 6.0, clubId: 'rtu', club: CLUB_LOOKUP['rtu'] },
-  { id: 'mid15', name: 'Richmond Nii Nortey', position: 'MID', price: 5.5, clubId: 'elmina', club: CLUB_LOOKUP['elmina'] },
-  // FWD
-  { id: 'fwd1', name: 'Frank Etouga', position: 'FWD', price: 12.5, clubId: 'kotoko', club: CLUB_LOOKUP['kotoko'] },
-  { id: 'fwd2', name: 'Albert Eonde', position: 'FWD', price: 11.0, clubId: 'hearts', club: CLUB_LOOKUP['hearts'] },
-  { id: 'fwd3', name: 'Abednego Tetteh', position: 'FWD', price: 10.5, clubId: 'medeama', club: CLUB_LOOKUP['medeama'] },
-  { id: 'fwd4', name: 'Sampson Agyapong', position: 'FWD', price: 9.5, clubId: 'dreams', club: CLUB_LOOKUP['dreams'] },
-  { id: 'fwd5', name: 'Hamza Issah', position: 'FWD', price: 9.0, clubId: 'dwarfs', club: CLUB_LOOKUP['dwarfs'] },
-  { id: 'fwd6', name: 'Peter Acquah', position: 'FWD', price: 8.5, clubId: 'rtu', club: CLUB_LOOKUP['rtu'] },
-  { id: 'fwd7', name: 'Kwame Boateng', position: 'FWD', price: 8.0, clubId: 'bibiani', club: CLUB_LOOKUP['bibiani'] },
-  { id: 'fwd8', name: 'Seidu Salifu', position: 'FWD', price: 7.5, clubId: 'cerro', club: CLUB_LOOKUP['cerro'] },
-  { id: 'fwd9', name: 'Eric Kwakwa', position: 'FWD', price: 7.0, clubId: 'legon', club: CLUB_LOOKUP['legon'] },
-];
-
 const POSITION_TABS: Position[] = ['GK', 'DEF', 'MID', 'FWD'];
-
-const ALLOWED_FORMATIONS = ['4-3-3', '4-4-2', '4-5-1', '3-5-2', '3-4-3', '5-3-2', '5-4-1'];
-
-const FORMATION_BREAKDOWN: Record<string, { def: number; mid: number; fwd: number }> = {
-  '4-3-3': { def: 4, mid: 3, fwd: 3 },
-  '4-4-2': { def: 4, mid: 4, fwd: 2 },
-  '4-5-1': { def: 4, mid: 5, fwd: 1 },
-  '3-5-2': { def: 3, mid: 5, fwd: 2 },
-  '3-4-3': { def: 3, mid: 4, fwd: 3 },
-  '5-3-2': { def: 5, mid: 3, fwd: 2 },
-  '5-4-1': { def: 5, mid: 4, fwd: 1 },
-};
 
 const MAX_PLAYERS = 15;
 const MAX_PER_POSITION: Record<Position, number> = {
@@ -124,6 +51,13 @@ const MAX_PER_POSITION: Record<Position, number> = {
 type BuilderStep = 'setup' | 'browse' | 'pitch' | 'lineup';
 type HubTab = 'team' | 'leaderboard' | 'leagues';
 
+const ROLE_COLORS: Record<Position, string> = {
+  GK: Colors.roleGk,
+  DEF: Colors.roleDef,
+  MID: Colors.roleMid,
+  FWD: Colors.roleFwd,
+};
+
 export default function FantasyRoot() {
   const insets = useSafeAreaInsets();
   const [teamName, setTeamName] = useState('');
@@ -132,6 +66,29 @@ export default function FantasyRoot() {
   const [positionFilter, setPositionFilter] = useState<Position | 'ALL'>('ALL');
   const [hubTab, setHubTab] = useState<HubTab>('team');
 
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [playersLoading, setPlayersLoading] = useState(false);
+  const [playersError, setPlayersError] = useState<string | null>(null);
+
+  const loadPlayers = useCallback(async () => {
+    setPlayersLoading(true);
+    setPlayersError(null);
+    try {
+      const data = await fetchPlayers();
+      setAllPlayers(data);
+    } catch {
+      setPlayersError('Failed to load players. Check your connection and try again.');
+    } finally {
+      setPlayersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === 'browse' && allPlayers.length === 0 && !playersLoading && !playersError) {
+      loadPlayers();
+    }
+  }, [step, allPlayers.length, playersLoading, playersError, loadPlayers]);
+
   const {
     draftPlayers,
     draftCaptainId,
@@ -139,17 +96,19 @@ export default function FantasyRoot() {
     draftStartingPlayerIds,
     draftFormation,
     budget,
+    loading: storeLoading,
+    error: storeError,
     addPlayer,
     removePlayer,
     setCaptain,
     setViceCaptain,
     setStartingXI,
-    setFormation,
     submitSquad,
     lockTeamForGameweek,
     unlockTeam,
     hasSquad,
     team,
+    clearError,
   } = useFantasyStore();
 
   const positionCounts = useMemo(() => {
@@ -199,18 +158,24 @@ export default function FantasyRoot() {
     try {
       await submitSquad(teamName.trim());
       Alert.alert('Success', `"${teamName.trim()}" has been created!`);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', message);
+    } catch {
+      if (storeError) {
+        Alert.alert('Error', storeError);
+      }
     }
   };
 
-  const handleLockTeam = () => {
-    lockTeamForGameweek();
-    Alert.alert('Locked', 'Your team has been locked for the current gameweek.');
+  const handleLockTeam = async () => {
+    try {
+      await lockTeamForGameweek();
+      Alert.alert('Locked', 'Your team has been locked for the current gameweek.');
+    } catch {
+      if (storeError) {
+        Alert.alert('Error', storeError);
+      }
+    }
   };
 
-  // ─── Pilot: Ready screen (locked) ───
   if (hasSquad && team) {
     if (team.isLocked) {
       return (
@@ -234,14 +199,13 @@ export default function FantasyRoot() {
       );
     }
 
-    // Ready screen — hub with tabs
     const starters = team.players.filter((p) => team.startingPlayerIds?.includes(p.id) ?? p.isStarting);
     const benchPlayers = team.players.filter((p) => !starters.includes(p));
 
     const renderHubTab = () => {
       switch (hubTab) {
         case 'team':
-          return <HubTeamView team={team} starters={starters} benchPlayers={benchPlayers} onLock={handleLockTeam} />;
+          return <HubTeamView team={team} starters={starters} benchPlayers={benchPlayers} onLock={handleLockTeam} loading={storeLoading} />;
         case 'leaderboard':
           return <HubLeaderboard entries={MOCK_FANTASY_LEADERBOARD} />;
         case 'leagues':
@@ -256,7 +220,15 @@ export default function FantasyRoot() {
           <Text style={styles.headerSubtitle}>Gameweek Points: {team.weekPoints} &middot; Overall Rank: {team.overallRank}</Text>
         </View>
 
-        {/* Hub tabs */}
+        {storeError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{storeError}</Text>
+            <TouchableOpacity onPress={clearError}>
+              <Ionicons name="close" size={18} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.hubTabRow}>
           {(['team', 'leaderboard', 'leagues'] as const).map((tab) => (
             <TouchableOpacity
@@ -293,13 +265,20 @@ export default function FantasyRoot() {
   // ─── Builder flow ───
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Squad Builder</Text>
         <Text style={styles.headerSubtitle}>Budget: ${budget.toFixed(1)}m</Text>
       </View>
 
-      {/* Step navigator */}
+      {storeError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{storeError}</Text>
+          <TouchableOpacity onPress={clearError}>
+            <Ionicons name="close" size={18} color={Colors.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.stepRow}>
         <StepDot index={1} label="Setup" active={step === 'setup'} done={step !== 'setup' && teamName.trim().length > 0} />
         <View style={styles.stepConnector} />
@@ -310,7 +289,6 @@ export default function FantasyRoot() {
         <StepDot index={4} label="Lineup" active={step === 'lineup'} done={false} />
       </View>
 
-      {/* Step content */}
       {step === 'setup' && (
         <SetupStep
           teamName={teamName}
@@ -323,7 +301,7 @@ export default function FantasyRoot() {
 
       {step === 'browse' && (
         <BrowseStep
-          players={MOCK_PLAYERS}
+          players={allPlayers}
           draftPlayers={draftPlayers}
           budget={budget}
           positionFilter={positionFilter}
@@ -335,6 +313,9 @@ export default function FantasyRoot() {
           canAddToPosition={canAddToPosition}
           onNext={() => setStep('pitch')}
           onBack={() => setStep('setup')}
+          loading={playersLoading}
+          error={playersError}
+          onRetry={loadPlayers}
         />
       )}
 
@@ -349,11 +330,9 @@ export default function FantasyRoot() {
       {step === 'lineup' && (
         <LineupStep
           players={draftPlayers}
-          formation={draftFormation}
           startingPlayerIds={draftStartingPlayerIds}
           captainId={draftCaptainId}
           viceCaptainId={draftViceCaptainId}
-          onSetFormation={setFormation}
           onSetStartingXI={setStartingXI}
           onSetCaptain={setCaptain}
           onSetViceCaptain={setViceCaptain}
@@ -361,8 +340,6 @@ export default function FantasyRoot() {
           onConfirm={handleConfirmSquad}
         />
       )}
-
-      {/* Team name + Submit button at bottom of lineup */}
     </View>
   );
 }
@@ -459,6 +436,9 @@ function BrowseStep({
   canAddToPosition,
   onNext,
   onBack,
+  loading,
+  error,
+  onRetry,
 }: {
   players: Player[];
   draftPlayers: Player[];
@@ -472,6 +452,9 @@ function BrowseStep({
   canAddToPosition: (pos: Position) => boolean;
   onNext: () => void;
   onBack: () => void;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }) {
   const filtered = useMemo(() => {
     if (positionFilter === 'ALL') return players;
@@ -482,9 +465,29 @@ function BrowseStep({
 
   const allSlotsFilled = positionCountTotal === MAX_PLAYERS;
 
+  if (loading) {
+    return (
+      <View style={[styles.flex, styles.centeredMessage]}>
+        <ActivityIndicator size="large" color={Colors.yellow} />
+        <Text style={styles.loadingText}>Loading players...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.flex, styles.centeredMessage]}>
+        <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.flex}>
-      {/* Squad composition bar */}
       <View style={styles.compositionBar}>
         <CompoBadge label="GK" count={positionCounts.GK} max={MAX_PER_POSITION.GK} />
         <CompoBadge label="DEF" count={positionCounts.DEF} max={MAX_PER_POSITION.DEF} />
@@ -495,7 +498,6 @@ function BrowseStep({
         </View>
       </View>
 
-      {/* Position tabs */}
       <View style={styles.posTabRow}>
         <TouchableOpacity
           style={[styles.posTab, positionFilter === 'ALL' && styles.posTabActive]}
@@ -514,7 +516,6 @@ function BrowseStep({
         ))}
       </View>
 
-      {/* Player list */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -589,10 +590,10 @@ function PitchStep({
       <ScrollView contentContainerStyle={styles.pitchScroll}>
         <Text style={styles.sectionLabel}>Your 15-Man Squad</Text>
         <View style={styles.pitchContainer}>
-          <PitchSectionRow label="FWD" players={fwd} />
-          <PitchSectionRow label="MID" players={mid} />
-          <PitchSectionRow label="DEF" players={def} />
-          <PitchSectionRow label="GK" players={gk} />
+          <PitchRoleSection label="FWD" players={fwd} />
+          <PitchRoleSection label="MID" players={mid} />
+          <PitchRoleSection label="DEF" players={def} />
+          <PitchRoleSection label="GK" players={gk} />
         </View>
       </ScrollView>
       <View style={styles.footerButtons}>
@@ -607,15 +608,28 @@ function PitchStep({
   );
 }
 
-function PitchSectionRow({ label, players }: { label: string; players: Player[] }) {
+function PitchRoleSection({ label, players }: { label: string; players: Player[] }) {
   if (players.length === 0) return null;
+  const pos = label as Position;
   return (
     <View style={styles.pitchSection}>
       <Text style={styles.pitchSectionLabel}>{label}</Text>
       <View style={styles.pitchPlayerRow}>
         {players.map((p) => (
-          <View key={p.id} style={[styles.jerseyChip, { backgroundColor: CLUB_COLORS[p.clubId] || Colors.primary }]}>
-            <Text style={styles.jerseyChipText} numberOfLines={1}>{p.name.split(' ').pop()}</Text>
+          <View key={p.id} style={styles.playerTokenWrapper}>
+            <View
+              style={[
+                styles.playerTokenCircle,
+                { backgroundColor: ROLE_COLORS[pos] || Colors.primary },
+              ]}
+            >
+              <Text style={styles.playerTokenInitial}>
+                {p.name.split(' ').pop()?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+            <Text style={styles.playerTokenName} numberOfLines={1}>
+              {p.name.split(' ').pop()}
+            </Text>
           </View>
         ))}
       </View>
@@ -626,11 +640,9 @@ function PitchSectionRow({ label, players }: { label: string; players: Player[] 
 // ─── Lineup step ───
 function LineupStep({
   players,
-  formation,
   startingPlayerIds,
   captainId,
   viceCaptainId,
-  onSetFormation,
   onSetStartingXI,
   onSetCaptain,
   onSetViceCaptain,
@@ -638,18 +650,23 @@ function LineupStep({
   onConfirm,
 }: {
   players: Player[];
-  formation: string;
   startingPlayerIds: string[];
   captainId: string | null;
   viceCaptainId: string | null;
-  onSetFormation: (f: string) => void;
   onSetStartingXI: (ids: string[]) => void;
   onSetCaptain: (id: string) => void;
   onSetViceCaptain: (id: string) => void;
   onBack: () => void;
   onConfirm: () => void;
 }) {
-  const breakdown = FORMATION_BREAKDOWN[formation] || FORMATION_BREAKDOWN['4-3-3'];
+  const starters = players.filter((p) => startingPlayerIds.includes(p.id));
+
+  const defCount = starters.filter((p) => p.position === 'DEF').length;
+  const midCount = starters.filter((p) => p.position === 'MID').length;
+  const fwdCount = starters.filter((p) => p.position === 'FWD').length;
+
+  const currentFormation = computeFormation(defCount, midCount, fwdCount);
+  const isValidFormation = currentFormation !== null;
 
   const handleToggleStarter = (playerId: string) => {
     if (startingPlayerIds.includes(playerId)) {
@@ -679,35 +696,40 @@ function LineupStep({
     onSetViceCaptain(playerId);
   };
 
-  const starters = players.filter((p) => startingPlayerIds.includes(p.id));
   const bench = players.filter((p) => !startingPlayerIds.includes(p.id));
 
   return (
     <View style={styles.flex}>
       <ScrollView contentContainerStyle={styles.listContent}>
-        <Text style={styles.sectionLabel}>Formation</Text>
-        <View style={styles.formationRow}>
-          {ALLOWED_FORMATIONS.map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.formationChip, formation === f && styles.formationChipActive]}
-              onPress={() => onSetFormation(f)}
-            >
-              <Text style={[styles.formationChipText, formation === f && styles.formationChipTextActive]}>{f}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.formationBanner}>
+          <Text style={styles.formationBannerLabel}>
+            {currentFormation ? `${currentFormation}` : 'Invalid formation'}
+          </Text>
+          <Text style={styles.formationBannerDetail}>
+            1 GK &middot; {defCount} DEF &middot; {midCount} MID &middot; {fwdCount} FWD
+          </Text>
         </View>
+
+        {!isValidFormation && (
+          <View style={styles.formationWarning}>
+            <Ionicons name="alert-circle" size={16} color={Colors.red} />
+            <Text style={styles.formationWarningText}>
+              Pick a valid combination: {
+                Object.values(FORMATIONS).map((f) => `${f.def}-${f.mid}-${f.fwd}`).join(', ')
+              } + 1 GK
+            </Text>
+          </View>
+        )}
 
         <Text style={[styles.sectionLabel, { marginTop: 16 }]}>
           Starting XI ({starters.length}/11)
         </Text>
         <Text style={styles.hintText}>
-          Tap a player to toggle starter/bench. Formation: {formation} ({breakdown.def} DEF, {breakdown.mid} MID, {breakdown.fwd} FWD + 1 GK)
+          Tap a player to toggle starter/bench. Tap a starter to set captain or VC.
         </Text>
 
-        {/* Starting XI pitch section */}
         <View style={styles.miniPitch}>
-          {['GK', 'DEF', 'MID', 'FWD'].map((pos) => {
+          {(['GK', 'DEF', 'MID', 'FWD'] as const).map((pos) => {
             const posPlayers = starters.filter((p) => p.position === pos);
             if (posPlayers.length === 0) return null;
             return (
@@ -745,7 +767,6 @@ function LineupStep({
           })}
         </View>
 
-        {/* Bench */}
         <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Bench ({bench.length})</Text>
         <View style={styles.benchRow}>
           {bench.length === 0 ? (
@@ -770,8 +791,8 @@ function LineupStep({
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.confirmButton, (!captainId || startingPlayerIds.length === 0) && styles.nextButtonDisabled]}
-          disabled={!captainId || startingPlayerIds.length === 0}
+          style={[styles.confirmButton, (!captainId || !isValidFormation) && styles.nextButtonDisabled]}
+          disabled={!captainId || !isValidFormation}
           onPress={onConfirm}
         >
           <Text style={styles.confirmButtonText}>Confirm Squad</Text>
@@ -829,29 +850,27 @@ function PitchView({
   startingPlayerIds?: string[];
   captainId?: string;
   viceCaptainId?: string;
-  formation?: string;
+  formation?: FormationKey;
   interactive: boolean;
 }) {
   const starters = startingPlayerIds
     ? players.filter((p) => startingPlayerIds.includes(p.id))
     : players;
 
-  const gk = starters.filter((p) => p.position === 'GK');
-  const def = starters.filter((p) => p.position === 'DEF');
-  const mid = starters.filter((p) => p.position === 'MID');
-  const fwd = starters.filter((p) => p.position === 'FWD');
   const benchPlayers = startingPlayerIds
     ? players.filter((p) => !startingPlayerIds.includes(p.id))
     : [];
 
   return (
     <View>
-      {formation ? <Text style={styles.formationLabel}>Formation: {formation}</Text> : null}
+      <View style={styles.pitchFormationHeader}>
+        <Text style={styles.formationLabel}>Formation: {formation || 'Custom'}</Text>
+      </View>
       <View style={styles.pitchContainer}>
-        <PitchSectionRow label="FWD" players={fwd} />
-        <PitchSectionRow label="MID" players={mid} />
-        <PitchSectionRow label="DEF" players={def} />
-        <PitchSectionRow label="GK" players={gk} />
+        <PitchRoleSection label="FWD" players={starters.filter((p) => p.position === 'FWD')} />
+        <PitchRoleSection label="MID" players={starters.filter((p) => p.position === 'MID')} />
+        <PitchRoleSection label="DEF" players={starters.filter((p) => p.position === 'DEF')} />
+        <PitchRoleSection label="GK" players={starters.filter((p) => p.position === 'GK')} />
       </View>
       {(captainId || viceCaptainId) && (
         <View style={styles.captaincyRow}>
@@ -907,11 +926,13 @@ function HubTeamView({
   starters,
   benchPlayers,
   onLock,
+  loading,
 }: {
   team: FantasyTeam;
   starters: FantasyPlayer[];
   benchPlayers: FantasyPlayer[];
   onLock: () => void;
+  loading: boolean;
 }) {
   return (
     <>
@@ -951,9 +972,17 @@ function HubTeamView({
         </View>
       )}
 
-      <TouchableOpacity style={styles.lockButton} onPress={onLock}>
-        <Ionicons name="lock-closed" size={18} color={Colors.textInverse} />
-        <Text style={styles.lockButtonText}>Lock Team for Gameweek</Text>
+      <TouchableOpacity
+        style={[styles.lockButton, loading && styles.lockButtonDisabled]}
+        onPress={onLock}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#000000" />
+        ) : (
+          <Ionicons name="lock-closed" size={18} color={Colors.textInverse} />
+        )}
+        <Text style={styles.lockButtonText}>{loading ? 'Locking...' : 'Lock Team for Gameweek'}</Text>
       </TouchableOpacity>
     </>
   );
@@ -1055,6 +1084,24 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: '800', fontFamily: fonts.display, color: Colors.white, textTransform: 'uppercase' },
   headerSubtitle: { fontSize: 14, color: Colors.grey1, fontWeight: '600', marginTop: 4 },
   flex: { flex: 1 },
+
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(208,2,27,0.15)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.red,
+  },
+  errorBannerText: { flex: 1, fontSize: 13, color: Colors.red, marginRight: 8 },
+
+  centeredMessage: { alignItems: 'center', justifyContent: 'center', padding: 40 },
+  loadingText: { fontSize: 14, color: Colors.grey1, marginTop: 12 },
+  errorText: { fontSize: 14, color: Colors.grey1, marginTop: 12, textAlign: 'center' },
+  retryButton: { marginTop: 16, backgroundColor: Colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
+  retryButtonText: { fontSize: 14, fontWeight: '800', color: '#000000', fontFamily: fonts.display, textTransform: 'uppercase' },
 
   // Steps
   stepRow: {
@@ -1169,29 +1216,48 @@ const styles = StyleSheet.create({
   },
   pitchSection: { marginBottom: 16 },
   pitchSectionLabel: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.7)', marginBottom: 6, textTransform: 'uppercase' },
-  pitchPlayerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  jerseyChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  pitchPlayerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
+
+  playerTokenWrapper: { alignItems: 'center', width: 56 },
+  playerTokenCircle: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    minWidth: 50,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  jerseyChipText: { color: Colors.white, fontSize: 11, fontWeight: '700' },
+  playerTokenInitial: { fontSize: 16, fontWeight: '800', color: Colors.white },
+  playerTokenName: { fontSize: 10, color: Colors.white, marginTop: 4, textAlign: 'center', maxWidth: 54 },
+
+  pitchFormationHeader: { alignItems: 'center', marginBottom: 8 },
+  formationLabel: { fontSize: 14, fontWeight: '700', color: Colors.grey1, textAlign: 'center' },
 
   // Lineup
-  formationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  formationChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+  formationBanner: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: radius.card,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
-  formationChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
-  formationChipText: { fontSize: 12, fontWeight: '700', color: Colors.white },
-  formationChipTextActive: { color: '#000000' },
+  formationBannerLabel: { fontSize: 22, fontWeight: '800', fontFamily: fonts.display, color: Colors.yellow, textTransform: 'uppercase' },
+  formationBannerDetail: { fontSize: 13, color: Colors.grey1, marginTop: 4 },
+
+  formationWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(208,2,27,0.1)',
+    padding: 12,
+    borderRadius: radius.card,
+    marginBottom: 12,
+    gap: 8,
+  },
+  formationWarningText: { flex: 1, fontSize: 12, color: Colors.red },
+
   miniPitch: { backgroundColor: Colors.pitchGrass, borderRadius: 16, padding: 12, marginTop: 8 },
   miniPitchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   miniPitchPosLabel: { width: 32, fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.6)' },
@@ -1243,6 +1309,7 @@ const styles = StyleSheet.create({
   lockButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     marginTop: 24,
     backgroundColor: Colors.yellow,
@@ -1250,9 +1317,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     borderRadius: radius.button,
   },
+  lockButtonDisabled: { opacity: 0.6 },
   lockButtonText: { color: '#000000', fontSize: 15, fontWeight: '700', fontFamily: fonts.display, textTransform: 'uppercase' },
   lockedPitchContainer: { padding: 16 },
-  formationLabel: { fontSize: 14, fontWeight: '700', color: Colors.grey1, marginBottom: 8, textAlign: 'center' },
   captaincyRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 },
   captainBadge: {
     backgroundColor: Colors.fantasyGold,
