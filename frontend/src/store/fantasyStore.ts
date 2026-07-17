@@ -138,16 +138,15 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
   },
 
   lockTeamForGameweek: async () => {
-    const state = get();
-    if (!state.team) return;
-
+    const currentTeam = get().team;
+    if (!currentTeam) return;
     set({ loading: true, error: null });
     try {
       await lockTeamApi();
       const nextGwDeadline = new Date();
       nextGwDeadline.setDate(nextGwDeadline.getDate() + 7);
       set({
-        team: { ...state.team!, isLocked: true, deadline: nextGwDeadline.toISOString() },
+        team: { ...currentTeam, isLocked: true, deadline: nextGwDeadline.toISOString() },
         loading: false,
       });
     } catch (err: unknown) {
@@ -158,14 +157,13 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
   },
 
   unlockTeam: async () => {
-    const state = get();
-    if (!state.team) return;
-
+    const currentTeam = get().team;
+    if (!currentTeam) return;
     set({ loading: true, error: null });
     try {
       await unlockTeamApi();
       set({
-        team: { ...state.team!, isLocked: false, deadline: undefined },
+        team: { ...currentTeam, isLocked: false, deadline: undefined },
         loading: false,
       });
     } catch (err: unknown) {

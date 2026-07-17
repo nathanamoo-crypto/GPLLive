@@ -1,4 +1,4 @@
-import { Article } from '../types';
+import { Article, NewsItem } from '../types';
 import { DUMMY_NEWS } from '../constants/homeDummyData';
 
 /**
@@ -10,7 +10,7 @@ import { DUMMY_NEWS } from '../constants/homeDummyData';
  */
 
 // TODO: Replace with API call to /news
-export const getLatestNews = async (): Promise<any[]> => {
+export const getLatestNews = async (): Promise<NewsItem[]> => {
   return DUMMY_NEWS;
 };
 

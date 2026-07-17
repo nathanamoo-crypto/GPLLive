@@ -1,7 +1,3 @@
-/**
- * TODO: Replace `submitAll` mock with real API call.
- * See APIDocs.md → Predictions section.
- */
 import { create } from 'zustand';
 import { Prediction, PredictionState } from '../types';
 
@@ -44,7 +40,9 @@ export const usePredictionStore = create<PredictionState>((set) => ({
       },
     }));
   },
-  submitAll: async () => {
+  submitAll: async (gameweek: number) => {
+    // TODO: POST /predictions with gameweek — currently mock-only
+    console.log(`Submitting predictions for gameweek ${gameweek}`);
     set((state) => ({
       predictions: Object.fromEntries(
         Object.entries(state.predictions).map(([fixtureId, prediction]) => [

@@ -36,10 +36,12 @@ export const useAuthStore = create<AuthState>()(
       splashKey: 0,
       login: async (email, password) => {
         try {
-          const response = await api.post('/auth/login', { email, password });
-          const token = response.data?.token as string | undefined;
+          const response = await api.post<{ token: string; user: Partial<User> & { name?: string } }>(
+            '/auth/login', { email, password },
+          );
+          const token = response.data?.token;
           const user = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
+            ? normalizeUser(response.data.user)
             : null;
 
           if (!token || !user) {
@@ -53,10 +55,12 @@ export const useAuthStore = create<AuthState>()(
       },
       register: async (name, email, password) => {
         try {
-          const response = await api.post('/auth/register', { name, email, password });
-          const token = response.data?.token as string | undefined;
+          const response = await api.post<{ token: string; user: Partial<User> & { name?: string } }>(
+            '/auth/register', { name, email, password },
+          );
+          const token = response.data?.token;
           const user = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
+            ? normalizeUser(response.data.user)
             : null;
 
           if (!token || !user) {
@@ -103,12 +107,12 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await api.patch('/auth/users/me', {
-            favouriteClubId: club.id,
-          });
+          const response = await api.patch<{ user: Partial<User> & { name?: string } }>(
+            '/auth/users/me', { favouriteClubId: club.id },
+          );
 
           const updatedUser = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
+            ? normalizeUser(response.data.user)
             : { ...currentUser, favouriteClub: club };
 
           set({ user: updatedUser });

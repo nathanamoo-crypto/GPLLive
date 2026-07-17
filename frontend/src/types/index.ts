@@ -97,6 +97,14 @@ export interface Article {
   url: string;
 }
 
+export interface NewsItem {
+  id: string;
+  headline: string;
+  source: string;
+  category: NewsCategory;
+  time: string;
+}
+
 export interface Reaction {
   id: string;
   matchId: string;
