@@ -110,7 +110,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const playerIds = draftPlayers.map((p) => p.id);
-      await saveFantasySquad({
+      const { team } = await saveFantasySquad({
         teamName,
         captainId,
         viceCaptainId: viceCaptainId ?? undefined,
@@ -118,20 +118,6 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
         formation,
         playerIds,
       });
-
-      const team = {
-        id: 'fantasy-team-1',
-        userId: 'user-1',
-        teamName,
-        players: draftPlayers.map((player) => ({ ...player, isStarting: true })),
-        captainId,
-        viceCaptainId: viceCaptainId ?? undefined,
-        startingPlayerIds: startingPlayerIds.length > 0 ? startingPlayerIds : undefined,
-        formation: formation || undefined,
-        totalPoints: 0,
-        weekPoints: 0,
-        overallRank: 0,
-      };
 
       set({
         team,
