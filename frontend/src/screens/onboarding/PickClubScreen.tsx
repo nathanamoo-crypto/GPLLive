@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -12,12 +13,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../store/authStore';
 import { GPL_CLUBS } from '../../constants/clubs';
+import { Logos } from '../../constants/logos';
 import { Colors } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../utils/authValidation';
 
 export default function PickClubScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
+  const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export default function PickClubScreen() {
 
       <FlatList
         data={GPL_CLUBS}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         numColumns={3}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
@@ -82,7 +84,7 @@ export default function PickClubScreen() {
               disabled={loading}
             >
               <View style={styles.badgePlaceholder}>
-                <Text style={styles.badgeText}>{item.shortName.slice(0, 2).toUpperCase()}</Text>
+                <Image source={Logos[item.id]} style={styles.badgeImage} resizeMode="contain" />
               </View>
               <Text style={styles.clubName}>{item.name}</Text>
               {active ? (
@@ -137,15 +139,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   badgePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.primaryLight,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
+    overflow: 'hidden',
   },
-  badgeText: { color: Colors.primary, fontWeight: '800' },
+  badgeImage: {
+    width: 36,
+    height: 36,
+  },
   clubName: { textAlign: 'center', fontSize: 13, color: Colors.textPrimary, fontWeight: '600' },
   checkmark: { marginTop: 8 },
   continueButton: {

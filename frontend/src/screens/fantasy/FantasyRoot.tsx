@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { useFantasyStore } from '../../store/fantasyStore';
 import { fetchPlayers } from '../../services/fantasyService';
+import { CLUB_LOOKUP } from '../../constants/clubs';
 import type { Player } from '../../types';
 
 export default function FantasyRoot() {
@@ -57,11 +58,6 @@ export default function FantasyRoot() {
     return () => controller.abort();
   }, [loadPlayers]);
 
-  /**
-   * API INTEGRATION PLACEHOLDER
-   * ---------------------------
-   * TODO: Sync squad with backend on submit.
-   */
   const handleSaveSquad = async () => {
     if (!teamName.trim()) {
       Alert.alert('Error', 'Please enter a team name');
@@ -85,7 +81,7 @@ export default function FantasyRoot() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{team.teamName}</Text>
-          <Text style={styles.headerSubtitle}>Overall Rank: {team.overallRank}</Text>
+          <Text style={styles.headerSubtitle}>Overall Rank: {team.rank}</Text>
         </View>
         <View style={styles.centered}>
           <Ionicons name="football" size={64} color={Colors.primary} />
@@ -137,15 +133,16 @@ export default function FantasyRoot() {
         ) : (
         <FlatList
           data={players}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => {
             const isSelected = draftPlayers.some((p) => p.id === item.id);
+            const club = CLUB_LOOKUP[item.clubId];
             return (
               <View style={styles.playerCard}>
                 <View style={styles.playerInfo}>
                   <Text style={styles.playerName}>{item.name}</Text>
-                  <Text style={styles.playerSub}>{item.position} · {item.club.name}</Text>
+                  <Text style={styles.playerSub}>{item.position} · {club?.name ?? 'Unknown'}</Text>
                 </View>
                 <View style={styles.playerAction}>
                   <Text style={styles.playerPrice}>${item.price}m</Text>
@@ -153,7 +150,7 @@ export default function FantasyRoot() {
                     style={[styles.addButton, isSelected && styles.removeButton]}
                     onPress={() => isSelected ? removePlayer(item.id) : addPlayer(item)}
                   >
-                    <Ionicons name={isSelected ? "remove" : "add"} size={20} color={Colors.textInverse} />
+                    <Ionicons name={isSelected ? 'remove' : 'add'} size={20} color={Colors.textInverse} />
                   </TouchableOpacity>
                 </View>
               </View>

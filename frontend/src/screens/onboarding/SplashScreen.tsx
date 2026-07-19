@@ -18,7 +18,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity }]}>
         <Image
-          source={require('../../../assets/icon.png')}
+          source={require('../../../assets/GplLogo1.png')}
           style={styles.logoImage}
           resizeMode="contain"
           accessibilityLabel="GPL Live logo"

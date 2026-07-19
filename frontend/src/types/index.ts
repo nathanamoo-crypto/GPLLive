@@ -1,6 +1,7 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished';
 export type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
 export type FormationKey = '4-3-3' | '4-4-2' | '3-4-3' | '4-5-1' | '3-5-2';
+export type ChipType = 'TripleCaptain' | 'BenchBoost' | 'Wildcard' | 'Wildcard2' | 'FreeHit';
 
 export interface FormationDefinition {
   label: FormationKey;
@@ -8,22 +9,25 @@ export interface FormationDefinition {
   mid: number;
   fwd: number;
 }
+
 export type NewsCategory = 'GPL' | 'Black Stars' | 'AFCON' | 'Transfers';
 export type EventType = 'goal' | 'yellow_card' | 'red_card' | 'substitution';
 export type BadgeName = 'Prediction King' | 'Top Reactor' | 'Club Loyalist' | 'MOTM Master';
 
 export interface Club {
-  id: string;
+  id: number;
   name: string;
   shortName: string;
+  slug: string;
   badgeUrl: string;
+  logoUrl?: string;
   city: string;
   stadium?: string;
   stadiumCapacity?: number;
 }
 
 export interface Match {
-  id: string;
+  id: number;
   homeClub: Club;
   awayClub: Club;
   homeScore: number | null;
@@ -37,8 +41,8 @@ export interface Match {
 }
 
 export interface MatchEvent {
-  id: string;
-  matchId: string;
+  id: number;
+  matchId: number;
   type: EventType;
   minute: number;
   playerName: string;
@@ -48,38 +52,64 @@ export interface MatchEvent {
 }
 
 export interface Player {
-  id: string;
+  id: number;
   name: string;
-  clubId: string;
-  club: Club;
+  clubId: number;
   position: Position;
   price: number;
   photoUrl?: string;
 }
 
-export interface FantasyPlayer extends Player {
+export interface SquadPlayerDTO {
+  fantasyTeamPlayerId: number;
+  playerId: number;
+  playerName: string;
+  clubId: number;
+  position: Position;
+  price: number;
   isStarting: boolean;
+  isCaptain: boolean;
+  isViceCaptain: boolean;
   weekPoints: number;
+}
+
+export interface FantasyPlayer extends Player {
+  fantasyTeamPlayerId: number;
+  isStarting: boolean;
+  isCaptain: boolean;
+  isViceCaptain: boolean;
+  weekPoints: number;
+}
+
+export interface ChipStatus {
+  tripleCaptain: boolean;
+  benchBoost: boolean;
+  wildcard: boolean;
+  wildcard2: boolean;
+  freeHit: boolean;
 }
 
 export interface FantasyTeam {
-  id: string;
-  userId: string;
+  teamId: number;
+  userId: number;
   teamName: string;
   players: FantasyPlayer[];
-  captainId: string;
+  captainId: number | null;
+  viceCaptainId: number | null;
+  startingPlayerIds: number[];
+  formation: string;
+  chips: ChipStatus;
   totalPoints: number;
-  weekPoints: number;
-  overallRank: number;
-  viceCaptainId?: string;
-  startingPlayerIds?: string[];
-  formation?: FormationKey;
-  isLocked?: boolean;
-  deadline?: string;
+  gameweekPoints: number;
+  rank: number;
+  budget: number;
+  transferCount: number;
+  isLocked: boolean;
+  createdAt: string;
 }
 
 export interface Prediction {
-  fixtureId: string;
+  fixtureId: number;
   outcome: 'home' | 'draw' | 'away' | null;
   exactHomeGoals?: number;
   exactAwayGoals?: number;
@@ -108,9 +138,9 @@ export interface NewsItem {
 }
 
 export interface Reaction {
-  id: string;
-  matchId: string;
-  userId: string;
+  id: number;
+  matchId: number;
+  userId: number;
   username: string;
   userClub: Club;
   text: string;
@@ -120,14 +150,14 @@ export interface Reaction {
 }
 
 export interface ClubSubscription {
-  clubId: string;
+  clubId: number;
   club: Club;
   status: 'active' | 'cancelled' | 'expired';
   renewalDate: string;
 }
 
 export interface User {
-  id: string;
+  id: number;
   username: string;
   email: string;
   avatarUrl?: string;
@@ -140,7 +170,7 @@ export interface User {
 }
 
 export interface Notification {
-  id: string;
+  id: number;
   type: 'goal' | 'fantasy' | 'prediction' | 'subscription' | 'general';
   title: string;
   body: string;
@@ -163,12 +193,49 @@ export interface Standing {
 export interface LeaderboardEntry {
   rank: number;
   rankChange: number;
-  userId: string;
+  userId: number;
   username: string;
   club: Club;
   totalPoints: number;
   weekPoints: number;
   isCurrentUser: boolean;
+}
+
+export interface Gameweek {
+  gameweekId: number;
+  seasonId: number;
+  gameweekNumber: number;
+  deadline: string;
+  isActive: boolean;
+  isFinished: boolean;
+}
+
+export interface FixtureResult {
+  fixtureId: number;
+  homeScore: number;
+  awayScore: number;
+  homePossession?: number;
+  awayPossession?: number;
+}
+
+export interface PlayerPrice {
+  playerId: number;
+  price: number;
+  gameweek: number;
+  changedAt: string;
+}
+
+export interface ScoringStats {
+  playerId: number;
+  gameweek: number;
+  minutesPlayed: number;
+  goals: number;
+  assists: number;
+  cleanSheet: boolean;
+  goalsConceded: number;
+  saves?: number;
+  bonusPoints?: number;
+  totalPoints: number;
 }
 
 export interface AuthState {
@@ -178,7 +245,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   splashKey: number;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetOnboarding: () => void;
   setFavouriteClub: (club: Club) => Promise<void>;
@@ -190,18 +257,18 @@ export interface FantasyState {
   team: FantasyTeam | null;
   hasSquad: boolean;
   draftPlayers: FantasyPlayer[];
-  draftCaptainId: string | null;
-  draftViceCaptainId: string | null;
-  draftStartingPlayerIds: string[];
+  draftCaptainId: number | null;
+  draftViceCaptainId: number | null;
+  draftStartingPlayerIds: number[];
   draftFormation: FormationKey;
   budget: number;
   loading: boolean;
   error: string | null;
   addPlayer: (player: Player) => void;
-  removePlayer: (playerId: string) => void;
-  setCaptain: (playerId: string) => void;
-  setViceCaptain: (playerId: string) => void;
-  setStartingXI: (playerIds: string[]) => void;
+  removePlayer: (playerId: number) => void;
+  setCaptain: (playerId: number) => void;
+  setViceCaptain: (playerId: number) => void;
+  setStartingXI: (playerIds: number[]) => void;
   setFormation: (formation: FormationKey) => void;
   submitSquad: (teamName: string) => Promise<void>;
   lockTeamForGameweek: () => Promise<void>;
@@ -212,8 +279,8 @@ export interface FantasyState {
 
 export interface PredictionState {
   predictions: Record<string, Prediction>;
-  setPrediction: (fixtureId: string, outcome: Prediction['outcome']) => void;
-  setExactScore: (fixtureId: string, home: number, away: number) => void;
+  setPrediction: (fixtureId: number, outcome: Prediction['outcome']) => void;
+  setExactScore: (fixtureId: number, home: number, away: number) => void;
   submitAll: (gameweek: number) => Promise<void>;
   reset: () => void;
 }

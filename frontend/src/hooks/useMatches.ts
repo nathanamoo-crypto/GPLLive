@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
+import { CLUB_BY_LEGACY_ID } from '../constants/clubs';
 import { Match } from '../types';
 
 const mockMatches: Match[] = [
   {
-    id: 'match-1',
-    homeClub: { id: 'kotoko', name: 'Asante Kotoko', shortName: 'Kotoko', badgeUrl: '', city: 'Kumasi' },
-    awayClub: { id: 'hearts', name: 'Hearts of Oak', shortName: 'Hearts', badgeUrl: '', city: 'Accra' },
+    id: 1,
+    homeClub: CLUB_BY_LEGACY_ID['kotoko']!,
+    awayClub: CLUB_BY_LEGACY_ID['hearts']!,
     homeScore: 2,
     awayScore: 1,
     status: 'live',

@@ -36,7 +36,7 @@ export default function NotificationInboxScreen() {
       </View>
       <FlatList
         data={notifications}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         removeClippedSubviews
         renderItem={({ item }) => (

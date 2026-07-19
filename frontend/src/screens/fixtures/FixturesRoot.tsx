@@ -25,7 +25,7 @@ type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'Fixtur
  */
 const MOCK_MATCHES: Match[] = [
   {
-    id: 'f1',
+    id: 1,
     homeClub: GPL_CLUBS[0],
     awayClub: GPL_CLUBS[1],
     homeScore: 2,
@@ -38,7 +38,7 @@ const MOCK_MATCHES: Match[] = [
     gameweek: 24,
   },
   {
-    id: 'f2',
+    id: 2,
     homeClub: GPL_CLUBS[2],
     awayClub: GPL_CLUBS[3],
     homeScore: null,
@@ -50,7 +50,7 @@ const MOCK_MATCHES: Match[] = [
     gameweek: 24,
   },
   {
-    id: 'f3',
+    id: 3,
     homeClub: GPL_CLUBS[4],
     awayClub: GPL_CLUBS[5],
     homeScore: null,
@@ -62,7 +62,7 @@ const MOCK_MATCHES: Match[] = [
     gameweek: 24,
   },
   {
-    id: 'f4',
+    id: 4,
     homeClub: GPL_CLUBS[6],
     awayClub: GPL_CLUBS[7],
     homeScore: 3,
@@ -74,7 +74,7 @@ const MOCK_MATCHES: Match[] = [
     gameweek: 23,
   },
   {
-    id: 'f5',
+    id: 5,
     homeClub: GPL_CLUBS[8],
     awayClub: GPL_CLUBS[9],
     homeScore: 1,
@@ -86,7 +86,7 @@ const MOCK_MATCHES: Match[] = [
     gameweek: 23,
   },
   {
-    id: 'f6',
+    id: 6,
     homeClub: GPL_CLUBS[10],
     awayClub: GPL_CLUBS[11],
     homeScore: 0,

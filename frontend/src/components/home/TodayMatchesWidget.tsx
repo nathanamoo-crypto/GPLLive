@@ -30,7 +30,7 @@ export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps)
     [navigation]
   );
 
-  const keyExtractor = useCallback((item: Match) => item.id, []);
+  const keyExtractor = useCallback((item: Match) => String(item.id), []);
 
   return (
     <View style={styles.widget}>

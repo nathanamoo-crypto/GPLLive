@@ -10,7 +10,7 @@ export type OnboardingStackParamList = AuthFlowParamList & {
 export type AuthStackParamList = AuthFlowParamList;
 
 export type MatchDetailsParams = {
-  matchId: string;
+  matchId: number;
 };
 
 export type NewsDetailParams = {
@@ -18,11 +18,11 @@ export type NewsDetailParams = {
 };
 
 export type MotmVoteParams = {
-  matchId: string;
+  matchId: number;
 };
 
 export type DiscussionParams = {
-  matchId: string;
+  matchId: number;
 };
 
 export type LeagueTableParams = undefined;

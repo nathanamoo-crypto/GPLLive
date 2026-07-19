@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { Colors } from '../../constants/colors';
 import { fonts } from '../../constants/layout';
+import { Logos } from '../../constants/logos';
 import { Match } from '../../types';
 
 interface MatchCardProps {
@@ -46,7 +47,7 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
       <View style={styles.row}>
         <View style={styles.clubBlock}>
           <View style={styles.badge}>
-            <Text style={styles.badgeLabel}>{match.homeClub.shortName.slice(0, 2)}</Text>
+            <Image source={Logos[match.homeClub.id]} style={styles.badgeImage} resizeMode="contain" />
           </View>
           <Text style={styles.clubName} numberOfLines={2}>
             {match.homeClub.name}
@@ -65,7 +66,7 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
 
         <View style={styles.clubBlock}>
           <View style={styles.badge}>
-            <Text style={styles.badgeLabel}>{match.awayClub.shortName.slice(0, 2)}</Text>
+            <Image source={Logos[match.awayClub.id]} style={styles.badgeImage} resizeMode="contain" />
           </View>
           <Text style={styles.clubName} numberOfLines={2}>
             {match.awayClub.name}
@@ -114,11 +115,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    overflow: 'hidden',
   },
-  badgeLabel: {
-    color: Colors.yellow,
-    fontSize: 11,
-    fontWeight: '800',
+  badgeImage: {
+    width: 24,
+    height: 24,
   },
   clubName: {
     fontSize: 12,

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,8 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
+import { CLUB_BY_LEGACY_ID } from '../../constants/clubs';
+import { Logos } from '../../constants/logos';
 import { getScrollBottomPadding } from '../../constants/layout';
 import type { Match, MatchEvent } from '../../types';
 import { getMatchDetails, getMatchEvents } from '../../services/matchService';
@@ -31,9 +34,9 @@ TO REVERT: Direct import from constants or local mock arrays.
  * This data will be replaced by an API call once the backend is ready.
  */
 const MOCK_MATCH: Match = {
-  id: 'match-1',
-  homeClub: { id: 'kotoko', name: 'Asante Kotoko', shortName: 'Kotoko', badgeUrl: '', city: 'Kumasi' },
-  awayClub: { id: 'hearts', name: 'Hearts of Oak', shortName: 'Hearts', badgeUrl: '', city: 'Accra' },
+  id: 1,
+  homeClub: CLUB_BY_LEGACY_ID['kotoko']!,
+  awayClub: CLUB_BY_LEGACY_ID['hearts']!,
   homeScore: 2,
   awayScore: 1,
   status: 'live',
@@ -45,10 +48,10 @@ const MOCK_MATCH: Match = {
 };
 
 const MOCK_EVENTS: MatchEvent[] = [
-  { id: 'e1', matchId: 'match-1', type: 'goal', minute: 12, playerName: 'Frank Etouga', side: 'home' },
-  { id: 'e2', matchId: 'match-1', type: 'yellow_card', minute: 34, playerName: 'Awako', side: 'away' },
-  { id: 'e3', matchId: 'match-1', type: 'goal', minute: 45, playerName: 'Barnieh', side: 'away' },
-  { id: 'e4', matchId: 'match-1', type: 'goal', minute: 58, playerName: 'Mbella', side: 'home' },
+  { id: 1, matchId: 1, type: 'goal', minute: 12, playerName: 'Frank Etouga', side: 'home' },
+  { id: 2, matchId: 1, type: 'yellow_card', minute: 34, playerName: 'Awako', side: 'away' },
+  { id: 3, matchId: 1, type: 'goal', minute: 45, playerName: 'Barnieh', side: 'away' },
+  { id: 4, matchId: 1, type: 'goal', minute: 58, playerName: 'Mbella', side: 'home' },
 ];
 
 type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
@@ -88,7 +91,7 @@ export default function MatchDetailsScreen() {
         {/* Match Scoreboard */}
         <View style={styles.scoreboard}>
           <View style={styles.teamContainer}>
-            <View style={styles.badgePlaceholder} />
+            <Image source={Logos[MOCK_MATCH.homeClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
             <Text style={styles.teamName}>{MOCK_MATCH.homeClub.name}</Text>
           </View>
 
@@ -104,7 +107,7 @@ export default function MatchDetailsScreen() {
           </View>
 
           <View style={styles.teamContainer}>
-            <View style={styles.badgePlaceholder} />
+            <Image source={Logos[MOCK_MATCH.awayClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
             <Text style={styles.teamName}>{MOCK_MATCH.awayClub.name}</Text>
           </View>
         </View>
@@ -208,7 +211,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   teamContainer: { alignItems: 'center', width: '35%' },
-  badgePlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.border, marginBottom: 8 },
+  badgeImage: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
   teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.textPrimary },
   scoreContainer: { alignItems: 'center' },
   scoreText: { fontSize: 36, fontWeight: '800', color: Colors.textPrimary },
