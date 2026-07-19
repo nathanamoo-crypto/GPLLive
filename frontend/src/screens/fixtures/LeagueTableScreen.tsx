@@ -18,7 +18,7 @@ import { Logos } from '../../constants/logos';
 type SortKey = 'pts' | 'gd' | 'w';
 
 interface StandingRow {
-  clubId: string;
+  clubId: number;
   position: number;
   clubName: string;
   shortName: string;
@@ -124,7 +124,7 @@ export default function LeagueTableScreen() {
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Image
                   source={Logos[
-                    GPL_CLUBS.find(club => club.shortName === s.shortName)?.id ?? ''
+                    GPL_CLUBS.find(club => club.shortName === s.shortName)?.id ?? 0
                   ]}
                   style={styles.badgeSmall}
                     resizeMode="contain"
