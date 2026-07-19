@@ -4,25 +4,26 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import api, { configureApiAuth, getApiErrorMessage } from '../services/api';
-import { AuthState, User, Club } from '../types';
+import { AuthEndpoints } from '../constants/apiUrls';
+import { AuthState, User, Club, ClubSubscription } from '../types';
 
 function isOfflineError(error: unknown): boolean {
   const axiosError = error as AxiosError;
   return !axiosError.response || axiosError.message === 'Network Error';
 }
 
-function normalizeUser(rawUser: Partial<User> & { name?: string }): User {
+function normalizeUser(raw: Partial<User> & { name?: string; favouriteClub?: Club; subscription?: ClubSubscription }): User {
   return {
-    id: rawUser.id ?? '',
-    username: rawUser.username ?? rawUser.name ?? 'Fan',
-    email: rawUser.email ?? '',
-    avatarUrl: rawUser.avatarUrl,
-    favouriteClub: rawUser.favouriteClub,
-    fantasyRank: rawUser.fantasyRank,
-    predictionPoints: rawUser.predictionPoints ?? 0,
-    reactionsPosted: rawUser.reactionsPosted ?? 0,
-    badges: rawUser.badges ?? [],
-    subscription: rawUser.subscription,
+    id: raw.id ?? 0,
+    username: raw.username ?? raw.name ?? 'Fan',
+    email: raw.email ?? '',
+    avatarUrl: raw.avatarUrl,
+    favouriteClub: raw.favouriteClub,
+    fantasyRank: raw.fantasyRank,
+    predictionPoints: raw.predictionPoints ?? 0,
+    reactionsPosted: raw.reactionsPosted ?? 0,
+    badges: raw.badges ?? [],
+    subscription: raw.subscription,
   };
 }
 
@@ -36,36 +37,59 @@ export const useAuthStore = create<AuthState>()(
       splashKey: 0,
       login: async (email, password) => {
         try {
-          const response = await api.post<{ token: string; user: Partial<User> & { name?: string } }>(
-            '/auth/login', { email, password },
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.LOGIN, { email, password },
           );
-          const token = response.data?.token;
-          const user = response.data?.user
-            ? normalizeUser(response.data.user)
-            : null;
+          const { token, username, userId } = response.data;
 
-          if (!token || !user) {
+          if (!token || !username) {
             throw new Error('Invalid auth response');
           }
 
+          const user: User = {
+            id: userId ?? 0,
+            username,
+            email: '',
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
+
           set({ user, token, isAuthenticated: true });
+
+          try {
+            const meResponse = await api.get<{ user: Partial<User> & { name?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data?.user) {
+              set({ user: normalizeUser(meResponse.data.user) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
         } catch (error) {
           throw new Error(getApiErrorMessage(error, 'Login failed'));
         }
       },
-      register: async (name, email, password) => {
+      register: async (username, email, password) => {
         try {
-          const response = await api.post<{ token: string; user: Partial<User> & { name?: string } }>(
-            '/auth/register', { name, email, password },
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.REGISTER, { username, email, password },
           );
-          const token = response.data?.token;
-          const user = response.data?.user
-            ? normalizeUser(response.data.user)
-            : null;
+          const { token, username: returnedUsername, userId } = response.data;
 
-          if (!token || !user) {
+          if (!token || !returnedUsername) {
             throw new Error('Invalid register response');
           }
+
+          const user: User = {
+            id: userId ?? 0,
+            username: returnedUsername,
+            email,
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
 
           set({ user, token, isAuthenticated: true });
         } catch (error) {
@@ -74,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
       },
       loginDemo: async () => {
         const demoUser: User = {
-          id: 'demo-user-1',
+          id: 999,
           username: 'Demo User',
           email: 'demo@example.com',
           predictionPoints: 0,
@@ -108,7 +132,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const response = await api.patch<{ user: Partial<User> & { name?: string } }>(
-            '/auth/users/me', { favouriteClubId: club.id },
+            AuthEndpoints.UPDATE_ME, { favouriteClubId: club.id },
           );
 
           const updatedUser = response.data?.user

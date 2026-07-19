@@ -1,9 +1,9 @@
 import { Match, Standing, LeaderboardEntry, Article, Notification } from '../types';
-import { CLUB_LOOKUP } from './clubs';
+import { CLUB_BY_LEGACY_ID } from './clubs';
 
 function c(id: string) {
-  const club = CLUB_LOOKUP[id];
-  if (!club) throw new Error(`CLUB_LOOKUP missing "${id}"`);
+  const club = CLUB_BY_LEGACY_ID[id];
+  if (!club) throw new Error(`CLUB_BY_LEGACY_ID missing "${id}"`);
   return club;
 }
 
@@ -13,7 +13,7 @@ function c(id: string) {
  */
 export const DUMMY_MATCHES: Match[] = [
   {
-    id: 'gw34-1',
+    id: 1,
     homeClub: c('hearts'),
     awayClub: c('medeama'),
     homeScore: 4,
@@ -25,7 +25,7 @@ export const DUMMY_MATCHES: Match[] = [
     gameweek: 34,
   },
   {
-    id: 'gw34-2',
+    id: 2,
     homeClub: c('berekum'),
     awayClub: c('bechem'),
     homeScore: 3,
@@ -37,7 +37,7 @@ export const DUMMY_MATCHES: Match[] = [
     gameweek: 34,
   },
   {
-    id: 'gw34-3',
+    id: 3,
     homeClub: c('kotoko'),
     awayClub: c('allblacks'),
     homeScore: 1,
@@ -55,7 +55,7 @@ export const DUMMY_MATCHES: Match[] = [
  */
 export const DUMMY_NOTIFICATIONS: Notification[] = [
   {
-    id: 'notif-1',
+    id: 1,
     type: 'goal',
     title: 'Goal for Hearts of Oak',
     body: 'Hearts of Oak take the lead against Medeama SC in a 4-2 thriller.',
@@ -63,7 +63,7 @@ export const DUMMY_NOTIFICATIONS: Notification[] = [
     createdAt: new Date(Date.now() - 3600000).toISOString(),
   },
   {
-    id: 'notif-2',
+    id: 2,
     type: 'fantasy',
     title: 'Fantasy points updated',
     body: 'Your squad earned 54 points this gameweek.',
@@ -71,7 +71,7 @@ export const DUMMY_NOTIFICATIONS: Notification[] = [
     createdAt: new Date(Date.now() - 7200000).toISOString(),
   },
   {
-    id: 'notif-3',
+    id: 3,
     type: 'prediction',
     title: 'Prediction results are in',
     body: 'You scored 12 points on Gameweek 34.',
@@ -121,7 +121,7 @@ export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
   {
     rank: 1,
     rankChange: 1,
-    userId: 'user-1',
+    userId: 101,
     username: 'MedeamaKing',
     club: c('medeama'),
     totalPoints: 48,
@@ -131,7 +131,7 @@ export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
   {
     rank: 2,
     rankChange: -1,
-    userId: 'user-2',
+    userId: 102,
     username: 'HeartsLoyal',
     club: c('hearts'),
     totalPoints: 42,
@@ -141,7 +141,7 @@ export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
   {
     rank: 3,
     rankChange: 0,
-    userId: 'user-3',
+    userId: 103,
     username: 'KotokoFan1',
     club: c('kotoko'),
     totalPoints: 39,

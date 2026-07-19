@@ -36,11 +36,11 @@ export default function MotmVoteScreen() {
   const { matchId } = route.params;
 
   const [candidates, setCandidates] = useState<MotmCandidate[]>([]);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
-  const [votedPlayerId, setVotedPlayerId] = useState<string | null>(null);
+  const [votedPlayerId, setVotedPlayerId] = useState<number | null>(null);
   const [results, setResults] = useState<MotmResult[]>([]);
   const [submitting, setSubmitting] = useState(false);
 

@@ -12,19 +12,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
-import { CLUB_LOOKUP } from '../../constants/clubs';
+import { CLUB_BY_LEGACY_ID } from '../../constants/clubs';
 import { usePredictionStore } from '../../store/predictionStore';
 import type { Club, Match } from '../../types';
 
 function requireClub(id: string): Club {
-  const club = CLUB_LOOKUP[id];
-  if (!club) throw new Error(`CLUB_LOOKUP missing key "${id}" — check GPL_CLUBS`);
+  const club = CLUB_BY_LEGACY_ID[id];
+  if (!club) throw new Error(`CLUB_BY_LEGACY_ID missing key "${id}" — check GPL_CLUBS`);
   return club;
 }
 
 const MOCK_FIXTURES: Match[] = [
   {
-    id: 'f1',
+    id: 1,
     homeClub: requireClub('kotoko'),
     awayClub: requireClub('hearts'),
     homeScore: null,
@@ -36,7 +36,7 @@ const MOCK_FIXTURES: Match[] = [
     gameweek: 1,
   },
   {
-    id: 'f2',
+    id: 2,
     homeClub: requireClub('medeama'),
     awayClub: requireClub('dreams'),
     homeScore: null,
@@ -53,7 +53,7 @@ export default function PredictRoot() {
   const insets = useSafeAreaInsets();
   const { predictions, setPrediction, setExactScore, submitAll } = usePredictionStore();
 
-  const handleScoreChange = (fixtureId: string, home: string, away: string) => {
+  const handleScoreChange = (fixtureId: number, home: string, away: string) => {
     const h = parseInt(home) || 0;
     const a = parseInt(away) || 0;
     setExactScore(fixtureId, h, a);

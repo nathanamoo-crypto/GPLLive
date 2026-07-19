@@ -1,31 +1,17 @@
 import api from './api';
-import { VOTE_URL } from '../constants/apiUrls';
-
-export const MOTMEndpoints = {
-  GET_CANDIDATES: '/votes/motm/:matchId/candidates',
-  SUBMIT_VOTE: '/votes/motm/:matchId',
-  GET_RESULTS: '/votes/motm/:matchId/results',
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ASSUMED RESPONSE SHAPES — flag if backend contract differs.
-// The backend vote-service has not been confirmed end-to-end; these types
-// are inferred from the apiUrls.ts comments and typical REST conventions.
-// ─────────────────────────────────────────────────────────────────────────────
+import { VOTE_URL, MOTMEndpoints } from '../constants/apiUrls';
 
 export interface MotmCandidate {
-  playerId: string;
+  playerId: number;
   playerName: string;
-  clubId: string;
+  clubId: number;
   position: string;
 }
 
 export interface MotmCandidatesResponse {
   candidates: MotmCandidate[];
-  /** ASSUMED: backend returns hasVoted flag. If absent, client infers
-   *  from whether results are non-empty — flag if this is the case. */
   hasVoted: boolean;
-  votedPlayerId?: string;
+  votedPlayerId?: number;
 }
 
 export interface MotmVoteResponse {
@@ -33,9 +19,9 @@ export interface MotmVoteResponse {
 }
 
 export interface MotmResult {
-  playerId: string;
+  playerId: number;
   playerName: string;
-  clubId: string;
+  clubId: number;
   votes: number;
   percentage: number;
 }
@@ -45,30 +31,26 @@ export interface MotmResultsResponse {
   totalVotes: number;
 }
 
-function resolvePath(template: string, matchId: string): string {
-  return template.replace(':matchId', matchId);
-}
-
-export async function getMotmCandidates(matchId: string, signal?: AbortSignal): Promise<MotmCandidatesResponse> {
+export async function getMotmCandidates(matchId: number, signal?: AbortSignal): Promise<MotmCandidatesResponse> {
   const { data } = await api.get<MotmCandidatesResponse>(
-    resolvePath(MOTMEndpoints.GET_CANDIDATES, matchId),
+    `${MOTMEndpoints.VOTE}/${matchId}/candidates`,
     { baseURL: VOTE_URL, signal },
   );
   return data;
 }
 
-export async function submitMotmVote(matchId: string, playerId: string): Promise<MotmVoteResponse> {
+export async function submitMotmVote(matchId: number, playerId: number): Promise<MotmVoteResponse> {
   const { data } = await api.post<MotmVoteResponse>(
-    resolvePath(MOTMEndpoints.SUBMIT_VOTE, matchId),
+    `${MOTMEndpoints.VOTE}/${matchId}`,
     { playerId },
     { baseURL: VOTE_URL },
   );
   return data;
 }
 
-export async function getMotmResults(matchId: string, signal?: AbortSignal): Promise<MotmResultsResponse> {
+export async function getMotmResults(matchId: number, signal?: AbortSignal): Promise<MotmResultsResponse> {
   const { data } = await api.get<MotmResultsResponse>(
-    resolvePath(MOTMEndpoints.GET_RESULTS, matchId),
+    `${MOTMEndpoints.VOTE}/${matchId}/results`,
     { baseURL: VOTE_URL, signal },
   );
   return data;

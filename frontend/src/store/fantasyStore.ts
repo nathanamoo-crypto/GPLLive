@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { FantasyPlayer, FantasyState, FormationKey, FormationDefinition, Player } from '../types';
-import { saveFantasySquad, lockTeamForGameweek as lockTeamApi, unlockTeam as unlockTeamApi } from '../services/fantasyService';
+import * as fantasyService from '../services/fantasyService';
 
 const INITIAL_BUDGET = 100;
 
@@ -38,7 +38,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     const draftPlayers = get().draftPlayers;
     if (draftPlayers.find((item) => item.id === player.id)) return;
     set((state) => ({
-      draftPlayers: [...state.draftPlayers, { ...player, isStarting: false, weekPoints: 0 }],
+      draftPlayers: [...state.draftPlayers, { ...player, fantasyTeamPlayerId: 0, isStarting: false, isCaptain: false, isViceCaptain: false, weekPoints: 0 }],
       budget: state.budget - player.price,
     }));
   },
@@ -109,18 +109,38 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const playerIds = draftPlayers.map((p) => p.id);
-      const { team } = await saveFantasySquad({
-        teamName,
-        captainId,
-        viceCaptainId: viceCaptainId ?? undefined,
-        startingPlayerIds,
-        formation,
-        playerIds,
-      });
+      const team = await fantasyService.createTeam(teamName);
+
+      for (const player of draftPlayers) {
+        await fantasyService.addPlayerToSquad(player.id);
+      }
+
+      if (startingPlayerIds.length > 0) {
+        await fantasyService.setLineup(
+          draftPlayers
+            .filter((p) => startingPlayerIds.includes(p.id))
+            .map((p) => p.id),
+        );
+      }
+
+      const teamData = await fantasyService.getMyTeam();
+      if (!teamData) throw new Error('Failed to load team after creation');
+
+      const updatedCaptain = teamData.players.find((p) => p.id === captainId);
+      if (updatedCaptain) {
+        await fantasyService.setCaptain(updatedCaptain.fantasyTeamPlayerId);
+      }
+      if (viceCaptainId) {
+        const updatedVC = teamData.players.find((p) => p.id === viceCaptainId);
+        if (updatedVC) {
+          await fantasyService.setViceCaptain(updatedVC.fantasyTeamPlayerId);
+        }
+      }
+
+      const finalTeam = await fantasyService.getMyTeam();
 
       set({
-        team,
+        team: finalTeam,
         hasSquad: true,
         draftPlayers: [],
         draftCaptainId: null,
@@ -142,11 +162,9 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     if (!currentTeam) return;
     set({ loading: true, error: null });
     try {
-      await lockTeamApi();
-      const nextGwDeadline = new Date();
-      nextGwDeadline.setDate(nextGwDeadline.getDate() + 7);
+      await fantasyService.lockTeamForGameweek();
       set({
-        team: { ...currentTeam, isLocked: true, deadline: nextGwDeadline.toISOString() },
+        team: { ...currentTeam, isLocked: true },
         loading: false,
       });
     } catch (err: unknown) {
@@ -161,9 +179,9 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     if (!currentTeam) return;
     set({ loading: true, error: null });
     try {
-      await unlockTeamApi();
+      await fantasyService.unlockTeam();
       set({
-        team: { ...currentTeam, isLocked: false, deadline: undefined },
+        team: { ...currentTeam, isLocked: false },
         loading: false,
       });
     } catch (err: unknown) {

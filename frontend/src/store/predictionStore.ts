@@ -7,8 +7,8 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     set((state) => ({
       predictions: {
         ...state.predictions,
-        [fixtureId]: {
-          ...(state.predictions[fixtureId] ?? {
+        [String(fixtureId)]: {
+          ...(state.predictions[String(fixtureId)] ?? {
             fixtureId,
             outcome: null,
             exactHomeGoals: undefined,
@@ -25,8 +25,8 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     set((state) => ({
       predictions: {
         ...state.predictions,
-        [fixtureId]: {
-          ...(state.predictions[fixtureId] ?? {
+        [String(fixtureId)]: {
+          ...(state.predictions[String(fixtureId)] ?? {
             fixtureId,
             outcome: null,
             exactHomeGoals: undefined,
@@ -41,7 +41,6 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     }));
   },
   submitAll: async (gameweek: number) => {
-    // TODO: POST /predictions with gameweek — currently mock-only
     console.log(`Submitting predictions for gameweek ${gameweek}`);
     set((state) => ({
       predictions: Object.fromEntries(

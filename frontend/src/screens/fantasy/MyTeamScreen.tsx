@@ -9,15 +9,15 @@ import { useFantasyStore } from '../../store/fantasyStore';
 import SegmentedControl from '../../components/shared/SegmentedControl';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
-import type { FantasyPlayer } from '../../types';
+import type { FantasyPlayer, ChipType, ChipStatus } from '../../types';
 
 type ViewMode = 'pitch' | 'list';
 
-const CHIPS = [
-  { name: 'Bench Boost', icon: 'rocket-outline' as const },
-  { name: 'Triple Captain', icon: 'trophy-outline' as const },
-  { name: 'Wildcard', icon: 'shuffle-outline' as const },
-  { name: 'Free Hit', icon: 'flash-outline' as const },
+const CHIPS: { name: string; icon: keyof typeof Ionicons.glyphMap; chipType: ChipType }[] = [
+  { name: 'Bench Boost', icon: 'rocket-outline', chipType: 'BenchBoost' },
+  { name: 'Triple Captain', icon: 'trophy-outline', chipType: 'TripleCaptain' },
+  { name: 'Wildcard', icon: 'shuffle-outline', chipType: 'Wildcard' },
+  { name: 'Free Hit', icon: 'flash-outline', chipType: 'FreeHit' },
 ];
 
 const POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD'] as const;
@@ -44,10 +44,10 @@ function MyTeamScreen() {
   const formation = team.formation || '4-3-3';
   const startingPlayerIds = team.startingPlayerIds || [];
   const captainId = team.captainId;
-  const viceCaptainId = team.viceCaptainId || null;
-  const weekPoints = team.weekPoints || 0;
+  const viceCaptainId = team.viceCaptainId ?? null;
+  const gameweekPoints = team.gameweekPoints || 0;
   const totalPoints = team.totalPoints || 0;
-  const overallRank = team.overallRank || 0;
+  const overallRank = team.rank || 0;
 
   const benchPlayers = team.players.filter((p: FantasyPlayer) => !startingPlayerIds.includes(p.id));
 
@@ -72,7 +72,7 @@ function MyTeamScreen() {
               <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{weekPoints}</Text>
+              <Text style={styles.statValue}>{gameweekPoints}</Text>
               <Text style={styles.statLabel}>GW {gameweek}</Text>
             </View>
             <View style={styles.stat}>
@@ -100,9 +100,13 @@ function MyTeamScreen() {
 
         <View style={styles.chipStrip}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipStripContent}>
-            {CHIPS.map((chip) => (
-              <ChipCard key={chip.name} name={chip.name} icon={chip.icon} />
-            ))}
+            {CHIPS.map((chip) => {
+              const chipKey = (chip.chipType.charAt(0).toLowerCase() + chip.chipType.slice(1)) as keyof ChipStatus;
+              const activated = team.chips?.[chipKey] ?? false;
+              return (
+                <ChipCard key={chip.name} name={chip.name} icon={chip.icon} available={activated} />
+              );
+            })}
           </ScrollView>
         </View>
 

@@ -8,10 +8,10 @@ import type { FantasyPlayer, FormationKey } from '../../types';
 
 interface PitchViewProps {
   players: FantasyPlayer[];
-  startingPlayerIds: string[];
-  captainId: string | null;
-  viceCaptainId?: string | null;
-  formation: FormationKey;
+  startingPlayerIds: number[];
+  captainId: number | null;
+  viceCaptainId?: number | null;
+  formation: string;
   /** When true, renders a smaller bench row below the pitch. Default false.
    *  NOTE: This bench row is exclusive to the read-only MyTeam screen.
    *  The draft flow (FantasyRoot / LineupStep) does not use this prop,
@@ -36,7 +36,7 @@ export default function PitchView({
   formation,
   showBench = false,
 }: PitchViewProps) {
-  const formationDef = FORMATIONS[formation];
+  const formationDef = FORMATIONS[formation as FormationKey];
   const startingPlayers = players.filter((p) => startingPlayerIds.includes(p.id));
   const benchPlayers = players.filter((p) => !startingPlayerIds.includes(p.id));
 

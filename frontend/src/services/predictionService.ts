@@ -1,15 +1,19 @@
+import api from './api';
+import { PREDICT_URL, PredictionEndpoints } from '../constants/apiUrls';
 import { Prediction } from '../types';
 
-/**
- * MOCK PREDICTION SERVICE
- * -------------------
- * This layer abstracts data fetching to make future API integration seamless.
- * 
- * TO REVERT/UPDATE: Replace mock returns with real 'api.post()' calls.
- */
+export async function submitPredictions(predictions: Record<string, Prediction>): Promise<void> {
+  const payload = Object.values(predictions).map((p) => ({
+    fixtureId: p.fixtureId,
+    outcome: p.outcome,
+    exactHomeGoals: p.exactHomeGoals,
+    exactAwayGoals: p.exactAwayGoals,
+  }));
 
-// TODO: Replace with API call to /predictions
-export const submitPredictions = async (predictions: Record<string, Prediction>): Promise<void> => {
-  console.log('Submitting predictions to backend...', predictions);
-  await new Promise(resolve => setTimeout(resolve, 1000));
-};
+  const { data } = await api.post(
+    PredictionEndpoints.SUBMIT,
+    { predictions: payload },
+    { baseURL: PREDICT_URL },
+  );
+  return data;
+}
