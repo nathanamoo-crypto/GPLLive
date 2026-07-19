@@ -1,120 +1,209 @@
 # GPL Live — API Endpoint Reference
 
-Every endpoint listed below corresponds to mock data locations in the frontend.
-Use the **File** column to find the `TODO` comment where the fetch/axios call should be inserted.
+All endpoints except those under `/auth/**` require:
+```
+Authorization: Bearer <token>
+```
+
+Every error response follows this shape:
+```json
+{ "timestamp": "...", "status": 400, "error": "Bad Request", "message": "...", "path": "/..." }
+```
 
 ---
 
-## Auth
+## Auth (`/auth`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `POST` | `/auth/register` | Create account | `{ name, email, password }` | `{ token, user }` | `RegisterLoginScreen.tsx` → `handleSubmit` |
-| `POST` | `/auth/login` | Log in | `{ email, password }` | `{ token, user }` | `RegisterLoginScreen.tsx` → `handleSubmit` |
-| `POST` | `/auth/demo` | Demo login | – | `{ token, user }` | `RegisterLoginScreen.tsx` → `handleDemo` |
-| `POST` | `/auth/google` | Google OAuth | `{ idToken }` | `{ token, user }` | `RegisterLoginScreen.tsx` → `handleGoogleSignIn` |
-| `POST` | `/auth/forgot-password` | Send reset email | `{ email }` | `{ message }` | `RegisterLoginScreen.tsx` → `handleForgotPassword` |
-| `GET` | `/auth/me` | Validate token, get current user | – | `{ user }` | `authStore.ts` → hydration |
+| Method | Endpoint | Purpose | Body | Response | Errors |
+|--------|----------|---------|------|----------|--------|
+| `POST` | `/auth/register` | Create account | `{ username, email, password, fullName, favouriteTeam }` | `{ token, username }` | 409 (email exists), 400 (invalid fields) |
+| `POST` | `/auth/login` | Log in | `{ email, password }` | `{ token, username }` | 401 (wrong credentials), 400 (missing fields) |
 
 ---
 
-## Onboarding / User
+## Clubs (`/clubs`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `PUT` | `/users/club` | Set favourite club | `{ clubId }` | `{ user }` | `PickClubScreen.tsx` → pick handler |
-| `GET` | `/users/me` | Get current profile | – | `{ user }` | `MoreScreen.tsx` → user card |
-| `PUT` | `/users/me` | Update profile | `{ username?, avatarUrl? }` | `{ user }` | future edit-profile screen |
-
----
-
-## Matches & Fixtures
-
-| Method | Endpoint | Purpose | Query Params | Response | File |
-|--------|----------|---------|-------------|----------|------|
-| `GET` | `/matches` | List matches | `?status=live\|scheduled\|ft&gameweek=24` | `Match[]` | `FixturesRoot.tsx` → `MOCK_MATCHES` |
-| `GET` | `/matches/:id` | Single match detail + events | – | `Match + MatchEvent[]` | `MatchDetailsScreen.tsx` → mock |
-| `GET` | `/matches/live` | Live matches (for home widget + tab badge) | – | `Match[]` | `HomeScreen.tsx`, `MainTabNavigator.tsx` |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `GET` | `/clubs` | All active clubs | — | `Club[]` | — |
+| `GET` | `/clubs/{id}` | Single club | — | `Club` | 404 |
+| `POST` | `/clubs` | Create club | `{ fullName, shortName, logoUrl, homeGround, foundedYear, city, clubStatus }` | `Club` | 409 (duplicate name), 400 |
+| `PUT` | `/clubs/{id}` | Update club | Same as create | `Club` | 404 |
 
 ---
 
-## Standings
+## Players (`/players`)
 
-| Method | Endpoint | Purpose | Query Params | Response | File |
-|--------|----------|---------|-------------|----------|------|
-| `GET` | `/standings` | Full league table | `?gameweek=24` | `Standing[]` | `FixturesRoot.tsx` → `StandingsView`, `LeagueTableScreen.tsx` |
-
----
-
-## News
-
-| Method | Endpoint | Purpose | Query Params | Response | File |
-|--------|----------|---------|-------------|----------|------|
-| `GET` | `/news` | List articles | `?category=GPL\|Black+Stars\|...&page=1&limit=20` | `Article[]` | `NewsScreen.tsx`, `LatestNewsWidget.tsx` |
-| `GET` | `/news/:id` | Single article | – | `Article` | `NewsDetailScreen.tsx` → `MOCK_ARTICLE` |
+| Method | Endpoint | Purpose | Params/Body | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `GET` | `/players` | All available players from active clubs | — | `Player[]` | — |
+| `GET` | `/players/{id}` | Single player | — | `Player` | 404 |
+| `GET` | `/players/position/{position}` | Filter by GK/DEF/MID/FWD | — | `Player[]` | — |
+| `GET` | `/players/club/{clubId}` | All players for a club | — | `Player[]` | 404 |
+| `POST` | `/players` | Create player | `{ fullName, clubId, jerseyNumber, position, photoUrl?, nationality, status }` | `Player` | 409 (duplicate), 404 (club), 400 |
+| `PUT` | `/players/{id}` | Update player | Same as create | `Player` | 404 |
 
 ---
 
-## Fantasy
+## Player Prices (`/player-price`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `GET` | `/fantasy/players` | Available players for draft | `?position=GK\|DEF\|MID\|FWD` | `Player[]` | `FantasyRoot.tsx` → `MOCK_PLAYERS` |
-| `POST` | `/fantasy/team` | Create/submit squad | `{ teamName, badgeId, captainId, viceCaptainId, startingPlayerIds, formation, playerIds[] }` | `{ team }` | `FantasyRoot.tsx` → `submitSquad` |
-| `GET` | `/fantasy/team` | Get current user's team | – | `FantasyTeam` | `FantasyRoot.tsx` → store hydrate |
-| `PUT` | `/fantasy/team/lineup` | Update starting XI / captain | `{ startingPlayerIds, captainId, viceCaptainId, formation }` | `{ team }` | `FantasyRoot.tsx` → lineup step |
-| `POST` | `/fantasy/team/lock` | Lock team for gameweek | – | `{ team }` | `FantasyRoot.tsx` → `lockTeamForGameweek` |
-| `GET` | `/fantasy/leaderboard` | Overall leaderboard | `?page=1&limit=50` | `LeaderboardEntry[]` | `FantasyRoot.tsx` → `MOCK_FANTASY_LEADERBOARD` |
-| `GET` | `/fantasy/leagues` | List private leagues | – | `{ leagues: [] }` | `FantasyRoot.tsx` → `MOCK_PRIVATE_LEAGUES` |
-| `POST` | `/fantasy/leagues` | Create private league | `{ name, code }` | `{ league }` | `FantasyRoot.tsx` → HubLeagues Create button |
-| `GET` | `/fantasy/leagues/:id` | League detail | – | `{ league, members, standings }` | future league detail screen |
-| `POST` | `/fantasy/leagues/join` | Join by code | `{ code }` | `{ league }` | future join league screen |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/player-price` | Record price entry | `{ playerId, gameweekId, price }` | — | 404, 400 |
+| `GET` | `/player-price/{playerId}/current` | Current price | — | `PlayerPrice` | 404 |
+| `GET` | `/player-price/{playerId}/history` | Price history | — | `PlayerPrice[]` | — |
 
 ---
 
-## Predictions
+## Gameweeks (`/gameweeks`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `GET` | `/predictions/fixtures` | Get gameweek fixtures for prediction | `?gameweek=24` | `Match[]` | `PredictRoot.tsx` → `MOCK_FIXTURES` |
-| `POST` | `/predictions` | Submit predictions | `{ gameweek, predictions: [{ fixtureId, outcome, exactHomeGoals, exactAwayGoals }] }` | `{ success }` | `PredictRoot.tsx` → `submitAll` |
-| `GET` | `/predictions/leaderboard` | Prediction league standings | `?page=1&limit=50` | `LeaderboardEntry[]` | `PredictRoot.tsx` → `MOCK_PREDICT_LEADERBOARD` |
-
----
-
-## Notifications
-
-| Method | Endpoint | Purpose | Query Params | Response | File |
-|--------|----------|---------|-------------|----------|------|
-| `GET` | `/notifications` | List notifications | `?page=1&limit=20` | `Notification[]` | `NotificationInboxScreen.tsx` → `DUMMY_NOTIFICATIONS` |
-| `PUT` | `/notifications/read-all` | Mark all as read | – | `{ success }` | `NotificationInboxScreen.tsx` → `markAllRead` |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `GET` | `/gameweeks` | All gameweeks | — | `Gameweek[]` | — |
+| `GET` | `/gameweeks/current` | Currently active gameweek | — | `Gameweek` | 404 |
+| `GET` | `/gameweeks/season/{season}` | By season string | — | `Gameweek[]` | — |
+| `POST` | `/gameweeks` | Create gameweek | `{ season, gameweekNumber, startDate, endDate, deadline }` | `Gameweek` | — |
+| `PUT` | `/gameweeks/{id}/set-current` | Activate this gameweek | — | — | 404 |
 
 ---
 
-## Search
+## Fixtures (`/fixtures`)
 
-| Method | Endpoint | Purpose | Query Params | Response | File |
-|--------|----------|---------|-------------|----------|------|
-| `GET` | `/search` | Global search | `?q=query&type=player\|club\|news` | `{ results: SearchResult[] }` | `SearchScreen.tsx` → `MOCK_DATA` |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `GET` | `/fixtures/scheduled` | Scheduled fixtures | — | `Fixture[]` | — |
+| `GET` | `/fixtures/live` | Live fixtures | — | `Fixture[]` | — |
+| `GET` | `/fixtures/finished` | Finished fixtures | — | `Fixture[]` | — |
+| `GET` | `/fixtures/gameweek/{id}` | All fixtures for a gameweek | — | `Fixture[]` | — |
+| `POST` | `/fixtures` | Create fixture | `{ homeClubId, awayClubId, gameweekId, matchDate, venue }` | `Fixture` | 400 (same club), 404 (club/gameweek) |
+| `PATCH` | `/fixtures/{id}/status` | Change status | Raw JSON string: `"LIVE"` | — | 404 |
+| `GET` | `/fixtures/{id}/lineups` | Starting XI + subs for both teams | — | `FixtureLineups` | 404 (fixture not found or lineups not yet published) |
+
+Required `FixtureLineups` shape:
+```json
+{
+  "fixtureId": 1,
+  "homeTeam": { "teamId": 1, "name": "Hearts of Oak", "startingXI": [{ "playerId": 10, "playerName": "Michael Ampadu", "position": "MF", "jerseyNumber": 8, "clubId": 1 }], "substitutes": [] },
+  "awayTeam": { "teamId": 2, "name": "Kotoko", "startingXI": [], "substitutes": [] }
+}
+```
+The MOTM vote screen uses **startingXI** from both teams as candidate list. Without this endpoint, voting is blocked.
 
 ---
 
-## Subscriptions
+## Fixture Results (`/fixture-results`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `GET` | `/subscriptions` | Get available plans + user's plan | – | `{ plans: [], currentPlan: {...}, club: {...} }` | `SubscribeScreen.tsx` → mock |
-| `POST` | `/subscriptions` | Create / upgrade subscription | `{ planId, clubId, paymentMethodId }` | `{ subscription }` | `SubscribeScreen.tsx` → subscribe action |
-| `POST` | `/subscriptions/payment` | Process payment | `{ cardNumber, expiry, cvv, name }` | `{ success, transactionId }` | `PaymentScreen.tsx` → `handlePay` |
-| `GET` | `/subscriptions/:id` | Get subscription details | – | `{ subscription }` | future subscription detail |
-| `DELETE` | `/subscriptions/:id` | Cancel subscription | – | `{ success }` | future cancel action |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/fixture-results` | Record final score + stats | `{ fixtureId, homeScore, awayScore, homePossession, awayPossession }` | — | 400 (already finished or postponed), 404 |
+| `GET` | `/fixture-results/{fixtureId}` | Get result | — | `FixtureResult` | 404 |
+| `GET` | `/fixture-results` | All results | — | `FixtureResult[]` | — |
 
 ---
 
-## Reactions (Match Comments)
+## Fantasy Teams (`/fantasy-teams`)
 
-| Method | Endpoint | Purpose | Request Body / Params | Response | File |
-|--------|----------|---------|----------------------|----------|------|
-| `GET` | `/matches/:id/reactions` | List reactions for a match | `?page=1&limit=30` | `Reaction[]` | `MatchDetailsScreen.tsx` → mock |
-| `POST` | `/matches/:id/reactions` | Post a reaction | `{ text }` | `{ reaction }` | `MatchDetailsScreen.tsx` → post handler |
-| `POST` | `/matches/:id/reactions/:reactionId/like` | Like a reaction | – | `{ reaction }` | `MatchDetailsScreen.tsx` → like handler |
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/fantasy-teams` | Create team (one per user) | `{ teamName }` | `{ budgetRemaining, totalPoints, transferPoints }` | 409 (already exists or name taken), 400 |
+| `GET` | `/fantasy-teams/my-team` | Current user's team | — | `FantasyTeam` | 404 |
+| `GET` | `/fantasy-teams/{id}` | Any team by ID | — | `FantasyTeam` | 404 |
+| `GET` | `/fantasy-teams` | All teams | — | `FantasyTeam[]` | — |
+| `PUT` | `/fantasy-teams/{id}` | Rename team | `{ teamName }` | — | 403 (not owner), 404 |
+
+---
+
+## Squad (`/squad`)
+
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/squad` | Add player to squad | `{ fantasyTeamId, playerId }` | — | 400 (rules violation), 403 (not owner), 404 |
+| `PUT` | `/squad/lineup` | Set starting XI (full overwrite) | `{ fantasyTeamPlayerIds: [17,19,...] }` | — | 400 (rules), 403, 404 |
+| `GET` | `/squad/{fantasyTeamId}` | Full squad | — | `SquadPlayer[]` | — |
+| `GET` | `/squad/{fantasyTeamId}/start-xi` | Starting XI only | — | `SquadPlayer[]` | — |
+| `GET` | `/squad/{fantasyTeamId}/bench` | Bench only | — | `SquadPlayer[]` | — |
+| `PATCH` | `/squad/{id}/captain` | Assign captain | — | — | 400, 403, 404 |
+| `PATCH` | `/squad/{id}/vice-captain` | Assign vice-captain | — | — | 400, 403, 404 |
+| `PATCH` | `/squad/{a}/{b}/toggle-bench` | Swap starter/bench | — | — | 400 (rules), 404 |
+
+---
+
+## Transfers (`/transfers`)
+
+| Method | Endpoint | Purpose | Body | Response | Errors |
+|--------|----------|---------|------|----------|--------|
+| `POST` | `/transfers` | Swap squad members | `{ fantasyTeamId, playerOutId, playerInId, gameweekId }` | — | 400 (rules), 403, 404 |
+| `GET` | `/transfers/team/{fantasyTeamId}` | Transfer history | — | `Transfer[]` | — |
+
+---
+
+## Chips (`/chips`)
+
+All require body: `{ fantasyTeamId, gameweekId }`
+
+| Method | Endpoint | Rules | Errors |
+|--------|----------|-------|--------|
+| `POST` | `/chips/triple-captain` | One chip per gameweek; type not already used this season | 400, 403, 404 |
+| `POST` | `/chips/bench-boost` | Same as above | same |
+| `POST` | `/chips/wildcard` | gameweekNumber ≤ 19 | same |
+| `POST` | `/chips/wildcard2` | gameweekNumber > 19 | same |
+| `POST` | `/chips/free-hit` | Snapshots squad + budget, restores at next gameweek | same |
+
+---
+
+## Scoring (`/scoring`)
+
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/scoring/stats` | Record player fixture stats + compute points | `{ playerId, fixtureId, minutesPlayed, goalsScored, assists, cleanSheet, yellowCard, redCard, saves }` | — | 409 (already recorded), 400, 404 |
+| `POST` | `/scoring/calculate-all/{gameweekId}` | Calculate all team scores | — | — | 404 (no fixtures) |
+| `GET` | `/scoring/fixture/{fixtureId}` | Stats for a fixture | — | `PlayerStats[]` | — |
+| `GET` | `/scoring/gameweek/{gameweekId}` | All team scores for gameweek | — | `TeamScore[]` | — |
+| `GET` | `/scoring/history/{fantasyTeamId}` | Team score history | — | `TeamScore[]` | — |
+
+---
+
+## Discussion (`/discussion`)
+
+| Method | Endpoint | Purpose | Body | Response | Errors |
+|--------|----------|---------|------|----------|--------|
+| `POST` | `/discussion` | Post message | `{ fixtureId, message }` | `{ message }` | 404 |
+| `GET` | `/discussion/fixture/{fixtureId}` | Messages for a fixture | — | `{ messages: DiscussionMessage[] }` | — |
+
+---
+
+## MOTM Votes (`/motmVotes`)
+
+| Method | Endpoint | Purpose | Body | Response | Errors |
+|--------|----------|---------|------|----------|--------|
+| `POST` | `/motmVotes` | Submit vote | `{ fixtureId, playerId }` | `{ success }` | 409 (already voted), 400 (not LIVE), 404 |
+| `GET` | `/motmVotes/{fixtureId}` | All votes for a fixture | — | `MotmVote[]` | — |
+
+**Frontend dependency**: The MOTM vote screen requires `GET /fixtures/{id}/lineups` to populate the player picker (candidates = all startingXI players from both teams). Without it, voting shows an explanatory message and is blocked.
+
+---
+
+## Notifications (`/notifications`)
+
+| Method | Endpoint | Purpose | Body/Params | Response | Errors |
+|--------|----------|---------|-------------|----------|--------|
+| `POST` | `/notifications` | Send notification (any auth'd user to any userId) | `{ userId, message, type }` | — | 404 |
+| `GET` | `/notifications` | Caller's notifications | — | `Notification[]` | — |
+| `GET` | `/notifications/unread` | Unread only | — | `Notification[]` | — |
+| `PATCH` | `/notifications/marked-as-read-notification/{id}` | Mark one read | — | — | 403 (not owner), 404 |
+
+---
+
+## Background Jobs (not HTTP)
+
+- **GameweekScheduler** (nightly cron): restores Free Hit snapshots, advances gameweek, logs warnings but does not throw on edge cases.
+
+---
+
+## Notes on IDs
+
+| Endpoint family | ID type expected |
+|----------------|-----------------|
+| `/squad/{id}/captain`, `/vice-captain`, `/toggle-bench`, `/squad/lineup` | `FantasyTeamPlayer` row ID (from squad responses) |
+| `/transfers` (`playerOutId`, `playerInId`) | Player table ID |
+| `/player-price/{playerId}/...` | Player table ID |

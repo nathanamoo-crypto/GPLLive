@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,26 +14,10 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
 import { getScrollBottomPadding } from '../../constants/layout';
+import { getArticleDetails } from '../../services/newsService';
 import type { Article } from '../../types';
 
 const { width } = Dimensions.get('window');
-
-/**
- * MOCK DATA SECTION
- * -----------------
- * This data will be replaced by an API call once the backend is ready.
- */
-const MOCK_ARTICLE: Article = {
-  id: 'a1',
-  headline: 'Asante Kotoko to Face Hearts of Oak in Season Opener',
-  category: 'GPL',
-  source: 'GPL Official',
-  publishedAt: new Date().toISOString(),
-  thumbnailUrl: '', // Placeholder
-  author: 'Kwesi Appiah',
-  body: `The Ghana Premier League returns with a bang as the two giants of Ghana football, Asante Kotoko and Accra Hearts of Oak, are set to face off in the opening weekend of the 2026/27 season.\n\nFans are eagerly awaiting the clash at the Baba Yara Stadium in Kumasi. Both teams have bolstered their squads during the transfer window and are looking to make a strong start to the campaign.\n\n"We are ready for the challenge," said the Kotoko head coach during the pre-match press conference. "Playing against Hearts is always a big occasion, and we want to give our fans something to celebrate."\n\nHearts of Oak, on the other hand, are confident of securing a positive result away from home. Their new signings are expected to make an immediate impact as they aim for the league title this year.`,
-  url: 'https://gpl.com.gh/news/a1',
-};
 
 export default function NewsDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -42,14 +26,73 @@ export default function NewsDetailScreen() {
   // @ts-ignore
   const { articleId } = route.params || {};
 
-  /**
-   * API INTEGRATION PLACEHOLDER
-   * ---------------------------
-   * TODO: Implement data fetching here.
-   * useEffect(() => {
-   *   fetchArticle(articleId);
-   * }, [articleId]);
-   */
+  const [article, setArticle] = useState<Article | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!articleId) {
+      setLoading(false);
+      setError('No article ID provided.');
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getArticleDetails(articleId)
+      .then((data) => {
+        if (cancelled) return;
+        if (data) {
+          setArticle(data);
+        } else {
+          setError('Article not found.');
+        }
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setError(err?.message ?? 'Failed to load article.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [articleId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.imageHeader}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backButton, { top: insets.top + 10 }]}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !article) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.imageHeader}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backButton, { top: insets.top + 10 }]}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'Article not found.'}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -57,7 +100,6 @@ export default function NewsDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
       >
-        {/* Header Image with Back Button */}
         <View style={styles.imageHeader}>
           <View style={styles.imagePlaceholder} />
           <TouchableOpacity
@@ -69,30 +111,29 @@ export default function NewsDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.category}>{MOCK_ARTICLE.category}</Text>
-          <Text style={styles.headline}>{MOCK_ARTICLE.headline}</Text>
+          <Text style={styles.category}>{article.category}</Text>
+          <Text style={styles.headline}>{article.headline}</Text>
           
           <View style={styles.metaRow}>
             <View style={styles.authorBadge}>
               <Text style={styles.authorText}>
-                {MOCK_ARTICLE.author?.charAt(0)}
+                {article.author?.charAt(0) ?? '?'}
               </Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{MOCK_ARTICLE.author}</Text>
+              <Text style={styles.authorName}>{article.author}</Text>
               <Text style={styles.sourceText}>
-                {MOCK_ARTICLE.source} · {new Date(MOCK_ARTICLE.publishedAt).toLocaleDateString()}
+                {article.source} · {new Date(article.publishedAt).toLocaleDateString()}
               </Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
-          <Text style={styles.body}>{MOCK_ARTICLE.body}</Text>
+          <Text style={styles.body}>{article.body}</Text>
         </View>
       </ScrollView>
 
-      {/* Share Button (Floating) */}
       <TouchableOpacity style={[styles.shareButton, { bottom: insets.bottom + 20 }]}>
         <Ionicons name="share-social-outline" size={24} color={Colors.textInverse} />
       </TouchableOpacity>
@@ -129,6 +170,8 @@ const styles = StyleSheet.create({
   sourceText: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
   divider: { height: 1, backgroundColor: Colors.border, marginBottom: 24 },
   body: { fontSize: 16, lineHeight: 26, color: Colors.textPrimary, letterSpacing: 0.3 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
   shareButton: {
     position: 'absolute',
     right: 20,

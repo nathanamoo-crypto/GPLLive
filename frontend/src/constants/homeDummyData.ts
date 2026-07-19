@@ -8,8 +8,8 @@ function c(id: string) {
 }
 
 /**
- * TODO: Replace with API call — see APIDocs.md → GET /matches/live
- * GW34 (final matchweek) fixtures — season 2025/26
+ * WIRED: HomeScreen now fetches live matches via getMatches(undefined, 'live') from matchService.
+ * Keeping as reference/fixture seed data.
  */
 export const DUMMY_MATCHES: Match[] = [
   {
@@ -151,7 +151,8 @@ export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
 ];
 
 /**
- * TODO: Replace with API call — see APIDocs.md → GET /fantasy/team
+ * WIRED: FantasySnapshotWidget now fetches via getMyTeam() from fantasyService.
+ * Keeping as reference data.
  */
 export const DUMMY_FANTASY = {
   hasSquad: true,

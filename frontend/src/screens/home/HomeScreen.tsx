@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,12 +18,13 @@ import LatestNewsWidget from '../../components/home/LatestNewsWidget';
 import LeagueTableWidget from '../../components/home/LeagueTableWidget';
 import FantasySnapshotWidget from '../../components/home/FantasySnapshotWidget';
 import PredictionLeaderboardTeaser from '../../components/home/PredictionLeaderboardTeaser';
-import { DUMMY_MATCHES } from '../../constants/homeDummyData';
 import { Colors } from '../../constants/colors';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifications } from '../../hooks/useNotifications';
+import { getMatches } from '../../services/matchService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
+import type { Match } from '../../types';
 
 type HomeNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'HomeFeed'>;
 
@@ -32,11 +33,26 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
+  const [liveMatches, setLiveMatches] = useState<Match[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMatchesLoading(true);
+    getMatches(undefined, 'live')
+      .then((data) => { if (!cancelled) setLiveMatches(data ?? []); })
+      .catch(() => { if (!cancelled) setLiveMatches([]); })
+      .finally(() => { if (!cancelled) setMatchesLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const data = await getMatches(undefined, 'live');
+      setLiveMatches(data ?? []);
+    } catch { /* keep current */ }
     setRefreshing(false);
   }, []);
 
@@ -86,7 +102,7 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <TodayMatchesWidget matches={DUMMY_MATCHES} />
+      <TodayMatchesWidget matches={liveMatches} />
       <LatestNewsWidget />
       <LeagueTableWidget />
       <FantasySnapshotWidget />
