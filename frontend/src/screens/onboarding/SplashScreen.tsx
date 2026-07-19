@@ -23,7 +23,9 @@ export default function SplashScreen() {
           resizeMode="contain"
           accessibilityLabel="GPL Live logo"
         />
-        <Text style={styles.logoText}>GPL Live</Text>
+        <Text style={styles.logoText}>
+          GPL <Text style={styles.logoLIVE}>LIVE</Text>
+        </Text>
       </Animated.View>
     </View>
   );
@@ -48,5 +50,8 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontSize: 38,
     fontWeight: '800',
+  },
+  logoLIVE: {
+    color: Colors.yellow,
   },
 });
