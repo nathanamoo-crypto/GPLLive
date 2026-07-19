@@ -11,7 +11,6 @@ export interface FormationDefinition {
 }
 
 export type NewsCategory = 'GPL' | 'Black Stars' | 'AFCON' | 'Transfers';
-export type EventType = 'goal' | 'yellow_card' | 'red_card' | 'substitution';
 export type BadgeName = 'Prediction King' | 'Top Reactor' | 'Club Loyalist' | 'MOTM Master';
 
 export interface Club {
@@ -38,17 +37,6 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
-}
-
-export interface MatchEvent {
-  id: number;
-  matchId: number;
-  type: EventType;
-  minute: number;
-  playerName: string;
-  side: 'home' | 'away';
-  assistPlayerName?: string;
-  subOffPlayerName?: string;
 }
 
 export interface Player {
@@ -135,18 +123,6 @@ export interface NewsItem {
   source: string;
   category: NewsCategory;
   time: string;
-}
-
-export interface Reaction {
-  id: number;
-  matchId: number;
-  userId: number;
-  username: string;
-  userClub: Club;
-  text: string;
-  likeCount: number;
-  isLikedByMe: boolean;
-  createdAt: string;
 }
 
 export interface ClubSubscription {
@@ -281,6 +257,6 @@ export interface PredictionState {
   predictions: Record<string, Prediction>;
   setPrediction: (fixtureId: number, outcome: Prediction['outcome']) => void;
   setExactScore: (fixtureId: number, home: number, away: number) => void;
-  submitAll: (gameweek: number) => Promise<void>;
+  submitAll: () => Promise<void>;
   reset: () => void;
 }

@@ -15,9 +15,9 @@ export const AuthEndpoints = {
 
 export const FantasyEndpoints = {
   PLAYERS: '/players',
-  MY_TEAM: '/fantasy-teams/mine',
+  MY_TEAM: '/fantasy-teams/my-team',
   CREATE_TEAM: '/fantasy-teams',
-  SQUAD_ADD: '/squad/add',
+  SQUAD_ADD: '/squad',
   SQUAD_REMOVE: '/squad/remove',
   SQUAD_LINEUP: '/squad/lineup',
   SQUAD_CAPTAIN: '/squad/captain',
@@ -26,16 +26,17 @@ export const FantasyEndpoints = {
   TRANSFERS: '/transfers',
   CHIPS_ACTIVATE: '/chips',
   CHIPS_DEACTIVATE: '/chips',
-  SCORING_PLAYER_STATS: '/scoring/player-stats',
-  SCORING_CALCULATE: '/scoring/calculate',
-  SCORING_HISTORY_PLAYER: '/scoring/history/player',
-  SCORING_HISTORY_TEAM: '/scoring/history/team',
+  SCORING_PLAYER_STATS: '/scoring/stats',
+  SCORING_CALCULATE: '/scoring/calculate-all',
+  SCORING_HISTORY_PLAYER: '/scoring/history',
+  SCORING_HISTORY_TEAM: '/scoring/history',
   PLAYER_PRICE: '/player-price',
 };
 
 export const MatchEndpoints = {
   FIXTURES: '/fixtures',
   FIXTURE_RESULTS: '/fixture-results',
+  FIXTURE_LINEUPS: '/fixtures/{id}/lineups',
 };
 
 export const PredictionEndpoints = {
@@ -43,7 +44,7 @@ export const PredictionEndpoints = {
 };
 
 export const DiscussionEndpoints = {
-  MESSAGES: '/discussions',
+  MESSAGES: '/discussion',
 };
 
 export const MOTMEndpoints = {

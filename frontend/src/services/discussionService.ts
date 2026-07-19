@@ -22,7 +22,7 @@ export async function getDiscussionMessages(
   signal?: AbortSignal,
 ): Promise<DiscussionListResponse> {
   const { data } = await api.get<DiscussionListResponse>(
-    `${DiscussionEndpoints.MESSAGES}/${fixtureId}`,
+    `${DiscussionEndpoints.MESSAGES}/fixture/${fixtureId}`,
     { baseURL: DISCUSSION_URL, signal },
   );
   return data;
@@ -33,8 +33,8 @@ export async function sendDiscussionMessage(
   message: string,
 ): Promise<DiscussionSendResponse> {
   const { data } = await api.post<DiscussionSendResponse>(
-    `${DiscussionEndpoints.MESSAGES}/${fixtureId}`,
-    { message },
+    DiscussionEndpoints.MESSAGES,
+    { fixtureId, message },
     { baseURL: DISCUSSION_URL },
   );
   return data;

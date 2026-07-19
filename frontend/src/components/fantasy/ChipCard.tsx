@@ -1,26 +1,50 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
+import { activateChip, deactivateChip } from '../../services/fantasyService';
+import type { ChipType } from '../../types';
 
 interface ChipCardProps {
   name: string;
   icon: keyof typeof Ionicons.glyphMap;
   available?: boolean;
+  chipType?: ChipType;
 }
 
-export default function ChipCard({ name, icon, available = false }: ChipCardProps) {
+export default function ChipCard({ name, icon, available = false, chipType }: ChipCardProps) {
+  const [toggling, setToggling] = useState(false);
+
+  const handlePress = async () => {
+    if (!chipType || toggling) return;
+    setToggling(true);
+    try {
+      if (available) {
+        await deactivateChip(chipType);
+      } else {
+        await activateChip(chipType);
+      }
+    } catch {
+      // chip toggle failed silently
+    } finally {
+      setToggling(false);
+    }
+  };
+
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, toggling && styles.cardDisabled]}
       activeOpacity={0.7}
-      onPress={() => {
-        // TODO: wire chip activation
-      }}
+      onPress={handlePress}
+      disabled={toggling}
     >
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={20} color={Colors.yellow} />
+        {toggling ? (
+          <ActivityIndicator size="small" color={Colors.yellow} />
+        ) : (
+          <Ionicons name={icon} size={20} color={Colors.yellow} />
+        )}
       </View>
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
       <View style={[styles.pill, available ? styles.pillAvailable : styles.pillUnavailable]}>
@@ -33,6 +57,7 @@ export default function ChipCard({ name, icon, available = false }: ChipCardProp
 }
 
 const styles = StyleSheet.create({
+  cardDisabled: { opacity: 0.5 },
   card: {
     width: 80,
     backgroundColor: Colors.surface,
