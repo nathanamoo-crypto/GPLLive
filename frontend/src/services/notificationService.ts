@@ -1,69 +1,144 @@
-// frontend/src/services/notificationService.ts
+// ================================================
+// notificationService.ts
+// GPL Live - Group 73
+// Integration & Notifications Lead
+// ================================================
 
-/**
- * Request permission to send notifications.
- */
-export const requestNotificationPermission = async (): Promise<boolean> => {
-  try {
-    console.log("Requesting notification permission...");
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import api from './api';
 
-    // TODO: Implement Expo notification permissions
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
-    return true;
-  } catch (error) {
-    console.error("Permission request failed:", error);
-    return false;
-  }
-};
-
-/**
- * Register device for push notifications
- * and retrieve Expo Push Token.
- */
+// ------------------------------------------------
+// Register device and get Expo push token
+// Sends token to notification-service (port 8086)
+// ------------------------------------------------
 export const registerForPushNotifications = async (): Promise<string | null> => {
-  try {
-    console.log("Registering for push notifications...");
-
-    // TODO: Retrieve Expo Push Token
-
-    return null;
-  } catch (error) {
-    console.error("Push registration failed:", error);
+  if (!Device.isDevice) {
+    console.warn('GPL Live: Push notifications require a real device');
     return null;
   }
+
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.warn('GPL Live: Notification permission denied');
+    return null;
+  }
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'GPL Live',
+      importance: Notifications.AndroidImportance.MAX,
+    });
+  }
+
+  const tokenData = await Notifications.getExpoPushTokenAsync();
+  // TODO: send to POST /notifications/register-token on port 8086
+  // await api.post('/notifications/register-token', { token: tokenData.data });
+  return tokenData.data;
 };
 
-/**
- * Send a local notification.
- */
-export const sendLocalNotification = async (
-  title: string,
-  body: string
+// ------------------------------------------------
+// GET /notifications?page=1&limit=20
+// Fetch all notifications for the current user
+// Consumer: NotificationInboxScreen
+// ------------------------------------------------
+export const getNotifications = async (page = 1, limit = 20) => {
+  // TODO: implement when notification-service (port 8086) is running
+  // const response = await api.get(`/notifications?page=${page}&limit=${limit}`);
+  // return response.data;
+  console.log('GPL Live: getNotifications pending - service not running');
+  return [];
+};
+
+// ------------------------------------------------
+// PUT /notifications/read-all
+// Mark all notifications as read
+// Consumer: NotificationInboxScreen "Mark all read" button
+// ------------------------------------------------
+export const markAllNotificationsRead = async () => {
+  // TODO: implement when notification-service (port 8086) is running
+  // const response = await api.put('/notifications/read-all');
+  // return response.data;
+  console.log('GPL Live: markAllRead pending - service not running');
+};
+
+// ------------------------------------------------
+// Goal alert notification
+// Triggered when match-service reports a goal
+// ------------------------------------------------
+export const sendGoalNotification = async (
+  matchId: number,
+  scorerName: string,
+  teamName: string
 ): Promise<void> => {
-  try {
-    console.log("Sending local notification:", title, body);
-
-    // TODO: Implement local notification
-
-  } catch (error) {
-    console.error("Failed to send notification:", error);
-  }
+  // TODO: implement when match-service (port 8082) is connected
+  console.log(`GPL Live: Goal notification pending for match ${matchId}`);
 };
 
-/**
- * Setup notification listeners.
- */
-export const setupNotificationListeners = (): void => {
-  console.log("Notification listeners initialized");
-
-  // TODO: Add listeners
+// ------------------------------------------------
+// MOTM poll reminder
+// Triggered after a match ends
+// ------------------------------------------------
+export const sendMotmPollReminder = async (
+  matchId: number
+): Promise<void> => {
+  // TODO: implement when vote-service (port 8084) is ready
+  console.log(`GPL Live: MOTM reminder pending for match ${matchId}`);
 };
 
-/**
- * Remove notification listeners.
- */
-export const removeNotificationListeners = (): void => {
-  console.log("Notification listeners removed");
+// ------------------------------------------------
+// Fantasy points update
+// Triggered after admin updates player stats
+// ------------------------------------------------
+export const sendFantasyUpdateNotification = async (
+  userId: number,
+  pointsEarned: number
+): Promise<void> => {
+  // TODO: implement when fantasy-service (port 8083) is connected
+  console.log(`GPL Live: Fantasy update pending for user ${userId}`);
+};
 
-  // TODO: Cleanup listeners
+// ------------------------------------------------
+// Setup notification listeners
+// Call this in App.tsx on first load
+// Handles navigation when user taps a notification
+// ------------------------------------------------
+export const setupNotificationListeners = () => {
+  const receivedSub = Notifications.addNotificationReceivedListener(
+    (notification) => {
+      console.log('GPL Live: Notification received', notification);
+    }
+  );
+
+  const tappedSub = Notifications.addNotificationResponseReceivedListener(
+    (response) => {
+      const data = response.notification.request.content.data;
+      // TODO: add navigation when RootNavigator is ready
+      // if (data.type === 'GOAL') navigate to MatchDetails
+      // if (data.type === 'MOTM') navigate to MatchDetails voting
+      // if (data.type === 'FANTASY') navigate to Fantasy tab
+      console.log('GPL Live: Notification tapped', data);
+    }
+  );
+
+  return () => {
+    receivedSub.remove();
+    tappedSub.remove();
+  };
 };
