@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,7 +20,7 @@ import FantasySnapshotWidget from '../../components/home/FantasySnapshotWidget';
 import PredictionLeaderboardTeaser from '../../components/home/PredictionLeaderboardTeaser';
 import { DUMMY_MATCHES } from '../../constants/homeDummyData';
 import { Colors } from '../../constants/colors';
-import { getScrollBottomPadding } from '../../constants/layout';
+import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifications } from '../../hooks/useNotifications';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
@@ -42,38 +43,57 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.logo}>GPL Live</Text>
-        <TouchableOpacity
-          style={styles.bellButton}
-          onPress={() => navigation.navigate('NotificationInbox')}
-        >
-          <Ionicons name="notifications-outline" size={24} color={Colors.textPrimary} />
-          {unreadCount > 0 ? (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{unreadCount}</Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
+        <View style={styles.logoRow}>
+          <Image
+            source={require('../../../assets/GplLogo1.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.logo}>
+            GPL <Text style={styles.logoLIVE}>LIVE</Text>
+          </Text>
+        </View>
+
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Ionicons name="search" size={22} color={Colors.grey1} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('NotificationInbox')}
+          >
+            <Ionicons name="notifications-outline" size={22} color={Colors.grey1} />
+            {unreadCount > 0 ? (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{unreadCount}</Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: getScrollBottomPadding(insets.bottom) },
-        ]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <Text style={styles.greeting}>Hello, {user?.username ?? 'Fan'} 👋</Text>
-
-        <TodayMatchesWidget matches={DUMMY_MATCHES} />
-        <LatestNewsWidget />
-        <LeagueTableWidget />
-        <FantasySnapshotWidget />
-        <PredictionLeaderboardTeaser />
-      </ScrollView>
-    </View>
-  );
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: getScrollBottomPadding(insets.bottom) },
+      ]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <TodayMatchesWidget matches={DUMMY_MATCHES} />
+      <LatestNewsWidget />
+      <LeagueTableWidget />
+      <FantasySnapshotWidget />
+      <PredictionLeaderboardTeaser />
+    </ScrollView>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -88,8 +108,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  logo: { fontSize: 22, fontWeight: '800', color: Colors.primary },
-  bellButton: { padding: 8 },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logo: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.white,
+  },
+  logoLIVE: {
+    color: Colors.yellow,
+  },
+  logoImage: {
+    width: 38,
+    height: 38,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: { padding: 6 },
   unreadBadge: {
     position: 'absolute',
     top: 2,

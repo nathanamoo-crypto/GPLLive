@@ -31,7 +31,6 @@ for (const club of GPL_CLUBS) {
   CLUB_BY_SLUG[club.slug] = club;
 }
 
-// Legacy string ID → Club mapping for backward compat with existing dummy data.
 export const CLUB_BY_LEGACY_ID: Record<string, Club> = {
   medeama: CLUB_LOOKUP[1], bibiani: CLUB_LOOKUP[2], hearts: CLUB_LOOKUP[3],
   dreams: CLUB_LOOKUP[4], samartex: CLUB_LOOKUP[5], aduana: CLUB_LOOKUP[6],

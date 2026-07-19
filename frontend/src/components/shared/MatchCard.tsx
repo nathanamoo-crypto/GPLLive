@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     width: 280,
   },
   statusChip: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,

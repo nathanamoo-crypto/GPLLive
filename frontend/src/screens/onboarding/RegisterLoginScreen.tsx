@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -150,23 +151,6 @@ export default function RegisterLoginScreen() {
       >
         <Text style={styles.heading}>Welcome to GPL Live</Text>
         <Text style={styles.subheading}>Sign in or create an account to continue.</Text>
-
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            onPress={() => setMode('register')}
-            style={[styles.tabButton, mode === 'register' && styles.tabActive]}
-            disabled={loading}
-          >
-            <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setMode('login')}
-            style={[styles.tabButton, mode === 'login' && styles.tabActive]}
-            disabled={loading}
-          >
-            <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Log In</Text>
-          </TouchableOpacity>
-        </View>
 
         {mode === 'register' && (
           <View style={styles.field}>
