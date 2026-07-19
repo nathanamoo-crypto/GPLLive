@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Prediction, PredictionState } from '../types';
+import { submitPredictions } from '../services/predictionService';
 
 export const usePredictionStore = create<PredictionState>((set) => ({
   predictions: {},
@@ -40,16 +41,17 @@ export const usePredictionStore = create<PredictionState>((set) => ({
       },
     }));
   },
-  submitAll: async (gameweek: number) => {
-    console.log(`Submitting predictions for gameweek ${gameweek}`);
-    set((state) => ({
+  submitAll: async () => {
+    const state = usePredictionStore.getState();
+    await submitPredictions(state.predictions);
+    set({
       predictions: Object.fromEntries(
         Object.entries(state.predictions).map(([fixtureId, prediction]) => [
           fixtureId,
           { ...prediction, submitted: true, locked: true },
         ])
       ),
-    }));
+    });
   },
   reset: () => {
     set({ predictions: {} });

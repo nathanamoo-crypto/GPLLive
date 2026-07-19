@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,44 +16,11 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
-import { CLUB_BY_LEGACY_ID } from '../../constants/clubs';
 import { Logos } from '../../constants/logos';
 import { getScrollBottomPadding } from '../../constants/layout';
-import type { Match, MatchEvent } from '../../types';
-import { getMatchDetails, getMatchEvents } from '../../services/matchService';
+import type { Match } from '../../types';
+import { getMatchDetails } from '../../services/matchService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
-
-/*
-TEMP FIX: Service Layer Abstraction
-This ensures the UI is ready for API integration.
-TO REVERT: Direct import from constants or local mock arrays.
-*/
-
-/**
- * MOCK DATA SECTION
- * -----------------
- * This data will be replaced by an API call once the backend is ready.
- */
-const MOCK_MATCH: Match = {
-  id: 1,
-  homeClub: CLUB_BY_LEGACY_ID['kotoko']!,
-  awayClub: CLUB_BY_LEGACY_ID['hearts']!,
-  homeScore: 2,
-  awayScore: 1,
-  status: 'live',
-  kickoffTime: new Date().toISOString(),
-  liveMinute: 67,
-  venue: 'Baba Yara Stadium',
-  round: 24,
-  gameweek: 24,
-};
-
-const MOCK_EVENTS: MatchEvent[] = [
-  { id: 1, matchId: 1, type: 'goal', minute: 12, playerName: 'Frank Etouga', side: 'home' },
-  { id: 2, matchId: 1, type: 'yellow_card', minute: 34, playerName: 'Awako', side: 'away' },
-  { id: 3, matchId: 1, type: 'goal', minute: 45, playerName: 'Barnieh', side: 'away' },
-  { id: 4, matchId: 1, type: 'goal', minute: 58, playerName: 'Mbella', side: 'home' },
-];
 
 type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
 
@@ -62,20 +30,68 @@ export default function MatchDetailsScreen() {
   const route = useRoute<MatchDetailsRouteProp>();
   const { matchId } = route.params;
 
+  const [match, setMatch] = useState<Match | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'events' | 'lineups' | 'stats'>('events');
 
-  /**
-   * API INTEGRATION PLACEHOLDER
-   * ---------------------------
-   * TODO: Implement data fetching here.
-   * useEffect(() => {
-   *   fetchMatchDetails(matchId);
-   * }, [matchId]);
-   */
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    getMatchDetails(matchId)
+      .then((data) => {
+        if (cancelled) return;
+        setMatch(data);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setError(err?.message ?? 'Failed to load match details.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [matchId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Match Details</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !match) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Match Details</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'Match not found.'}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header with Back Button */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
@@ -88,33 +104,32 @@ export default function MatchDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
       >
-        {/* Match Scoreboard */}
         <View style={styles.scoreboard}>
           <View style={styles.teamContainer}>
-            <Image source={Logos[MOCK_MATCH.homeClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
-            <Text style={styles.teamName}>{MOCK_MATCH.homeClub.name}</Text>
+            <Image source={Logos[match.homeClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
+            <Text style={styles.teamName}>{match.homeClub.name}</Text>
           </View>
 
           <View style={styles.scoreContainer}>
             <Text style={styles.scoreText}>
-              {MOCK_MATCH.homeScore} - {MOCK_MATCH.awayScore}
+              {match.homeScore ?? '-'} - {match.awayScore ?? '-'}
             </Text>
-            {MOCK_MATCH.status === 'live' && (
+            {match.status === 'live' && (
               <View style={styles.liveBadge}>
-                <Text style={styles.liveText}>{MOCK_MATCH.liveMinute}'</Text>
+                <Text style={styles.liveText}>{match.liveMinute ?? ''}'</Text>
               </View>
             )}
           </View>
 
           <View style={styles.teamContainer}>
-            <Image source={Logos[MOCK_MATCH.awayClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
-            <Text style={styles.teamName}>{MOCK_MATCH.awayClub.name}</Text>
+            <Image source={Logos[match.awayClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
+            <Text style={styles.teamName}>{match.awayClub.name}</Text>
           </View>
         </View>
 
         <View style={styles.venueInfo}>
-          <Text style={styles.venueText}>{MOCK_MATCH.venue}</Text>
-          <Text style={styles.gameweekText}>Round {MOCK_MATCH.round}</Text>
+          <Text style={styles.venueText}>{match.venue}</Text>
+          <Text style={styles.gameweekText}>Round {match.round}</Text>
         </View>
 
         <View style={styles.actionRow}>
@@ -134,7 +149,6 @@ export default function MatchDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tabs */}
         <View style={styles.tabBar}>
           {(['events', 'lineups', 'stats'] as const).map((tab) => (
             <TouchableOpacity
@@ -149,25 +163,10 @@ export default function MatchDetailsScreen() {
           ))}
         </View>
 
-        {/* Tab Content */}
         <View style={styles.content}>
           {activeTab === 'events' && (
-            <View>
-              {MOCK_EVENTS.map((event) => (
-                <View key={event.id} style={styles.eventRow}>
-                  <Text style={styles.eventMinute}>{event.minute}'</Text>
-                  <View style={styles.eventIcon}>
-                    <Ionicons
-                      name={event.type === 'goal' ? 'football' : 'square'}
-                      size={16}
-                      color={event.type === 'goal' ? Colors.textPrimary : '#FFD700'}
-                    />
-                  </View>
-                  <Text style={[styles.eventPlayer, { textAlign: event.side === 'home' ? 'left' : 'right', flex: 1 }]}>
-                    {event.playerName}
-                  </Text>
-                </View>
-              ))}
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>Match events will appear here.</Text>
             </View>
           )}
 
@@ -257,4 +256,6 @@ const styles = StyleSheet.create({
   eventPlayer: { fontSize: 14, color: Colors.textPrimary },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
   placeholderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
 });

@@ -22,6 +22,52 @@ export function computeFormation(def: number, mid: number, fwd: number): Formati
   return FORMATION_LOOKUP[`${def}-${mid}-${fwd}`] ?? null;
 }
 
+export function canApplyFormation(
+  targetFormation: FormationKey,
+  startingPlayers: FantasyPlayer[]
+): { valid: boolean; message?: string } {
+  const required = FORMATIONS[targetFormation];
+  if (!required) {
+    return { valid: false, message: `Unknown formation: ${targetFormation}` };
+  }
+
+  const defCount = startingPlayers.filter((p) => p.position === 'DEF').length;
+  const midCount = startingPlayers.filter((p) => p.position === 'MID').length;
+  const fwdCount = startingPlayers.filter((p) => p.position === 'FWD').length;
+
+  if (defCount !== required.def) {
+    return {
+      valid: false,
+      message:
+        defCount > required.def
+          ? `You have ${defCount} defenders but ${targetFormation} needs ${required.def}. Bench a defender and promote a midfielder, then try again.`
+          : `You have ${defCount} defenders but ${targetFormation} needs ${required.def}. Add a defender from your bench, then try again.`,
+    };
+  }
+
+  if (midCount !== required.mid) {
+    return {
+      valid: false,
+      message:
+        midCount > required.mid
+          ? `You have ${midCount} midfielders but ${targetFormation} needs ${required.mid}. Bench a midfielder and promote a forward, then try again.`
+          : `You have ${midCount} midfielders but ${targetFormation} needs ${required.mid}. Add a midfielder from your bench, then try again.`,
+    };
+  }
+
+  if (fwdCount !== required.fwd) {
+    return {
+      valid: false,
+      message:
+        fwdCount > required.fwd
+          ? `You have ${fwdCount} forwards but ${targetFormation} needs ${required.fwd}. Bench a forward and promote a defender, then try again.`
+          : `You have ${fwdCount} forwards but ${targetFormation} needs ${required.fwd}. Add a forward from your bench, then try again.`,
+    };
+  }
+
+  return { valid: true };
+}
+
 export const useFantasyStore = create<FantasyState>((set, get) => ({
   team: null,
   hasSquad: false,
