@@ -1,0 +1,178 @@
+{
+  "info": {
+    "name": "GPL Live API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8081/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Test User\", \"email\": \"test@gmail.com\", \"password\": \"password123\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8081/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"test@gmail.com\", \"password\": \"password123\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Demo Login",
+          "request": { "method": "POST", "url": "http://172.20.10.2:8081/auth/demo" }
+        },
+        {
+          "name": "Get Me",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8081/auth/me" }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8081/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"test@gmail.com\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        {
+          "name": "Get All Matches",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8082/matches" }
+        },
+        {
+          "name": "Get Match By ID",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8082/matches/1" }
+        },
+        {
+          "name": "Get Live Matches",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8082/matches/live" }
+        },
+        {
+          "name": "Get Standings",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8082/standings" }
+        }
+      ]
+    },
+    {
+      "name": "Fantasy",
+      "item": [
+        {
+          "name": "Get Players",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8083/fantasy/players" }
+        },
+        {
+          "name": "Create Team",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8083/fantasy/team",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"teamName\": \"Black Stars FC\", \"captainId\": \"1\", \"startingPlayerIds\": [\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\"], \"formation\": \"4-3-3\", \"playerIds\": [\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\"]}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get My Team",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8083/fantasy/team" }
+        },
+        {
+          "name": "Lock Team",
+          "request": { "method": "POST", "url": "http://172.20.10.2:8083/fantasy/team/lock" }
+        },
+        {
+          "name": "Get Fantasy Leaderboard",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8083/fantasy/leaderboard" }
+        },
+        {
+          "name": "Get Leagues",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8083/fantasy/leagues" }
+        }
+      ]
+    },
+    {
+      "name": "Voting",
+      "item": [
+        {
+          "name": "Cast MOTM Vote",
+          "request": { "method": "POST", "url": "http://172.20.10.2:8084/votes/motm/1" }
+        },
+        {
+          "name": "Get Vote Results",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8084/votes/motm/1" }
+        }
+      ]
+    },
+    {
+      "name": "Predictions",
+      "item": [
+        {
+          "name": "Get Fixtures",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8085/predictions/fixtures" }
+        },
+        {
+          "name": "Submit Predictions",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8085/predictions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"gameweek\": 1, \"predictions\": [{\"fixtureId\": \"1\", \"outcome\": \"HOME_WIN\", \"exactHomeGoals\": 2, \"exactAwayGoals\": 0}]}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8085/predictions/leaderboard" }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": { "method": "GET", "url": "http://172.20.10.2:8086/notifications" }
+        },
+        {
+          "name": "Mark All Read",
+          "request": { "method": "PUT", "url": "http://172.20.10.2:8086/notifications/read-all" }
+        },
+        {
+          "name": "Register Push Token",
+          "request": {
+            "method": "POST",
+            "url": "http://172.20.10.2:8086/notifications/register-token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
