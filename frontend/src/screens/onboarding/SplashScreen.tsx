@@ -52,6 +52,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   logoLIVE: {
-    color: Colors.yellow,
+    color: Colors.textInverse,
   },
 });
