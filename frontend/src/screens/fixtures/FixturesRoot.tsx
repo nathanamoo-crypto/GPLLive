@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,87 +20,9 @@ import type { Match } from '../../types';
 import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
 import { Logos } from '../../constants/logos';
+import { getMatches } from '../../services/matchService';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
-
-/**
- * TODO: Replace with API call — see APIDocs.md → GET /matches
- */
-const MOCK_MATCHES: Match[] = [
-  {
-    id: 1,
-    homeClub: GPL_CLUBS[0],
-    awayClub: GPL_CLUBS[1],
-    homeScore: 2,
-    awayScore: 1,
-    status: 'live',
-    kickoffTime: new Date().toISOString(),
-    liveMinute: 67,
-    venue: 'Baba Yara Stadium',
-    round: 24,
-    gameweek: 24,
-  },
-  {
-    id: 2,
-    homeClub: GPL_CLUBS[2],
-    awayClub: GPL_CLUBS[3],
-    homeScore: null,
-    awayScore: null,
-    status: 'scheduled',
-    kickoffTime: new Date(Date.now() + 7200000).toISOString(),
-    venue: 'TNA Park',
-    round: 24,
-    gameweek: 24,
-  },
-  {
-    id: 3,
-    homeClub: GPL_CLUBS[4],
-    awayClub: GPL_CLUBS[5],
-    homeScore: null,
-    awayScore: null,
-    status: 'scheduled',
-    kickoffTime: new Date(Date.now() + 14400000).toISOString(),
-    venue: 'Agyeman Badu Stadium',
-    round: 24,
-    gameweek: 24,
-  },
-  {
-    id: 4,
-    homeClub: GPL_CLUBS[6],
-    awayClub: GPL_CLUBS[7],
-    homeScore: 3,
-    awayScore: 0,
-    status: 'finished',
-    kickoffTime: new Date(Date.now() - 86400000).toISOString(),
-    venue: 'Accra Sports Stadium',
-    round: 23,
-    gameweek: 23,
-  },
-  {
-    id: 5,
-    homeClub: GPL_CLUBS[8],
-    awayClub: GPL_CLUBS[9],
-    homeScore: 1,
-    awayScore: 1,
-    status: 'finished',
-    kickoffTime: new Date(Date.now() - 86400000).toISOString(),
-    venue: 'Tamale Stadium',
-    round: 23,
-    gameweek: 23,
-  },
-  {
-    id: 6,
-    homeClub: GPL_CLUBS[10],
-    awayClub: GPL_CLUBS[11],
-    homeScore: 0,
-    awayScore: 2,
-    status: 'finished',
-    kickoffTime: new Date(Date.now() - 172800000).toISOString(),
-    venue: 'Obuasi Stadium',
-    round: 22,
-    gameweek: 22,
-  },
-];
 
 const FILTER_OPTIONS = ['All', 'Live', 'Scheduled', 'FT'] as const;
 
@@ -108,27 +31,49 @@ export default function FixturesRoot() {
   const navigation = useNavigation<FixturesNavProp>();
   const [filter, setFilter] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'fixtures' | 'table'>('fixtures');
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const gameweeks = useMemo(() => {
-    const gws = [...new Set(MOCK_MATCHES.map((m) => m.gameweek))].sort((a, b) => b - a);
-    return gws.length > 0 ? gws : [24];
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFetchError(null);
+    getMatches()
+      .then((data) => { if (!cancelled) setMatches(data ?? []); })
+      .catch((err: any) => { if (!cancelled) setFetchError(err?.message ?? 'Failed to load fixtures.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  const [currentGameweek, setCurrentGameweek] = useState(gameweeks[0]);
+  const gameweeks = useMemo(() => {
+    const gws = [...new Set(matches.map((m) => m.gameweek))].sort((a, b) => b - a);
+    return gws.length > 0 ? gws : [];
+  }, [matches]);
+
+  const [currentGameweek, setCurrentGameweek] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (gameweeks.length > 0 && currentGameweek === null) {
+      setCurrentGameweek(gameweeks[0]);
+    }
+  }, [gameweeks, currentGameweek]);
 
   const goPrevGameweek = () => {
+    if (currentGameweek === null) return;
     const idx = gameweeks.indexOf(currentGameweek);
     if (idx < gameweeks.length - 1) setCurrentGameweek(gameweeks[idx + 1]);
   };
 
   const goNextGameweek = () => {
+    if (currentGameweek === null) return;
     const idx = gameweeks.indexOf(currentGameweek);
     if (idx > 0) setCurrentGameweek(gameweeks[idx - 1]);
   };
 
   const gwMatches = useMemo(
-    () => MOCK_MATCHES.filter((m) => m.gameweek === currentGameweek),
-    [currentGameweek],
+    () => matches.filter((m) => m.gameweek === currentGameweek),
+    [currentGameweek, matches],
   );
 
   const filtered = useMemo(() => {
@@ -166,8 +111,8 @@ export default function FixturesRoot() {
           />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>MATCHDAY {currentGameweek}</Text>
-          {isCurrentGw && (
+          <Text style={styles.headerTitle}>{currentGameweek != null ? `MATCHDAY ${currentGameweek}` : 'FIXTURES'}</Text>
+          {isCurrentGw && currentGameweek != null && (
             <View style={styles.currentBadge}>
               <Text style={styles.currentBadgeText}>CURRENT</Text>
             </View>
@@ -208,7 +153,15 @@ export default function FixturesRoot() {
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'fixtures' ? (
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : fetchError ? (
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{fetchError}</Text>
+        </View>
+      ) : activeTab === 'fixtures' ? (
         <>
           <ScrollView
             horizontal
@@ -433,6 +386,8 @@ const styles = StyleSheet.create({
   },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.grey2 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
   standingsContent: { padding: 16, paddingBottom: 40 },
   tableHead: {
     flexDirection: 'row',

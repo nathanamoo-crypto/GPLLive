@@ -1,24 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 import { Colors } from '../../constants/colors';
-import { DUMMY_FANTASY } from '../../constants/homeDummyData';
+import { getMyTeam } from '../../services/fantasyService';
 
 export default function FantasySnapshotWidget() {
+  const [team, setTeam] = useState<{ teamName?: string; gameweekPoints?: number; rank?: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMyTeam()
+      .then((data) => { if (!cancelled) setTeam(data ? { teamName: data.teamName, gameweekPoints: data.gameweekPoints, rank: data.rank } : null); })
+      .catch(() => { if (!cancelled) setTeam(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.widget}>
+        <Text style={styles.widgetTitle}>Fantasy Snapshot</Text>
+        <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.widget}>
       <Text style={styles.widgetTitle}>Fantasy Snapshot</Text>
-      {DUMMY_FANTASY.hasSquad ? (
+      {team ? (
         <>
-          <Text style={styles.teamName}>{DUMMY_FANTASY.teamName}</Text>
+          <Text style={styles.teamName}>{team.teamName}</Text>
           <View style={styles.statsRow}>
             <View style={styles.statBlock}>
               <Text style={styles.statLabel}>This GW</Text>
-              <Text style={styles.statValue}>{DUMMY_FANTASY.weekPoints}</Text>
+              <Text style={styles.statValue}>{team.gameweekPoints ?? 0}</Text>
             </View>
             <View style={styles.statBlock}>
               <Text style={styles.statLabel}>Overall Rank</Text>
-              <Text style={styles.statValue}>#{DUMMY_FANTASY.overallRank}</Text>
+              <Text style={styles.statValue}>#{team.rank ?? '-'}</Text>
             </View>
           </View>
         </>

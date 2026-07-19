@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +52,9 @@ const MOCK_FIXTURES: Match[] = [
 export default function PredictRoot() {
   const insets = useSafeAreaInsets();
   const { predictions, setPrediction, setExactScore, submitAll } = usePredictionStore();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const handleScoreChange = (fixtureId: number, home: string, away: string) => {
     const h = parseInt(home) || 0;
@@ -59,23 +62,24 @@ export default function PredictRoot() {
     setExactScore(fixtureId, h, a);
   };
 
-  /**
-   * API INTEGRATION PLACEHOLDER
-   * ---------------------------
-   * TODO: Submit predictions to backend.
-   */
   const handleSubmit = async () => {
     const count = Object.keys(predictions).length;
     if (count === 0) {
-      Alert.alert('Error', 'Make at least one prediction before submitting.');
+      setSubmitError('Make at least one prediction before submitting.');
       return;
     }
 
+    setSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
     try {
-      await submitAll(24); // Gameweek 24
-      Alert.alert('Success', 'Your predictions have been locked in!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit predictions.');
+      await submitAll();
+      setSubmitSuccess(true);
+    } catch (error: any) {
+      setSubmitError(error?.message ?? 'Failed to submit predictions.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -152,9 +156,27 @@ export default function PredictRoot() {
         })}
       </ScrollView>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Submit Predictions</Text>
-      </TouchableOpacity>
+      {submitSuccess ? (
+        <View style={styles.successBanner}>
+          <Ionicons name="checkmark-circle" size={20} color={Colors.textInverse} />
+          <Text style={styles.successText}>Predictions locked in!</Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color={Colors.textInverse} />
+          ) : (
+            <Text style={styles.submitText}>Submit Predictions</Text>
+          )}
+        </TouchableOpacity>
+      )}
+      {submitError ? (
+        <Text style={styles.errorText}>{submitError}</Text>
+      ) : null}
     </View>
   );
 }
@@ -179,7 +201,11 @@ const styles = StyleSheet.create({
   outcomeLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   outcomeLabelActive: { color: Colors.textInverse },
   submitButton: { margin: 16, backgroundColor: Colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
+  submitButtonDisabled: { opacity: 0.6 },
   submitText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
+  successBanner: { margin: 16, backgroundColor: '#2E7D32', padding: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  successText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
+  errorText: { marginHorizontal: 16, marginBottom: 8, color: Colors.live, fontSize: 13, textAlign: 'center' },
   disabledInput: { backgroundColor: Colors.border, color: Colors.textTertiary },
   disabledButton: { opacity: 0.6 },
 });

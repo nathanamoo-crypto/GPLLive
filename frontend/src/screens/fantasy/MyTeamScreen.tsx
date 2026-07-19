@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import { CLUB_COLORS } from '../../constants/clubs';
-import { useFantasyStore } from '../../store/fantasyStore';
+import { useFantasyStore, FORMATIONS, canApplyFormation } from '../../store/fantasyStore';
+import * as fantasyService from '../../services/fantasyService';
 import SegmentedControl from '../../components/shared/SegmentedControl';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
-import type { FantasyPlayer, ChipType, ChipStatus } from '../../types';
+import type { FantasyPlayer, FormationKey, ChipType, ChipStatus } from '../../types';
 
 type ViewMode = 'pitch' | 'list';
 
@@ -26,8 +34,72 @@ function MyTeamScreen() {
   const insets = useSafeAreaInsets();
   const team = useFantasyStore((s) => s.team);
   const hasSquad = useFantasyStore((s) => s.hasSquad);
+  const setFormation = useFantasyStore((s) => s.setFormation);
   const [gameweek, setGameweek] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('pitch');
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [formationMsg, setFormationMsg] = useState<string | null>(null);
+
+  const handleFetchTeam = useCallback(async () => {
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const data = await fantasyService.getMyTeam();
+      useFantasyStore.setState({ team: data, hasSquad: data !== null });
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load team data');
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    handleFetchTeam();
+  }, [handleFetchTeam]);
+
+  const handleFormationPress = useCallback(
+    (target: FormationKey) => {
+      setFormationMsg(null);
+      if (!team) return;
+
+      const startingPlayers = team.players.filter((p) =>
+        team.startingPlayerIds.includes(p.id)
+      );
+      const result = canApplyFormation(target, startingPlayers);
+      if (result.valid) {
+        setFormation(target);
+      } else {
+        setFormationMsg(result.message ?? null);
+      }
+    },
+    [team, setFormation]
+  );
+
+  if (fetching) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.yellow} />
+          <Text style={styles.emptySub}>Loading your squad...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.centered}>
+          <Text style={styles.emptyTitle}>Something went wrong</Text>
+          <Text style={styles.emptySub}>{fetchError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleFetchTeam}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (!hasSquad || !team) {
     return (
@@ -120,6 +192,29 @@ function MyTeamScreen() {
             onSelect={setViewMode}
           />
         </View>
+
+        <View style={styles.formationRow}>
+          {(Object.keys(FORMATIONS) as FormationKey[]).map((key) => {
+            const active = formation === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.formationChip, active && styles.formationChipActive]}
+                onPress={() => handleFormationPress(key)}
+              >
+                <Text style={[styles.formationChipText, active && styles.formationChipTextActive]}>
+                  {key}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {formationMsg ? (
+          <View style={styles.formationMsgWrap}>
+            <Text style={styles.formationMsgText}>{formationMsg}</Text>
+          </View>
+        ) : null}
 
         {viewMode === 'pitch' ? (
           <View style={styles.pitchSection}>
@@ -237,4 +332,58 @@ const styles = StyleSheet.create({
   listCaptainText: { fontSize: 10, fontWeight: '900', color: Colors.black },
   listPrice: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: Colors.white, minWidth: 40, textAlign: 'right' },
   listPriceBench: { color: Colors.grey2 },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: Colors.yellow,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000000',
+    textTransform: 'uppercase',
+  },
+  formationRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  formationChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.surface2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  formationChipActive: {
+    backgroundColor: Colors.yellow,
+    borderColor: Colors.yellow,
+  },
+  formationChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.grey1,
+  },
+  formationChipTextActive: {
+    color: '#000000',
+  },
+  formationMsgWrap: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.yellow,
+  },
+  formationMsgText: {
+    fontSize: 12,
+    color: Colors.yellow,
+    lineHeight: 18,
+  },
 });
