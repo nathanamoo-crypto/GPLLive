@@ -30,6 +30,7 @@ export const authFormStyles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 1,
     borderColor: Colors.border,
+    color: Colors.text,
   },
   inputError: {
     borderColor: Colors.live,
@@ -100,4 +101,64 @@ export const authFormStyles = StyleSheet.create({
     alignItems: 'center',
   },
   demoButtonText: { color: Colors.textPrimary, fontWeight: '700', fontSize: 13 },
+  clubPickerLoading: {
+    paddingVertical: 12,
+    alignItems: 'flex-start',
+  },
+  retryText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+    marginTop: 6,
+  },
+  clubList: {
+    paddingVertical: 4,
+    gap: 10,
+  },
+  clubChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 84,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  clubChipActive: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+  },
+  clubChipBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  clubChipBadgeImage: { width: 24, height: 24 },
+  clubChipText: {
+    fontSize: 11,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  clubChipTextActive: { color: Colors.primary },
+  switchModeRow: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  switchModeText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  switchModeLink: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
 });

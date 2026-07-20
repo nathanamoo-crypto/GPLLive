@@ -8,29 +8,43 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
-import { GPL_CLUBS } from '../../constants/clubs';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
-import type { Match } from '../../types';
+import type { Match, StandingRow } from '../../types';
 import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
 import { Logos } from '../../constants/logos';
 import { getMatches } from '../../services/matchService';
+import { fetchStandings } from '../../services/standingsService';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
+type FixturesRootRouteProp = RouteProp<FixturesStackParamList, 'FixturesRoot'>;
 
-const FILTER_OPTIONS = ['All', 'Live', 'Scheduled', 'FT'] as const;
+const FILTER_OPTIONS = ['All', 'Live', 'Scheduled', 'Completed'] as const;
 
 export default function FixturesRoot() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<FixturesNavProp>();
+  const route = useRoute<FixturesRootRouteProp>();
   const [filter, setFilter] = useState<string>('All');
-  const [activeTab, setActiveTab] = useState<'fixtures' | 'table'>('fixtures');
+  const [activeTab, setActiveTab] = useState<'fixtures' | 'table'>(route.params?.defaultTab || 'fixtures');
+
+  // Table used to be reached by tapping a separate bottom tab (which always
+  // remounted this screen fresh); now it's also reachable by deep-linking
+  // in here (e.g. from the Profile menu) while this screen may already be
+  // mounted from the Fixtures tab - re-apply the param if it changes under
+  // an already-mounted instance.
+  useEffect(() => {
+    if (route.params?.defaultTab) {
+      setActiveTab(route.params.defaultTab);
+    }
+  }, [route.params?.defaultTab]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -215,23 +229,57 @@ export default function FixturesRoot() {
   );
 }
 
+type StandingsSortKey = 'pts' | 'gd' | 'w';
+
+// This is now the app's only league table view (the standalone Table tab
+// was folded into this Fixtures/Table toggle). Computed live by the backend
+// from real recorded fixture results (StandingsService.java) - no
+// hardcoded/generated rows - so it stays correct as results get entered,
+// this season or a future one, with nothing to update here by hand.
 function StandingsView() {
-  const standings = useMemo(() => {
-    const clubs = GPL_CLUBS;
-    return clubs.map((club, i) => ({
-      position: i + 1,
-      club,
-      played: 24 - i,
-      won: 15 - i,
-      drawn: 5 + Math.floor(i / 2),
-      lost: 4 + Math.floor(i / 3),
-      goalDifference: 12 - i * 2,
-      points: 50 - i * 4,
-      form: (['W', 'W', 'D', 'L', 'W'] as const).map((f) =>
-        Math.random() > 0.3 ? f : f === 'W' ? 'L' : 'W'
-      ),
-    }));
+  const [sortBy, setSortBy] = useState<StandingsSortKey>('pts');
+  const [rows, setRows] = useState<StandingRow[]>([]);
+  const [season, setSeason] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetchStandings(undefined, controller.signal)
+      .then((data) => {
+        setRows(data.rows);
+        setSeason(data.season);
+        setError(null);
+      })
+      .catch((err: any) => setError(err?.message ?? 'Failed to load the league table.'))
+      .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
+
+  const standings = useMemo(() => {
+    const sorted = [...rows];
+    if (sortBy === 'pts') sorted.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
+    else if (sortBy === 'gd') sorted.sort((a, b) => b.goalDifference - a.goalDifference || b.points - a.points);
+    else sorted.sort((a, b) => b.won - a.won || b.points - a.points);
+    return sorted.map((row, i) => ({ ...row, position: i + 1 }));
+  }, [rows, sortBy]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (error || standings.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error ?? 'No results recorded yet for this season.'}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -239,6 +287,31 @@ function StandingsView() {
       contentContainerStyle={styles.standingsContent}
       showsVerticalScrollIndicator={false}
     >
+      {season ? <Text style={styles.seasonLabel}>{season} Season</Text> : null}
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.sortScroll}
+        contentContainerStyle={styles.sortContent}
+      >
+        {([
+          { key: 'pts' as StandingsSortKey, label: 'Points' },
+          { key: 'gd' as StandingsSortKey, label: 'Goal Diff' },
+          { key: 'w' as StandingsSortKey, label: 'Wins' },
+        ]).map((s) => (
+          <TouchableOpacity
+            key={s.key}
+            style={[styles.sortChip, sortBy === s.key && styles.sortChipActive]}
+            onPress={() => setSortBy(s.key)}
+          >
+            <Text style={[styles.sortText, sortBy === s.key && styles.sortTextActive]}>
+              {s.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <View style={styles.tableHead}>
         <Text style={[styles.th, { width: 28 }]}>#</Text>
         <Text style={[styles.th, { flex: 1 }]}>Club</Text>
@@ -246,11 +319,12 @@ function StandingsView() {
         <Text style={[styles.th, { width: 24, textAlign: 'center' }]}>W</Text>
         <Text style={[styles.th, { width: 24, textAlign: 'center' }]}>D</Text>
         <Text style={[styles.th, { width: 24, textAlign: 'center' }]}>L</Text>
+        <Text style={[styles.th, { width: 32, textAlign: 'center' }]}>GD</Text>
         <Text style={[styles.th, { width: 32, textAlign: 'center' }]}>Pts</Text>
       </View>
       {standings.map((s, i) => (
         <View
-          key={s.club.id}
+          key={s.club.id || s.club.name}
           style={[styles.row, i % 2 === 0 && styles.rowAlt, i < 3 && styles.rowTop]}
         >
           <Text
@@ -276,6 +350,16 @@ function StandingsView() {
           <Text style={[styles.cell, { width: 24, textAlign: 'center' }]}>{s.won}</Text>
           <Text style={[styles.cell, { width: 24, textAlign: 'center' }]}>{s.drawn}</Text>
           <Text style={[styles.cell, { width: 24, textAlign: 'center' }]}>{s.lost}</Text>
+          <Text
+            style={[
+              styles.cellGd,
+              { width: 32, textAlign: 'center' },
+              s.goalDifference > 0 && { color: Colors.win },
+              s.goalDifference < 0 && { color: Colors.loss },
+            ]}
+          >
+            {s.goalDifference > 0 ? '+' : ''}{s.goalDifference}
+          </Text>
           <Text style={[styles.cellPts, { width: 32, textAlign: 'center' }]}>{s.points}</Text>
         </View>
       ))}
@@ -389,6 +473,30 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
   standingsContent: { padding: 16, paddingBottom: 40 },
+  seasonLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.grey2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+    marginBottom: 10,
+  },
+  sortScroll: { flexGrow: 0, marginBottom: 12 },
+  sortContent: { alignItems: 'center', gap: 4 },
+  sortChip: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: 8,
+  },
+  sortChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
+  sortText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
+  sortTextActive: { color: '#000000', fontWeight: '700' },
   tableHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,6 +527,7 @@ const styles = StyleSheet.create({
   cellPts: { fontSize: 15, fontWeight: '900', color: Colors.fantasyGold },
   cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
   cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
+  cellGd: { fontSize: 12, fontWeight: '700', color: Colors.grey2 },
   clubLogo: {
   width: 24,
   height: 24,

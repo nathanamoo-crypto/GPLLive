@@ -27,7 +27,7 @@ export default function GamesRoot() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.toggleContainer, { paddingTop: insets.top }]}>
+      <View style={[styles.toggleContainer, { paddingTop: insets.top + 14 }]}>
         <View style={styles.tabRow}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'fantasy' && styles.tabActive]}

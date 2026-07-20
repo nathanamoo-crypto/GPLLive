@@ -18,9 +18,12 @@ import { CLUB_COLORS } from '../../constants/clubs';
 import SubScreenHeader from '../../components/shared/SubScreenHeader';
 import PrimaryButton from '../../components/shared/PrimaryButton';
 import { getMotmVotes, submitMotmVote } from '../../services/motmService';
-import { getFixtureLineups } from '../../services/lineupService';
+import { getMatchDetails, getFixtureClubNames } from '../../services/matchService';
+import { fetchClubs, backendClubIdToLocalClub, fetchClubsById, RealClub } from '../../services/clubService';
+import { fetchPlayersByClub } from '../../services/fantasyService';
+import { getApiErrorMessage } from '../../services/api';
 import type { MotmResult } from '../../services/motmService';
-import type { LineupPlayer } from '../../services/lineupService';
+import type { Player } from '../../types';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type MotmVoteRouteProp = RouteProp<HomeStackParamList, 'MotmVote'>;
@@ -32,45 +35,64 @@ export default function MotmVoteScreen() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFinished, setIsFinished] = useState(false);
+  const [votingOpen, setVotingOpen] = useState(false);
   const [results, setResults] = useState<MotmResult[]>([]);
-  const [candidates, setCandidates] = useState<LineupPlayer[]>([]);
+  const [candidates, setCandidates] = useState<Player[]>([]);
+  const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [votedPlayerId, setVotedPlayerId] = useState<number | null>(null);
+  const [myVotePlayerId, setMyVotePlayerId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [lineupsAvailable, setLineupsAvailable] = useState(true);
+
+  const localClubId = useCallback((backendClubId: number): number => {
+    // CLUB_COLORS is keyed by this app's LOCAL club ids, but every clubId
+    // coming off the backend (Player.clubId, MotmResult.clubId) is the
+    // BACKEND club id - the two id spaces don't match (see clubService.ts).
+    return backendClubIdToLocalClub(backendClubId, clubsById)?.id ?? 0;
+  }, [clubsById]);
 
   const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const votesData = await getMotmVotes(matchId, signal);
+      const [match, votesData, byId] = await Promise.all([
+        getMatchDetails(matchId, signal),
+        getMotmVotes(matchId, signal),
+        fetchClubsById(signal),
+      ]);
       if (signal?.aborted) return;
-      if (votesData.results.length > 0) {
-        setHasVoted(true);
-        setResults(votesData.results);
-        setLineupsAvailable(true);
-      } else {
-        setHasVoted(false);
-        setResults([]);
-        try {
-          const lineups = await getFixtureLineups(matchId, signal);
+
+      setClubsById(byId);
+      setResults(votesData.results);
+      setMyVotePlayerId(votesData.myVotePlayerId);
+      setVotingOpen(votesData.votingOpen);
+      setIsFinished(match?.status === 'finished');
+
+      // Only bother loading candidates when there's actually a ballot to
+      // show - not needed once the user has voted, and not while voting is
+      // closed (either the match hasn't finished yet, or the 24h window
+      // after kickoff has passed).
+      if (votesData.votingOpen && votesData.myVotePlayerId == null) {
+        const names = await getFixtureClubNames(matchId, signal);
+        if (signal?.aborted) return;
+        if (names) {
+          const realClubs = await fetchClubs(signal);
           if (signal?.aborted) return;
-          const allPlayers = [
-            ...lineups.homeTeam.startingXI,
-            ...lineups.awayTeam.startingXI,
-          ];
-          setCandidates(allPlayers);
-          setLineupsAvailable(true);
-        } catch {
+          const homeClub = realClubs.find((c) => c.fullName === names.homeClubName);
+          const awayClub = realClubs.find((c) => c.fullName === names.awayClubName);
+          const clubIds = [homeClub?.id, awayClub?.id].filter((id): id is number => id != null);
+          const squads = await Promise.all(clubIds.map((id) => fetchPlayersByClub(id, signal)));
           if (signal?.aborted) return;
-          setLineupsAvailable(false);
+          setCandidates(squads.flat());
+        } else {
           setCandidates([]);
         }
+      } else {
+        setCandidates([]);
       }
-    } catch {
+    } catch (err) {
       if (signal?.aborted) return;
-      setError('Failed to load data. Check your connection and try again.');
+      setError(getApiErrorMessage(err, 'Failed to load data. Check your connection and try again.'));
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -82,25 +104,27 @@ export default function MotmVoteScreen() {
     return () => controller.abort();
   }, [loadData]);
 
+  const hasVoted = myVotePlayerId != null;
+
   const handleSubmitVote = async () => {
     if (!selectedPlayerId) return;
     setSubmitting(true);
     setError(null);
     try {
       await submitMotmVote(matchId, selectedPlayerId);
-      setHasVoted(true);
-      setVotedPlayerId(selectedPlayerId);
+      setMyVotePlayerId(selectedPlayerId);
       const votesData = await getMotmVotes(matchId);
       setResults(votesData.results);
-    } catch {
-      setError('Failed to submit vote. Please try again.');
+      setVotingOpen(votesData.votingOpen);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to submit vote. Please try again.'));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <SubScreenHeader title="Man of the Match" />
 
       {loading && (
@@ -120,7 +144,7 @@ export default function MotmVoteScreen() {
         </View>
       )}
 
-      {!loading && !error && hasVoted && results.length > 0 && (
+      {!loading && !error && (hasVoted || (!votingOpen && isFinished && results.length > 0)) && (
         <ScrollView
           style={styles.scrollContent}
           contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
@@ -128,12 +152,14 @@ export default function MotmVoteScreen() {
         >
           <View style={styles.resultsHeader}>
             <Ionicons name="trophy" size={28} color={Colors.yellow} />
-            <Text style={styles.resultsTitle}>Voting Results</Text>
-            <Text style={styles.resultsSubtitle}>Here are the results</Text>
+            <Text style={styles.resultsTitle}>{votingOpen ? 'Voting Results' : 'Final Results'}</Text>
+            <Text style={styles.resultsSubtitle}>
+              {votingOpen ? 'Here are the results so far' : 'Voting has closed for this match'}
+            </Text>
           </View>
 
           {results.map((result, index) => {
-            const isVotedPlayer = result.playerId === votedPlayerId;
+            const isVotedPlayer = result.playerId === myVotePlayerId;
             return (
               <View
                 key={result.playerId}
@@ -142,7 +168,7 @@ export default function MotmVoteScreen() {
                 <View style={styles.resultRank}>
                   <Text style={styles.resultRankText}>{index + 1}</Text>
                 </View>
-                <View style={[styles.resultAccent, { backgroundColor: CLUB_COLORS[result.clubId] || Colors.grey1 }]} />
+                <View style={[styles.resultAccent, { backgroundColor: CLUB_COLORS[localClubId(result.clubId)] || Colors.grey1 }]} />
                 <View style={styles.resultInfo}>
                   <Text style={[styles.resultName, isVotedPlayer && styles.resultNameVoted]}>
                     {result.playerName}
@@ -161,7 +187,7 @@ export default function MotmVoteScreen() {
         </ScrollView>
       )}
 
-      {!loading && !error && !hasVoted && lineupsAvailable && (
+      {!loading && !error && !hasVoted && votingOpen && (
         <ScrollView
           style={styles.scrollContent}
           contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
@@ -172,18 +198,18 @@ export default function MotmVoteScreen() {
           </Text>
 
           {candidates.map((candidate) => {
-            const isSelected = candidate.playerId === selectedPlayerId;
-            const clubColor = CLUB_COLORS[candidate.clubId] || Colors.grey1;
+            const isSelected = candidate.id === selectedPlayerId;
+            const clubColor = CLUB_COLORS[localClubId(candidate.clubId)] || Colors.grey1;
             return (
               <TouchableOpacity
-                key={candidate.playerId}
+                key={candidate.id}
                 style={[styles.candidateCard, isSelected && styles.candidateCardSelected]}
-                onPress={() => setSelectedPlayerId(candidate.playerId)}
+                onPress={() => setSelectedPlayerId(candidate.id)}
                 activeOpacity={0.7}
               >
                 <View style={[styles.candidateAccent, { backgroundColor: clubColor }]} />
                 <View style={styles.candidateInfo}>
-                  <Text style={styles.candidateName}>{candidate.playerName}</Text>
+                  <Text style={styles.candidateName}>{candidate.name}</Text>
                   <Text style={styles.candidatePosition}>{candidate.position}</Text>
                 </View>
                 {isSelected && (
@@ -205,12 +231,22 @@ export default function MotmVoteScreen() {
         </ScrollView>
       )}
 
-      {!loading && !error && !hasVoted && !lineupsAvailable && (
+      {!loading && !error && !hasVoted && !isFinished && (
         <View style={styles.centeredMessage}>
-          <Ionicons name="football-outline" size={48} color={Colors.grey2} />
-          <Text style={styles.waitingTitle}>Voting Not Yet Available</Text>
+          <Ionicons name="hourglass-outline" size={48} color={Colors.grey2} />
+          <Text style={styles.waitingTitle}>Voting Not Yet Open</Text>
           <Text style={styles.waitingText}>
-            MOTM voting requires player lineup data from GET /fixtures/{'{id}'}/lineups (backend not yet built). Once the backend exposes this endpoint, voters will see all starting XI players here.
+            MOTM voting opens once this match has finished. Check back after full time.
+          </Text>
+        </View>
+      )}
+
+      {!loading && !error && !hasVoted && isFinished && !votingOpen && results.length === 0 && (
+        <View style={styles.centeredMessage}>
+          <Ionicons name="lock-closed-outline" size={48} color={Colors.grey2} />
+          <Text style={styles.waitingTitle}>Voting Has Closed</Text>
+          <Text style={styles.waitingText}>
+            The 24-hour voting window for this match has ended, and no votes were cast.
           </Text>
         </View>
       )}
