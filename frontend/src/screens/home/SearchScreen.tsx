@@ -86,7 +86,7 @@ export default function SearchScreen() {
   }, [query]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color={Colors.white} />
@@ -165,11 +165,13 @@ export default function SearchScreen() {
                 style={styles.resultCard}
                 activeOpacity={0.7}
                 onPress={() => {
-                  if (r.type === 'news') {
-                    navigation.navigate('NewsDetail', { articleId: r.id });
-                  } else {
-                    Alert.alert(r.label, r.subtitle);
-                  }
+                  // News search results here are still mock data (see TODO
+                  // above) with no real Article object to hand off to
+                  // NewsDetail (which now needs the full fetched article,
+                  // not just an id - RSS articles aren't re-fetchable by
+                  // id). Falls back to the same preview alert as the other
+                  // mock result types until search has a real backend.
+                  Alert.alert(r.label, r.subtitle);
                 }}
               >
                 <View style={[styles.resultIcon, { backgroundColor: cfg.color + '18' }]}>

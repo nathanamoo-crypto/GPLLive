@@ -8,7 +8,7 @@ import DiscussionScreen from '../screens/match/DiscussionScreen';
 import type { MatchDetailsParams, MotmVoteParams, DiscussionParams } from './types';
 
 export type FixturesStackParamList = {
-  FixturesRoot: undefined;
+  FixturesRoot: { defaultTab?: 'fixtures' | 'table' } | undefined;
   MatchDetails: MatchDetailsParams;
   MotmVote: MotmVoteParams;
   Discussion: DiscussionParams;

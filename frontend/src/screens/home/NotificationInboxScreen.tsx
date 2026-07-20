@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,59 +6,154 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
-import { DUMMY_NOTIFICATIONS } from '../../constants/homeDummyData';
 import { Colors } from '../../constants/colors';
+import { getApiErrorMessage } from '../../services/api';
+import {
+  getNotifications,
+  markNotificationRead,
+} from '../../services/notificationService';
 import { Notification } from '../../types';
 
+// Backend only ever sends a single `message` string (no separate title), so
+// this is what stands in for a title/icon per notification type.
+const TYPE_META: Record<Notification['type'], { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  DEADLINE: { label: 'Deadline Reminder', icon: 'alarm-outline' },
+  RANK: { label: 'Rank Update', icon: 'trophy-outline' },
+  GOAL: { label: 'Goal Alert', icon: 'football-outline' },
+  CAPTAIN: { label: 'Captain Pick', icon: 'star-outline' },
+};
+
+function relativeTime(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function NotificationInboxScreen() {
-  const [notifications, setNotifications] = useState<Notification[]>(DUMMY_NOTIFICATIONS);
+  const insets = useSafeAreaInsets();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const data = await getNotifications(signal);
+    // Newest first.
+    return [...data].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    load(controller.signal)
+      .then((data) => { if (!cancelled) setNotifications(data); })
+      .catch((err) => {
+        if (!cancelled) setError(getApiErrorMessage(err, 'Could not load notifications.'));
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; controller.abort(); };
+  }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const data = await load();
+      setNotifications(data);
+      setError(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not load notifications.'));
+    }
     setRefreshing(false);
+  }, [load]);
+
+  const handlePress = useCallback(async (item: Notification) => {
+    if (item.read) return;
+    // Optimistic - flip it locally immediately, revert if the real PATCH
+    // call fails so the UI never lies about server state.
+    setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+    try {
+      await markNotificationRead(item.id);
+    } catch {
+      setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: false } : n)));
+    }
   }, []);
 
+  const markAllRead = useCallback(() => {
+    const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+    // No bulk endpoint on the backend - fire the per-id PATCH for each one.
+    Promise.allSettled(unreadIds.map((id) => markNotificationRead(id)));
+  }, [notifications]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
-        <TouchableOpacity onPress={markAllRead} style={styles.markButton}>
-          <Text style={styles.markButtonText}>Mark all read</Text>
-        </TouchableOpacity>
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={markAllRead} style={styles.markButton}>
+            <Text style={styles.markButtonText}>Mark all read</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => String(item.id)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        removeClippedSubviews
-        renderItem={({ item }) => (
-          <View style={[styles.notificationItem, !item.read && styles.unreadItem]}>
-            {!item.read ? <View style={styles.indicator} /> : <View style={styles.indicatorSpacer} />}
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationTitle}>{item.title}</Text>
-              <Text style={styles.notificationBody}>{item.body}</Text>
-              <Text style={styles.notificationTime}>Just now</Text>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No notifications yet.</Text>}
-      />
+
+      {loading ? (
+        <ActivityIndicator color={Colors.primary} style={styles.loading} />
+      ) : error ? (
+        <Text style={styles.emptyText}>{error}</Text>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => String(item.id)}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          removeClippedSubviews
+          renderItem={({ item }) => {
+            const meta = TYPE_META[item.type] ?? TYPE_META.GOAL;
+            return (
+              <TouchableOpacity
+                activeOpacity={item.read ? 1 : 0.7}
+                onPress={() => handlePress(item)}
+                style={[styles.notificationItem, !item.read && styles.unreadItem]}
+              >
+                {!item.read ? <View style={styles.indicator} /> : <View style={styles.indicatorSpacer} />}
+                <Ionicons name={meta.icon} size={20} color={Colors.primary} style={styles.typeIcon} />
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>{meta.label}</Text>
+                  <Text style={styles.notificationBody}>{item.message}</Text>
+                  <Text style={styles.notificationTime}>{relativeTime(item.createdAt)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<Text style={styles.emptyText}>No notifications yet.</Text>}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
+  container: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 16, paddingBottom: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  loading: { marginTop: 40 },
   markButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -82,9 +177,10 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.primary,
-    marginRight: 14,
+    marginRight: 10,
   },
-  indicatorSpacer: { width: 10, marginRight: 14 },
+  indicatorSpacer: { width: 10, marginRight: 10 },
+  typeIcon: { marginRight: 12 },
   notificationContent: { flex: 1 },
   notificationTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   notificationBody: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },

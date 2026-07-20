@@ -6,17 +6,23 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import { CLUB_COLORS } from '../../constants/clubs';
 import { useFantasyStore, FORMATIONS, canApplyFormation } from '../../store/fantasyStore';
 import * as fantasyService from '../../services/fantasyService';
+import { getApiErrorMessage } from '../../services/api';
+import { fetchClubsById, backendClubIdToLocalClub, RealClub } from '../../services/clubService';
 import SegmentedControl from '../../components/shared/SegmentedControl';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
+import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { FantasyPlayer, FormationKey, ChipType, ChipStatus } from '../../types';
 
 type ViewMode = 'pitch' | 'list';
@@ -32,6 +38,7 @@ const POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD'] as const;
 
 function MyTeamScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const team = useFantasyStore((s) => s.team);
   const hasSquad = useFantasyStore((s) => s.hasSquad);
   const setFormation = useFantasyStore((s) => s.setFormation);
@@ -40,6 +47,28 @@ function MyTeamScreen() {
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [formationMsg, setFormationMsg] = useState<string | null>(null);
+  // The real current-gameweek ID (as opposed to `gameweek` above, which is
+  // just a local display counter for the header chevrons) - chip activation
+  // needs the actual DB gameweek ID.
+  const [currentGameweekId, setCurrentGameweekId] = useState<number | null>(null);
+  // player.clubId is the backend's real club id - resolve to the local club
+  // (for CLUB_COLORS, which is keyed by local id) via a live-fetched map
+  // rather than trusting the id directly, since the two club lists don't
+  // share ids (see backendClubMap.ts).
+  const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
+  // Two-tap swap flow: tap a starter or a bench player to select it, then
+  // tap the other side to swap them. Tracks player.id (not
+  // fantasyTeamPlayerId) since that's what PlayerChip/PitchView key on.
+  const [swapSourceId, setSwapSourceId] = useState<number | null>(null);
+  const [swapping, setSwapping] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchClubsById(controller.signal)
+      .then((byId) => setClubsById(byId))
+      .catch(() => { /* falls back to a neutral color below */ });
+    return () => controller.abort();
+  }, []);
 
   const handleFetchTeam = useCallback(async () => {
     setFetching(true);
@@ -56,6 +85,9 @@ function MyTeamScreen() {
 
   useEffect(() => {
     handleFetchTeam();
+    fantasyService.getCurrentGameweek()
+      .then((gw) => setCurrentGameweekId(gw?.gameweekId ?? null))
+      .catch(() => setCurrentGameweekId(null));
   }, [handleFetchTeam]);
 
   const handleFormationPress = useCallback(
@@ -75,6 +107,137 @@ function MyTeamScreen() {
     },
     [team, setFormation]
   );
+
+  // Promotes a player to captain or vice-captain. The backend already
+  // handles unsetting whoever held the armband before, rejects players not
+  // in the starting XI, and rejects a captain/vice-captain overlap (e.g. you
+  // must reassign the vice-captaincy elsewhere before promoting them to
+  // captain) - surface whatever message it sends back rather than trying to
+  // duplicate that logic here.
+  const handleSetRole = useCallback(
+    (player: FantasyPlayer, role: 'captain' | 'vice') => {
+      setSwapping(true);
+      const call =
+        role === 'captain'
+          ? fantasyService.setCaptain(player.fantasyTeamPlayerId)
+          : fantasyService.setViceCaptain(player.fantasyTeamPlayerId);
+      call
+        .then(() => handleFetchTeam())
+        .catch((err) => {
+          Alert.alert('Cannot update', getApiErrorMessage(err, 'Failed to update captain'));
+        })
+        .finally(() => setSwapping(false));
+    },
+    [handleFetchTeam]
+  );
+
+  const showPlayerOptions = useCallback(
+    (player: FantasyPlayer) => {
+      const isCaptain = player.id === team?.captainId;
+      const isVice = player.id === team?.viceCaptainId;
+      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [];
+      if (!isCaptain) {
+        buttons.push({ text: 'Make Captain', onPress: () => handleSetRole(player, 'captain') });
+      }
+      if (!isVice) {
+        buttons.push({ text: 'Make Vice-Captain', onPress: () => handleSetRole(player, 'vice') });
+      }
+      buttons.push({ text: 'Swap with Bench', onPress: () => setSwapSourceId(player.id) });
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert(
+        player.name,
+        isCaptain ? 'Currently your captain' : isVice ? 'Currently your vice-captain' : undefined,
+        buttons
+      );
+    },
+    [team, handleSetRole]
+  );
+
+  // Swaps one starter for one bench player. The min/max-per-position rules
+  // (GK-for-GK only, DEF/MID/FWD floors) are enforced server-side by the
+  // /squad/{a}/{b}/toggle-bench endpoint - a straight one-for-one swap also
+  // keeps the total starters at 11 and the formation shape intact by
+  // construction, so there's nothing extra to validate client-side beyond
+  // "one side must be starting and the other benched".
+  const handlePlayerTap = useCallback(
+    (player: FantasyPlayer) => {
+      if (!team) return;
+      if (team.isLocked) {
+        Alert.alert('Team locked', "Your lineup is locked for this gameweek and can't be changed.");
+        return;
+      }
+      if (swapSourceId === player.id) {
+        setSwapSourceId(null);
+        return;
+      }
+      if (swapSourceId == null) {
+        const isStarter = (team.startingPlayerIds || []).includes(player.id);
+        if (isStarter) {
+          // Starters get a menu (captain / vice-captain / swap out) instead
+          // of immediately entering swap-selection mode, since tapping a
+          // starter is now also how you reassign the armband.
+          showPlayerOptions(player);
+        } else {
+          setSwapSourceId(player.id);
+        }
+        return;
+      }
+      const source = team.players.find((p) => p.id === swapSourceId);
+      if (!source) {
+        setSwapSourceId(player.id);
+        return;
+      }
+      const starting = team.startingPlayerIds || [];
+      const sourceIsStarting = starting.includes(source.id);
+      const targetIsStarting = starting.includes(player.id);
+      if (sourceIsStarting === targetIsStarting) {
+        Alert.alert('Pick one starter and one bench player', 'Select a Starting XI player and a bench player to swap them.');
+        setSwapSourceId(player.id);
+        return;
+      }
+      const startingPlayer = sourceIsStarting ? source : player;
+      const benchPlayer = sourceIsStarting ? player : source;
+      setSwapSourceId(null);
+      setSwapping(true);
+      fantasyService
+        .swapStartingAndBenchPlayer(startingPlayer.fantasyTeamPlayerId, benchPlayer.fantasyTeamPlayerId)
+        .then(() => handleFetchTeam())
+        .catch((err) => {
+          Alert.alert('Cannot swap', getApiErrorMessage(err, 'Failed to swap players'));
+        })
+        .finally(() => setSwapping(false));
+    },
+    [team, swapSourceId, handleFetchTeam, showPlayerOptions]
+  );
+
+  // Once a team is created there was previously no way to undo it -
+  // createFantasyTeam 409s ("You already have a fantasy team") on any
+  // second attempt, permanently blocking a rebuild. This wipes the team
+  // (and its squad/transfers/chips) server-side and drops the user back on
+  // the Squad Builder.
+  const handleDeleteTeam = useCallback(() => {
+    Alert.alert(
+      'Delete this team?',
+      'This permanently removes your squad, transfers, and chip usage so you can build a new one. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await fantasyService.deleteMyTeam();
+              useFantasyStore.setState({ team: null, hasSquad: false });
+              useFantasyStore.getState().resetDraft();
+              navigation.navigate('GamesRoot', { defaultTab: 'fantasy' });
+            } catch (err) {
+              Alert.alert('Could not delete team', getApiErrorMessage(err, 'Failed to delete team'));
+            }
+          },
+        },
+      ]
+    );
+  }, [navigation]);
 
   if (fetching) {
     return (
@@ -117,9 +280,8 @@ function MyTeamScreen() {
   const startingPlayerIds = team.startingPlayerIds || [];
   const captainId = team.captainId;
   const viceCaptainId = team.viceCaptainId ?? null;
-  const gameweekPoints = team.gameweekPoints || 0;
   const totalPoints = team.totalPoints || 0;
-  const overallRank = team.rank || 0;
+  const freeTransfers = team.freeTransfers ?? 0;
 
   const benchPlayers = team.players.filter((p: FantasyPlayer) => !startingPlayerIds.includes(p.id));
 
@@ -137,21 +299,41 @@ function MyTeamScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{team.teamName}</Text>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.headerTitle}>{team.teamName}</Text>
+            <TouchableOpacity
+              onPress={handleDeleteTeam}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.deleteTeamButton}
+            >
+              <Ionicons name="trash-outline" size={16} color={Colors.grey2} />
+              <Text style={styles.deleteTeamText}>Delete Team</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.headerStats}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>{totalPoints}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+              <Text style={styles.statLabel}>Total Points</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{gameweekPoints}</Text>
-              <Text style={styles.statLabel}>GW {gameweek}</Text>
+              <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                GH₵{team.budget.toFixed(1)}m
+              </Text>
+              <Text style={styles.statLabel}>Budget Remaining</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{overallRank}</Text>
-              <Text style={styles.statLabel}>Rank</Text>
+              <Text style={styles.statValue}>{freeTransfers}</Text>
+              <Text style={styles.statLabel}>Free Transfers</Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={styles.transfersButton}
+            onPress={() => navigation.navigate('Transfers')}
+          >
+            <Ionicons name="swap-horizontal" size={16} color={Colors.black} />
+            <Text style={styles.transfersButtonText}>Transfers</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.gameweekBar}>
@@ -174,9 +356,18 @@ function MyTeamScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipStripContent}>
             {CHIPS.map((chip) => {
               const chipKey = (chip.chipType.charAt(0).toLowerCase() + chip.chipType.slice(1)) as keyof ChipStatus;
-              const activated = team.chips?.[chipKey] ?? false;
+              const used = team.chips?.[chipKey] ?? false;
               return (
-                <ChipCard key={chip.name} name={chip.name} icon={chip.icon} available={activated} />
+                <ChipCard
+                  key={chip.name}
+                  name={chip.name}
+                  icon={chip.icon}
+                  used={used}
+                  chipType={chip.chipType}
+                  fantasyTeamId={team.teamId}
+                  gameweekId={currentGameweekId}
+                  onActivated={handleFetchTeam}
+                />
               );
             })}
           </ScrollView>
@@ -193,6 +384,10 @@ function MyTeamScreen() {
           />
         </View>
 
+        <Text style={styles.currentFormationLabel}>
+          Current shape: {formation}
+          {!(formation in FORMATIONS) ? ' (not a preset - tap one below to try switching)' : ''}
+        </Text>
         <View style={styles.formationRow}>
           {(Object.keys(FORMATIONS) as FormationKey[]).map((key) => {
             const active = formation === key;
@@ -218,6 +413,13 @@ function MyTeamScreen() {
 
         {viewMode === 'pitch' ? (
           <View style={styles.pitchSection}>
+            <Text style={styles.swapHint}>
+              {swapping
+                ? 'Updating your team...'
+                : swapSourceId != null
+                ? 'Now tap a player on the other side to swap.'
+                : 'Tap a starter for captain/vice-captain options, or tap a bench player to swap them in.'}
+            </Text>
             <PitchView
               players={team.players}
               startingPlayerIds={startingPlayerIds}
@@ -225,6 +427,9 @@ function MyTeamScreen() {
               viceCaptainId={viceCaptainId}
               formation={formation}
               showBench
+              onPlayerPress={handlePlayerTap}
+              selectedPlayerId={swapSourceId}
+              clubsById={clubsById}
             />
           </View>
         ) : (
@@ -236,7 +441,8 @@ function MyTeamScreen() {
                   <Text style={styles.groupCount}>{group.items.length}</Text>
                 </View>
                 {group.items.map((player: FantasyPlayer, idx: number) => {
-                  const clubColor = CLUB_COLORS[player.clubId] || Colors.grey2;
+                  const localClub = backendClubIdToLocalClub(player.clubId, clubsById);
+                  const clubColor = (localClub ? CLUB_COLORS[localClub.id] : null) || Colors.grey2;
                   const isStarter = startingPlayerIds.includes(player.id);
                   return (
                     <View key={player.id} style={[styles.listRow, idx === group.items.length - 1 && styles.listRowLast]}>
@@ -249,7 +455,7 @@ function MyTeamScreen() {
                           </View>
                         )}
                         <Text style={[styles.listPrice, !isStarter && styles.listPriceBench]}>
-                          ${player.price}m
+                          GH₵{player.price}m
                         </Text>
                       </View>
                     </View>
@@ -272,11 +478,24 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 20, fontFamily: fonts.display, color: Colors.white, marginTop: 16, textTransform: 'uppercase' },
   emptySub: { fontSize: 14, fontFamily: fonts.body, color: Colors.grey1, textAlign: 'center', marginTop: 8 },
   header: { paddingHorizontal: 20, paddingVertical: 16, gap: 12 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: 22, fontFamily: fonts.display, color: Colors.yellow, textTransform: 'uppercase', letterSpacing: 0.5 },
-  headerStats: { flexDirection: 'row', gap: 16 },
+  deleteTeamButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  deleteTeamText: { fontSize: 11, fontFamily: fonts.bodySemiBold, color: Colors.grey2 },
+  headerStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, rowGap: 8 },
   stat: { alignItems: 'center' },
   statValue: { fontSize: 18, fontFamily: fonts.display, color: Colors.white },
   statLabel: { fontSize: 10, fontFamily: fonts.bodySemiBold, color: Colors.grey1, textTransform: 'uppercase', marginTop: 2 },
+  transfersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.yellow,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  transfersButtonText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: Colors.black, fontWeight: '800' },
   gameweekBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,6 +512,13 @@ const styles = StyleSheet.create({
   chipStripContent: { paddingHorizontal: 20, gap: 8 },
   toggleRow: { paddingHorizontal: 20, marginBottom: 16 },
   pitchSection: { paddingHorizontal: 16 },
+  swapHint: {
+    fontSize: 12,
+    fontFamily: fonts.body,
+    color: Colors.grey1,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   listSection: { paddingHorizontal: 16, gap: 16 },
   groupBlock: {
     backgroundColor: Colors.surface,
@@ -344,6 +570,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000000',
     textTransform: 'uppercase',
+  },
+  currentFormationLabel: {
+    fontSize: 11,
+    fontFamily: fonts.body,
+    color: Colors.grey1,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   formationRow: {
     flexDirection: 'row',
