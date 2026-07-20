@@ -18,7 +18,7 @@ jest.mock('../../services/fantasyService', () => {
     gameweekPoints: 0,
     rank: 0,
     budget: 100,
-    transferCount: 0,
+    freeTransfers: 1,
     isLocked: false,
     createdAt: new Date().toISOString(),
   };
@@ -73,8 +73,26 @@ const MID2 = makePlayer(7, 'Test MID2', 'MID', 8.0, 4);
 const MID3 = makePlayer(8, 'Test MID3', 'MID', 7.0, 2);
 const MID4 = makePlayer(9, 'Test MID4', 'MID', 6.0, 1);
 const FWD1 = makePlayer(10, 'Test FWD1', 'FWD', 10.0, 2);
-const FWD2 = makePlayer(11, 'Test FWD2', 'FWD', 9.5, 1);
+// clubId 4, not 1 - club 1 already has GK/DEF2/MID4 (3, the max allowed).
+const FWD2 = makePlayer(11, 'Test FWD2', 'FWD', 9.5, 4);
 const FWD3 = makePlayer(12, 'Test FWD3', 'FWD', 8.5, 3);
+
+// The store now enforces the same per-position squad quota AND per-club cap
+// (max 3 players from any one club) as the backend. Tests that need a full,
+// submittable 15-man squad must respect both or addPlayer will silently
+// reject players past the cap. Spreading across 5 clubs gives exactly 3
+// players per club for a 15-man squad.
+const makeValidSquad = (idOffset: number, price = 5.0): Player[] => {
+  const positions: Array<'GK' | 'DEF' | 'MID' | 'FWD'> = [
+    'GK', 'GK',
+    'DEF', 'DEF', 'DEF', 'DEF', 'DEF',
+    'MID', 'MID', 'MID', 'MID', 'MID',
+    'FWD', 'FWD', 'FWD',
+  ];
+  return positions.map((position, i) =>
+    makePlayer(idOffset + i, `Squad Player ${idOffset + i}`, position, price, (i % 5) + 1)
+  );
+};
 
 const resetStore = () => {
   useFantasyStore.setState({
@@ -146,15 +164,11 @@ describe('existing functionality', () => {
 
   it('submitSquad creates a team and resets draft state', async () => {
     const store = useFantasyStore.getState();
-    const players = [GK, DEF1, DEF2, MID1, MID2, FWD1, FWD2];
-    for (let i = 0; i < 8; i++) {
-      const extra = makePlayer(100 + i, `Extra ${i}`, i < 3 ? 'DEF' : i < 6 ? 'MID' : 'FWD', 5.0, 3);
-      players.push(extra);
-    }
-    for (const p of players) {
+    const squad = makeValidSquad(100);
+    for (const p of squad) {
       store.addPlayer(p);
     }
-    store.setCaptain(2);
+    store.setCaptain(squad[0].id);
     await useFantasyStore.getState().submitSquad('Test Team');
     const state = useFantasyStore.getState();
     expect(state.hasSquad).toBe(true);
@@ -310,11 +324,9 @@ describe('computeFormation', () => {
 describe('async actions (formation change, loading/error paths)', () => {
   it('submitSquad sets loading true then false on success', async () => {
     const store = useFantasyStore.getState();
-    for (let i = 0; i < 15; i++) {
-      const p = makePlayer(300 + i, `Player ${i}`, i < 1 ? 'GK' : i < 6 ? 'DEF' : i < 11 ? 'MID' : 'FWD', 5.0, 2);
-      store.addPlayer(p);
-    }
-    store.setCaptain(300);
+    const squad = makeValidSquad(300);
+    for (const p of squad) store.addPlayer(p);
+    store.setCaptain(squad[0].id);
 
     const submitPromise = useFantasyStore.getState().submitSquad('Test');
     expect(useFantasyStore.getState().loading).toBe(true);
@@ -327,11 +339,9 @@ describe('async actions (formation change, loading/error paths)', () => {
     createTeam.mockRejectedValueOnce(new Error('API error'));
 
     const store = useFantasyStore.getState();
-    for (let i = 0; i < 15; i++) {
-      const p = makePlayer(400 + i, `Player ${i}`, i < 1 ? 'GK' : i < 6 ? 'DEF' : i < 11 ? 'MID' : 'FWD', 5.0, 2);
-      store.addPlayer(p);
-    }
-    store.setCaptain(400);
+    const squad = makeValidSquad(400);
+    for (const p of squad) store.addPlayer(p);
+    store.setCaptain(squad[0].id);
 
     await expect(useFantasyStore.getState().submitSquad('Fail')).rejects.toThrow('API error');
     const state = useFantasyStore.getState();

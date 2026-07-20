@@ -4,6 +4,7 @@ import { AUTH_URL } from '../constants/apiUrls';
 
 const api = axios.create({
   baseURL: AUTH_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },

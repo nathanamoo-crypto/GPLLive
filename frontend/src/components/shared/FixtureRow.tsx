@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { fonts } from '../../constants/layout';
 import { Match } from '../../types';
+import { Logos } from '../../constants/logos';
 import Badge from './Badge';
 
 interface FixtureRowProps {
@@ -29,6 +30,11 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
     >
       <View style={styles.teamRow}>
         <View style={styles.teamWrap}>
+          {Logos[match.homeClub.id] ? (
+            <Image source={Logos[match.homeClub.id]} style={styles.badge} resizeMode="contain" />
+          ) : (
+            <View style={styles.badgePlaceholder} />
+          )}
           <Text style={styles.teamName} numberOfLines={1}>{match.homeClub.shortName}</Text>
         </View>
 
@@ -46,6 +52,11 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
 
         <View style={[styles.teamWrap, styles.teamWrapRight]}>
           <Text style={styles.teamName} numberOfLines={1}>{match.awayClub.shortName}</Text>
+          {Logos[match.awayClub.id] ? (
+            <Image source={Logos[match.awayClub.id]} style={styles.badge} resizeMode="contain" />
+          ) : (
+            <View style={styles.badgePlaceholder} />
+          )}
         </View>
       </View>
 
@@ -102,6 +113,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.white,
+    flexShrink: 1,
+  },
+  badge: {
+    width: 20,
+    height: 20,
+  },
+  badgePlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.surface2,
   },
   scoreWrap: {
     alignItems: 'center',

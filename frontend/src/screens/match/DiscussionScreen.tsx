@@ -23,6 +23,8 @@ import {
   sendDiscussionMessage,
 } from '../../services/discussionService';
 import type { DiscussionMessage } from '../../services/discussionService';
+import { getApiErrorMessage } from '../../services/api';
+import { getMatchDetails } from '../../services/matchService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type DiscussionRouteProp = RouteProp<HomeStackParamList, 'Discussion'>;
@@ -49,17 +51,24 @@ export default function DiscussionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Discussion closes once the match itself is over - mirrors how Transfers
+  // locks at the gameweek deadline. Past messages stay visible either way.
+  const [isFinished, setIsFinished] = useState(false);
 
   const loadMessages = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDiscussionMessages(matchId, signal);
+      const [data, match] = await Promise.all([
+        getDiscussionMessages(matchId, signal),
+        getMatchDetails(matchId, signal),
+      ]);
       if (signal?.aborted) return;
-      setMessages(data.messages);
-    } catch {
+      setMessages(data);
+      setIsFinished(match?.status === 'finished');
+    } catch (err) {
       if (signal?.aborted) return;
-      setError('Failed to load discussion. Check your connection and try again.');
+      setError(getApiErrorMessage(err, 'Failed to load discussion. Check your connection and try again.'));
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -76,11 +85,11 @@ export default function DiscussionScreen() {
     if (!text) return;
     setSubmitting(true);
     try {
-      const data = await sendDiscussionMessage(matchId, text);
-      setMessages((prev) => [...prev, data.message]);
+      const sent = await sendDiscussionMessage(matchId, text);
+      setMessages((prev) => [...prev, sent]);
       setInputText('');
-    } catch {
-      setError('Failed to send message. Please try again.');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to send message. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +117,7 @@ export default function DiscussionScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
         <SubScreenHeader title="Discussion" />
 
         {loading && (
@@ -132,7 +141,7 @@ export default function DiscussionScreen() {
           <>
             <FlatList
               data={messages}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               renderItem={renderMessage}
               contentContainerStyle={[
                 styles.listContent,
@@ -148,28 +157,35 @@ export default function DiscussionScreen() {
               }
             />
 
-            <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Type a message..."
-                placeholderTextColor={Colors.grey2}
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-                maxLength={500}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() || submitting) && styles.sendButtonDisabled]}
-                onPress={handleSend}
-                disabled={!inputText.trim() || submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color={Colors.black} />
-                ) : (
-                  <Ionicons name="send" size={18} color={Colors.black} />
-                )}
-              </TouchableOpacity>
-            </View>
+            {isFinished ? (
+              <View style={[styles.closedBanner, { paddingBottom: insets.bottom + 12 }]}>
+                <Ionicons name="lock-closed-outline" size={16} color={Colors.grey2} />
+                <Text style={styles.closedText}>This discussion is closed - the match has ended.</Text>
+              </View>
+            ) : (
+              <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Type a message..."
+                  placeholderTextColor={Colors.grey2}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, (!inputText.trim() || submitting) && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={!inputText.trim() || submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color={Colors.black} />
+                  ) : (
+                    <Ionicons name="send" size={18} color={Colors.black} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </View>
@@ -233,6 +249,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  closedText: { fontSize: 13, color: Colors.grey2, fontWeight: '600' },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

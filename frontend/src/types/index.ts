@@ -91,7 +91,11 @@ export interface FantasyTeam {
   gameweekPoints: number;
   rank: number;
   budget: number;
-  transferCount: number;
+  // The backend's free-transfer bank (its field is called transferPoints -
+  // 1 per gameweek, banked up to 2). Named freeTransfers here since
+  // "transferCount" read like a count of transfers already made, which is
+  // the opposite of what this number means.
+  freeTransfers: number;
   isLocked: boolean;
   createdAt: string;
 }
@@ -132,6 +136,23 @@ export interface ClubSubscription {
   renewalDate: string;
 }
 
+// A league table row, computed live by the backend from real recorded
+// fixture results (see standingsService.ts) - `club` is this app's local
+// Club (resolved by name from the backend's real club, same as fixtures),
+// not a raw backend id.
+export interface StandingRow {
+  position: number;
+  club: Club;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -145,11 +166,15 @@ export interface User {
   subscription?: ClubSubscription;
 }
 
+// Matches the real backend NotificationResponse (id/message/isRead/
+// createdAt/type) - there is no separate title field, just one message, and
+// the type enum is the backend's actual NotificationType (DEADLINE/RANK/
+// GOAL/CAPTAIN), not the fictional 'goal'|'fantasy'|'prediction'|... set
+// this used to have when the whole feature was hardcoded mock data.
 export interface Notification {
   id: number;
-  type: 'goal' | 'fantasy' | 'prediction' | 'subscription' | 'general';
-  title: string;
-  body: string;
+  type: 'DEADLINE' | 'RANK' | 'GOAL' | 'CAPTAIN';
+  message: string;
   read: boolean;
   createdAt: string;
 }
@@ -221,10 +246,12 @@ export interface AuthState {
   isAuthenticated: boolean;
   splashKey: number;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string, favouriteClubId: number) => Promise<void>;
   logout: () => Promise<void>;
   resetOnboarding: () => void;
-  setFavouriteClub: (club: Club) => Promise<void>;
+  // Takes the backend's real club id + name (e.g. from clubService.fetchClubs()),
+  // not this app's local/hardcoded Club - those use different, mismatched ids.
+  setFavouriteClub: (club: { id: number; fullName: string }) => Promise<void>;
   completeOnboarding: () => void;
   loginDemo: () => Promise<void>;
 }
@@ -240,7 +267,7 @@ export interface FantasyState {
   budget: number;
   loading: boolean;
   error: string | null;
-  addPlayer: (player: Player) => void;
+  addPlayer: (player: Player) => { success: boolean; message?: string };
   removePlayer: (playerId: number) => void;
   setCaptain: (playerId: number) => void;
   setViceCaptain: (playerId: number) => void;

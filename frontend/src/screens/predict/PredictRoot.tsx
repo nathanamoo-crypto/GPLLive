@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
@@ -50,7 +49,6 @@ const MOCK_FIXTURES: Match[] = [
 ];
 
 export default function PredictRoot() {
-  const insets = useSafeAreaInsets();
   const { predictions, setPrediction, setExactScore, submitAll } = usePredictionStore();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -84,7 +82,10 @@ export default function PredictRoot() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    // No insets.top here - PredictRoot is always rendered nested below
+    // GamesRoot's Fantasy/Predictions toggle bar, which already reserves
+    // the safe-area space at the top of the screen (same fix as FantasyRoot).
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Predict & Win</Text>
         <Text style={styles.headerSubtitle}>Gameweek 24</Text>

@@ -6,19 +6,33 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import api, { configureApiAuth, getApiErrorMessage } from '../services/api';
 import { AuthEndpoints } from '../constants/apiUrls';
 import { AuthState, User, Club, ClubSubscription } from '../types';
+import { backendClubToLocalClub } from '../services/clubService';
 
 function isOfflineError(error: unknown): boolean {
   const axiosError = error as AxiosError;
   return !axiosError.response || axiosError.message === 'Network Error';
 }
 
-function normalizeUser(raw: Partial<User> & { name?: string; favouriteClub?: Club; subscription?: ClubSubscription }): User {
+// Backend's GET/PATCH /auth/users/me returns favouriteClub as
+// {id, fullName, shortName, logoUrl} (the real backend club) - resolve that
+// to this app's local Club shape (for badge/asset lookups) via the explicit
+// name mapping, rather than trusting the backend's id against local data.
+function resolveFavouriteClub(raw: { id?: number; fullName?: string } | null | undefined): Club | undefined {
+  if (!raw?.fullName) return undefined;
+  return backendClubToLocalClub(raw.fullName) ?? undefined;
+}
+
+function normalizeUser(raw: Partial<User> & { name?: string; fullName?: string; favouriteClub?: { id?: number; fullName?: string } | Club; subscription?: ClubSubscription }): User {
+  const favouriteClub = raw.favouriteClub && 'slug' in raw.favouriteClub
+    ? (raw.favouriteClub as Club)
+    : resolveFavouriteClub(raw.favouriteClub as { id?: number; fullName?: string } | undefined);
+
   return {
     id: raw.id ?? 0,
-    username: raw.username ?? raw.name ?? 'Fan',
+    username: raw.username ?? raw.name ?? raw.fullName ?? 'Fan',
     email: raw.email ?? '',
     avatarUrl: raw.avatarUrl,
-    favouriteClub: raw.favouriteClub,
+    favouriteClub,
     fantasyRank: raw.fantasyRank,
     predictionPoints: raw.predictionPoints ?? 0,
     reactionsPosted: raw.reactionsPosted ?? 0,
@@ -57,12 +71,15 @@ export const useAuthStore = create<AuthState>()(
 
           set({ user, token, isAuthenticated: true });
 
+          // Best-effort - backend's GET /auth/users/me returns the profile
+          // flat (no wrapper), including favouriteClub if one was set at
+          // registration. If this fails, the login already succeeded above.
           try {
-            const meResponse = await api.get<{ user: Partial<User> & { name?: string } }>(
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
               AuthEndpoints.GET_ME,
             );
-            if (meResponse.data?.user) {
-              set({ user: normalizeUser(meResponse.data.user) });
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
             }
           } catch {
             // profile fetch is best-effort
@@ -71,10 +88,11 @@ export const useAuthStore = create<AuthState>()(
           throw new Error(getApiErrorMessage(error, 'Login failed'));
         }
       },
-      register: async (username, email, password) => {
+      register: async (username, email, password, favouriteClubId) => {
         try {
           const response = await api.post<{ token: string; username: string; userId: number }>(
-            AuthEndpoints.REGISTER, { username, email, password },
+            AuthEndpoints.REGISTER,
+            { username, email, password, fullName: username, favouriteClubId },
           );
           const { token, username: returnedUsername, userId } = response.data;
 
@@ -92,6 +110,20 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user, token, isAuthenticated: true });
+
+          // Fetch the full profile so `user.favouriteClub` is populated -
+          // RegisterLoginScreen relies on this being set to skip the
+          // fallback club-picker step after a fresh registration.
+          try {
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
         } catch (error) {
           throw new Error(getApiErrorMessage(error, 'Registration failed'));
         }
@@ -114,14 +146,15 @@ export const useAuthStore = create<AuthState>()(
       resetOnboarding: () => {
         set({ onboardingComplete: false, splashKey: get().splashKey + 1 });
       },
-      setFavouriteClub: async (club: Club) => {
+      setFavouriteClub: async (club: { id: number; fullName: string }) => {
         const currentUser = get().user;
         if (!currentUser) {
           throw new Error('No user available');
         }
 
+        const localClub = resolveFavouriteClub(club);
         const saveLocally = () => {
-          set({ user: { ...currentUser, favouriteClub: club } });
+          set({ user: { ...currentUser, favouriteClub: localClub } });
         };
 
         const token = get().token;
@@ -131,13 +164,13 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await api.patch<{ user: Partial<User> & { name?: string } }>(
+          const response = await api.patch<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
             AuthEndpoints.UPDATE_ME, { favouriteClubId: club.id },
           );
 
-          const updatedUser = response.data?.user
-            ? normalizeUser(response.data.user)
-            : { ...currentUser, favouriteClub: club };
+          const updatedUser = response.data
+            ? normalizeUser(response.data)
+            : { ...currentUser, favouriteClub: localClub };
 
           set({ user: updatedUser });
         } catch (error) {
