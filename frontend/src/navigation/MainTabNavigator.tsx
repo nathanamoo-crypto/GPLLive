@@ -5,19 +5,23 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeStack from './HomeStack';
 import GamesStack from './GamesStack';
-import TableStack from './TableStack';
 import NewsStack from './NewsStack';
 import FixturesStack from './FixturesStack';
 import ProfileStack from './ProfileStack';
 import { useMatches } from '../hooks/useMatches';
 import { Colors } from '../constants/colors';
 
+// 'Table' used to be its own bottom tab, but FixturesRoot already has a
+// built-in Fixtures/Table toggle at the top of the screen (same pattern as
+// Games' Fantasy/Predictions toggle) - having both was redundant and made
+// the tab bar cramped at 6 items. Dropped to 5; League Table is still one
+// tap away via Fixtures (or the Profile menu, which deep-links straight
+// into the Table side).
 export type MainTabParamList = {
   Home: undefined;
   Games: undefined;
-  Table: undefined;
   News: undefined;
-  Fixtures: undefined;
+  Fixtures: { screen: 'FixturesRoot'; params?: { defaultTab?: 'fixtures' | 'table' } } | undefined;
   Profile: undefined;
 };
 
@@ -33,10 +37,22 @@ export default function MainTabNavigator() {
       initialRouteName="Home"
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }],
+        // Base content height (icon + label + breathing room) stays fixed;
+        // the device's safe-area inset is added ON TOP of that instead of
+        // eaten out of a fixed total height. The previous fixed height=60
+        // with insets.bottom squeezed into its paddingBottom meant the
+        // label text got compressed/clipped on any phone with a tall
+        // bottom safe area (basically every modern iPhone/Android with a
+        // gesture bar) - this is why the labels were hard to read.
+        tabBarStyle: [
+          styles.tabBar,
+          { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6 },
+        ],
         tabBarActiveTintColor: '#F5C518',
         tabBarInactiveTintColor: '#4B5563',
         tabBarLabelStyle: styles.tabBarLabel,
+        tabBarItemStyle: styles.tabBarItem,
+        tabBarAllowFontScaling: false,
       }}
     >
       <Tab.Screen
@@ -55,14 +71,6 @@ export default function MainTabNavigator() {
         options={{
           tabBarLabel: 'Games',
           tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" size={size || 24} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Table"
-        component={TableStack}
-        options={{
-          tabBarLabel: 'Table',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size || 24} color={color} />,
         }}
       />
       <Tab.Screen
@@ -98,15 +106,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#111111',
     borderTopColor: '#2A2A2A',
     borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
-    paddingTop: 6,
+    paddingTop: 8,
+  },
+  tabBarItem: {
+    // Explicit space for icon + label so the label never gets squeezed
+    // out regardless of screen width - 5 tabs across even a 375pt-wide
+    // phone still leaves enough room per item at this size.
+    paddingVertical: 2,
   },
   tabBarLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
-    marginTop: 2,
+    marginTop: 3,
+    includeFontPadding: false,
   },
   liveBadge: {
     backgroundColor: '#D0021B',

@@ -1,4 +1,4 @@
-import { Match, Standing, LeaderboardEntry, Article, Notification } from '../types';
+import { Match, Standing, Article } from '../types';
 import { CLUB_BY_LEGACY_ID } from './clubs';
 
 function c(id: string) {
@@ -51,36 +51,6 @@ export const DUMMY_MATCHES: Match[] = [
 ];
 
 /**
- * TODO: Replace with API call — see APIDocs.md → GET /notifications
- */
-export const DUMMY_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    type: 'goal',
-    title: 'Goal for Hearts of Oak',
-    body: 'Hearts of Oak take the lead against Medeama SC in a 4-2 thriller.',
-    read: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 2,
-    type: 'fantasy',
-    title: 'Fantasy points updated',
-    body: 'Your squad earned 54 points this gameweek.',
-    read: false,
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    id: 3,
-    type: 'prediction',
-    title: 'Prediction results are in',
-    body: 'You scored 12 points on Gameweek 34.',
-    read: true,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
-
-/**
  * TODO: Replace with API call — see APIDocs.md → GET /news
  */
 export const DUMMY_NEWS: Array<Pick<Article, 'id' | 'headline' | 'source' | 'category'> & { time: string }> = [
@@ -112,42 +82,6 @@ export const DUMMY_STANDINGS: Standing[] = [
   { position: 16, club: c('basake'),    played: 33, won: 12, drawn: 7,  lost: 14, goalDifference: -13, points: 43, form: ['D','L','W','L','L'] },
   { position: 17, club: c('hohoe'),     played: 28, won: 7,  drawn: 9,  lost: 12, goalDifference: -10, points: 30, form: ['D','L','W','D','L'] },
   { position: 18, club: c('wonders'),   played: 33, won: 2,  drawn: 4,  lost: 27, goalDifference: -50, points: 10, form: ['L','L','D','L','L'] },
-];
-
-/**
- * TODO: Replace with API call — see APIDocs.md → GET /predictions/leaderboard
- */
-export const DUMMY_LEADERBOARD: LeaderboardEntry[] = [
-  {
-    rank: 1,
-    rankChange: 1,
-    userId: 101,
-    username: 'MedeamaKing',
-    club: c('medeama'),
-    totalPoints: 48,
-    weekPoints: 12,
-    isCurrentUser: false,
-  },
-  {
-    rank: 2,
-    rankChange: -1,
-    userId: 102,
-    username: 'HeartsLoyal',
-    club: c('hearts'),
-    totalPoints: 42,
-    weekPoints: 9,
-    isCurrentUser: false,
-  },
-  {
-    rank: 3,
-    rankChange: 0,
-    userId: 103,
-    username: 'KotokoFan1',
-    club: c('kotoko'),
-    totalPoints: 39,
-    weekPoints: 8,
-    isCurrentUser: false,
-  },
 ];
 
 /**

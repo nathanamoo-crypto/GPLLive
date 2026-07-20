@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../store/authStore';
-import { GPL_CLUBS } from '../../constants/clubs';
-import { Logos } from '../../constants/logos';
+import { fetchClubs, RealClub } from '../../services/clubService';
 import { Colors } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../utils/authValidation';
 
 export default function PickClubScreen() {
   const insets = useSafeAreaInsets();
+  const [clubs, setClubs] = useState<RealClub[]>([]);
+  const [clubsLoading, setClubsLoading] = useState(true);
+  const [clubsError, setClubsError] = useState<string | null>(null);
   const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -26,10 +28,43 @@ export default function PickClubScreen() {
 
   const setFavouriteClub = useAuthStore((state) => state.setFavouriteClub);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
+  const logout = useAuthStore((state) => state.logout);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [loggingOut, logout]);
+
+  const loadClubs = useCallback(async (signal?: AbortSignal) => {
+    setClubsLoading(true);
+    setClubsError(null);
+    try {
+      const data = await fetchClubs(signal);
+      if (signal?.aborted) return;
+      setClubs(data);
+    } catch (error) {
+      if (signal?.aborted) return;
+      setClubsError(getAuthErrorMessage(error, 'Failed to load clubs. Check your connection and try again.'));
+    } finally {
+      if (!signal?.aborted) setClubsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadClubs(controller.signal);
+    return () => controller.abort();
+  }, [loadClubs]);
 
   const selectedClub = useMemo(
-    () => GPL_CLUBS.find((club) => club.id === selectedClubId) ?? null,
-    [selectedClubId]
+    () => clubs.find((club) => club.id === selectedClubId) ?? null,
+    [clubs, selectedClubId]
   );
 
   const handleContinue = useCallback(async () => {
@@ -42,9 +77,9 @@ export default function PickClubScreen() {
     setSuccessMessage(null);
 
     try {
-      await setFavouriteClub(selectedClub);
+      await setFavouriteClub({ id: selectedClub.id, fullName: selectedClub.fullName });
       completeOnboarding();
-      setSuccessMessage(`${selectedClub.name} saved as your favourite club.`);
+      setSuccessMessage(`${selectedClub.fullName} saved as your favourite club.`);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, 'Unable to save your club. Please try again.'));
     } finally {
@@ -62,11 +97,34 @@ export default function PickClubScreen() {
         },
       ]}
     >
-      <Text style={styles.heading}>Which club do you support?</Text>
-      <Text style={styles.subheading}>Choose one of the 18 GPL clubs.</Text>
+      <View style={styles.topRow}>
+        <View style={styles.topRowText}>
+          <Text style={styles.heading}>Which club do you support?</Text>
+          <Text style={styles.subheading}>Choose one of the 18 GPL clubs.</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} disabled={loggingOut} style={styles.logoutButton}>
+          {loggingOut ? (
+            <ActivityIndicator size="small" color={Colors.textSecondary} />
+          ) : (
+            <Text style={styles.logoutText}>Log out</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
+      {clubsLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : clubsError ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{clubsError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => loadClubs()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <FlatList
-        data={GPL_CLUBS}
+        data={clubs}
         keyExtractor={(item) => String(item.id)}
         numColumns={3}
         contentContainerStyle={styles.grid}
@@ -84,9 +142,13 @@ export default function PickClubScreen() {
               disabled={loading}
             >
               <View style={styles.badgePlaceholder}>
-                <Image source={Logos[item.id]} style={styles.badgeImage} resizeMode="contain" />
+                {item.badge ? (
+                  <Image source={item.badge} style={styles.badgeImage} resizeMode="contain" />
+                ) : (
+                  <Ionicons name="shield-outline" size={28} color={Colors.textTertiary} />
+                )}
               </View>
-              <Text style={styles.clubName}>{item.name}</Text>
+              <Text style={styles.clubName}>{item.fullName}</Text>
               {active ? (
                 <View style={styles.checkmark}>
                   <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
@@ -96,6 +158,7 @@ export default function PickClubScreen() {
           );
         }}
       />
+      )}
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
@@ -120,6 +183,14 @@ export default function PickClubScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 24 },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  topRowText: { flex: 1, paddingRight: 12 },
+  logoutButton: { paddingVertical: 4, paddingHorizontal: 6 },
+  logoutText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   heading: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
   subheading: { fontSize: 14, color: Colors.textSecondary, marginBottom: 20 },
   grid: { paddingBottom: 24 },
@@ -176,4 +247,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+  },
+  retryButtonText: { fontSize: 14, fontWeight: '800', color: Colors.textInverse, textTransform: 'uppercase' },
 });

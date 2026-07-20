@@ -17,7 +17,7 @@ import TodayMatchesWidget from '../../components/home/TodayMatchesWidget';
 import LatestNewsWidget from '../../components/home/LatestNewsWidget';
 import LeagueTableWidget from '../../components/home/LeagueTableWidget';
 import FantasySnapshotWidget from '../../components/home/FantasySnapshotWidget';
-import PredictionLeaderboardTeaser from '../../components/home/PredictionLeaderboardTeaser';
+import MotmVoteSpotlight from '../../components/home/MotmVoteSpotlight';
 import { Colors } from '../../constants/colors';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
@@ -28,33 +28,64 @@ import type { Match } from '../../types';
 
 type HomeNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'HomeFeed'>;
 
+// True if an ISO fixture date falls on the same LOCAL calendar day as now -
+// comparing y/m/d directly (not a 24h-window check) so a match at 11pm
+// today and one at 1am today are both "today", regardless of timezone.
+function isSameLocalDay(isoDate: string, reference: Date): boolean {
+  const d = new Date(isoDate);
+  return (
+    d.getFullYear() === reference.getFullYear() &&
+    d.getMonth() === reference.getMonth() &&
+    d.getDate() === reference.getDate()
+  );
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
-  const [liveMatches, setLiveMatches] = useState<Match[]>([]);
+  const [todaysMatches, setTodaysMatches] = useState<Match[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [contentRefreshTrigger, setContentRefreshTrigger] = useState(0);
+
+  // Previously this only pulled status=live fixtures, which is only ever
+  // non-empty in the narrow window a match is actually being played - a
+  // match scheduled for later today, or one that finished this morning,
+  // would both show as "no matches today" even though real fixtures exist
+  // for today. Fetching everything and filtering by date (any status) is
+  // what the widget's title actually promises.
+  const loadTodaysMatches = useCallback(async (signal?: AbortSignal) => {
+    const all = await getMatches(undefined, undefined, signal);
+    const today = new Date();
+    return (all ?? []).filter((m) => isSameLocalDay(m.kickoffTime, today));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setMatchesLoading(true);
-    getMatches(undefined, 'live')
-      .then((data) => { if (!cancelled) setLiveMatches(data ?? []); })
-      .catch(() => { if (!cancelled) setLiveMatches([]); })
+    loadTodaysMatches(controller.signal)
+      .then((data) => { if (!cancelled) setTodaysMatches(data); })
+      .catch(() => { if (!cancelled) setTodaysMatches([]); })
       .finally(() => { if (!cancelled) setMatchesLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
+    return () => { cancelled = true; controller.abort(); };
+  }, [loadTodaysMatches]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    // Bumping this tells LatestNewsWidget (re-fetch + reshuffle, same as the
+    // News tab) and LeagueTableWidget (re-fetch) to update too - previously
+    // this only reloaded live matches, leaving those widgets stuck on
+    // whatever they first loaded.
+    setContentRefreshTrigger((n) => n + 1);
     try {
-      const data = await getMatches(undefined, 'live');
-      setLiveMatches(data ?? []);
+      const data = await loadTodaysMatches();
+      setTodaysMatches(data);
     } catch { /* keep current */ }
     setRefreshing(false);
-  }, []);
+  }, [loadTodaysMatches]);
 
   return (
     <View style={styles.container}>
@@ -102,11 +133,11 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <TodayMatchesWidget matches={liveMatches} />
-      <LatestNewsWidget />
-      <LeagueTableWidget />
+      <TodayMatchesWidget matches={todaysMatches} />
+      <LatestNewsWidget refreshTrigger={contentRefreshTrigger} />
+      <LeagueTableWidget refreshTrigger={contentRefreshTrigger} />
       <FantasySnapshotWidget />
-      <PredictionLeaderboardTeaser />
+      <MotmVoteSpotlight />
     </ScrollView>
   </View>
 );

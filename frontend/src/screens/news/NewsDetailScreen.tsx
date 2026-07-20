@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,93 +6,38 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator,
+  Linking,
+  Share,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 
 import { Colors } from '../../constants/colors';
 import { getScrollBottomPadding } from '../../constants/layout';
-import { getArticleDetails } from '../../services/newsService';
-import type { Article } from '../../types';
+import type { NewsStackParamList } from '../../navigation/NewsStack';
 
 const { width } = Dimensions.get('window');
+
+type NewsDetailRouteProp = RouteProp<NewsStackParamList, 'NewsDetail'>;
 
 export default function NewsDetailScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const route = useRoute();
-  // @ts-ignore
-  const { articleId } = route.params || {};
+  const route = useRoute<NewsDetailRouteProp>();
+  const { article } = route.params;
 
-  const [article, setArticle] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const handleReadFullStory = () => {
+    if (article.url) Linking.openURL(article.url);
+  };
 
-  useEffect(() => {
-    if (!articleId) {
-      setLoading(false);
-      setError('No article ID provided.');
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getArticleDetails(articleId)
-      .then((data) => {
-        if (cancelled) return;
-        if (data) {
-          setArticle(data);
-        } else {
-          setError('Article not found.');
-        }
-      })
-      .catch((err: any) => {
-        if (cancelled) return;
-        setError(err?.message ?? 'Failed to load article.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [articleId]);
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.imageHeader}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.backButton, { top: insets.top + 10 }]}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  if (error || !article) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.imageHeader}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.backButton, { top: insets.top + 10 }]}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Article not found.'}</Text>
-        </View>
-      </View>
-    );
-  }
+  const handleShare = () => {
+    void Share.share({
+      message: article.url ? `${article.headline}\n${article.url}` : article.headline,
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -101,7 +46,17 @@ export default function NewsDetailScreen() {
         contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
       >
         <View style={styles.imageHeader}>
-          <View style={styles.imagePlaceholder} />
+          {article.thumbnailUrl ? (
+            <Image
+              source={{ uri: article.thumbnailUrl }}
+              style={styles.image}
+              contentFit="cover"
+              contentPosition={{ top: '20%' }}
+              transition={150}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder} />
+          )}
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={[styles.backButton, { top: insets.top + 10 }]}
@@ -113,28 +68,44 @@ export default function NewsDetailScreen() {
         <View style={styles.content}>
           <Text style={styles.category}>{article.category}</Text>
           <Text style={styles.headline}>{article.headline}</Text>
-          
+
           <View style={styles.metaRow}>
             <View style={styles.authorBadge}>
-              <Text style={styles.authorText}>
-                {article.author?.charAt(0) ?? '?'}
-              </Text>
+              <Ionicons name="newspaper-outline" size={18} color={Colors.textInverse} />
             </View>
             <View>
-              <Text style={styles.authorName}>{article.author}</Text>
+              <Text style={styles.authorName}>{article.source}</Text>
               <Text style={styles.sourceText}>
-                {article.source} · {new Date(article.publishedAt).toLocaleDateString()}
+                {new Date(article.publishedAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
               </Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
+          {/* RSS feeds only ever give a short excerpt, never the full
+              article body - showing that honestly as a summary, with a
+              clear way to read the complete story at the source, rather
+              than passing off a truncated snippet as the whole article. */}
           <Text style={styles.body}>{article.body}</Text>
+
+          {article.url ? (
+            <TouchableOpacity style={styles.readMoreButton} onPress={handleReadFullStory}>
+              <Text style={styles.readMoreText}>Read full story on {article.source}</Text>
+              <Ionicons name="open-outline" size={18} color={Colors.textInverse} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={[styles.shareButton, { bottom: insets.bottom + 20 }]}>
+      <TouchableOpacity
+        style={[styles.shareButton, { bottom: insets.bottom + 20 }]}
+        onPress={handleShare}
+      >
         <Ionicons name="share-social-outline" size={24} color={Colors.textInverse} />
       </TouchableOpacity>
     </View>
@@ -144,6 +115,7 @@ export default function NewsDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   imageHeader: { width: width, height: 250, backgroundColor: Colors.border },
+  image: { width: '100%', height: '100%' },
   imagePlaceholder: { flex: 1, backgroundColor: '#333' },
   backButton: {
     position: 'absolute',
@@ -165,13 +137,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  authorText: { color: Colors.textInverse, fontWeight: '700' },
   authorName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   sourceText: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
   divider: { height: 1, backgroundColor: Colors.border, marginBottom: 24 },
   body: { fontSize: 16, lineHeight: 26, color: Colors.textPrimary, letterSpacing: 0.3 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
+  readMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 28,
+  },
+  readMoreText: { fontSize: 15, fontWeight: '700', color: Colors.textInverse },
   shareButton: {
     position: 'absolute',
     right: 20,

@@ -47,6 +47,15 @@ export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const resetOnboarding = useAuthStore((state) => state.resetOnboarding);
+  // "My Team" used to push straight into the pitch-view screen, which just
+  // shows a dead-end "No Squad Yet" message for anyone who hasn't built a
+  // squad yet (and the store's hasSquad flag can be stale right after a
+  // fresh app launch, before anything has fetched it). Route to the Games >
+  // Fantasy tab instead - FantasyRoot does its own fresh check of whether a
+  // squad exists and shows the Squad Builder or the pitch view accordingly.
+  const handleMyTeamPress = useCallback(() => {
+    navigation.navigate('Games', { screen: 'GamesRoot', params: { defaultTab: 'fantasy' } });
+  }, [navigation]);
 
   const handleLogOut = useCallback(() => {
     Alert.alert('Log out?', 'You will return to the login screen.', [
@@ -110,7 +119,12 @@ export default function ProfileScreen() {
         title="Football"
         items={[
           { icon: 'calendar-outline', label: 'Fixtures', onPress: () => navigation.navigate('Fixtures') },
-          { icon: 'trophy-outline', label: 'League Table', onPress: () => navigation.navigate('Table') },
+          {
+            icon: 'trophy-outline',
+            label: 'League Table',
+            onPress: () =>
+              navigation.navigate('Fixtures', { screen: 'FixturesRoot', params: { defaultTab: 'table' } }),
+          },
           { icon: 'newspaper-outline', label: 'All News', onPress: () => navigation.navigate('News') },
           { icon: 'search-outline', label: 'News Search', onPress: () => navigation.navigate('Home', { screen: 'Search' }) },
         ]}
@@ -120,7 +134,7 @@ export default function ProfileScreen() {
         title="Games"
         items={[
           { icon: 'game-controller-outline', label: 'Fantasy League', onPress: () => navigation.navigate('Games') },
-          { icon: 'people-outline', label: 'My Team', onPress: () => navigation.navigate('Games', { screen: 'MyTeam' }), accent: true },
+          { icon: 'people-outline', label: 'My Team', onPress: handleMyTeamPress, accent: true },
           { icon: 'bulb-outline', label: 'Predictions', onPress: () => navigation.navigate('Games', { screen: 'GamesRoot', params: { defaultTab: 'predictions' } }) },
         ]}
       />

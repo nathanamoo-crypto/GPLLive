@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { FantasyPlayer, FantasyState, FormationKey, FormationDefinition, Player } from '../types';
 import * as fantasyService from '../services/fantasyService';
+import { getApiErrorMessage } from '../services/api';
 
 const INITIAL_BUDGET = 100;
 
@@ -80,13 +81,47 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
   loading: false,
   error: null,
 
+  // Mirrors the backend's per-position squad quota, per-club cap, and budget
+  // rules (FantasyTeamPlayerService.addPlayerToSquad: 2 GK, 5 DEF, 5 MID,
+  // 3 FWD, 15 total, max 3 players from any one club, never over budget) so
+  // the user gets an immediate reason instead of building an "illegal" squad
+  // that can only fail later at submit time.
   addPlayer: (player) => {
-    const draftPlayers = get().draftPlayers;
-    if (draftPlayers.find((item) => item.id === player.id)) return;
-    set((state) => ({
-      draftPlayers: [...state.draftPlayers, { ...player, fantasyTeamPlayerId: 0, isStarting: false, isCaptain: false, isViceCaptain: false, weekPoints: 0 }],
-      budget: state.budget - player.price,
+    const state = get();
+    const draftPlayers = state.draftPlayers;
+
+    if (draftPlayers.find((item) => item.id === player.id)) {
+      return { success: false, message: `${player.name} is already in your squad` };
+    }
+    if (draftPlayers.length >= 15) {
+      return { success: false, message: 'Your squad already has 15 players' };
+    }
+
+    const positionCounts = { GK: 0, DEF: 0, MID: 0, FWD: 0 } as Record<Player['position'], number>;
+    for (const p of draftPlayers) {
+      positionCounts[p.position] = (positionCounts[p.position] ?? 0) + 1;
+    }
+
+    const quota: Record<Player['position'], number> = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
+    if (positionCounts[player.position] >= quota[player.position]) {
+      return { success: false, message: `You already have ${quota[player.position]} ${player.position}s` };
+    }
+
+    const MAX_PER_CLUB = 3;
+    const clubCount = draftPlayers.filter((p) => p.clubId === player.clubId).length;
+    if (clubCount >= MAX_PER_CLUB) {
+      return { success: false, message: `You can only pick ${MAX_PER_CLUB} players from the same club` };
+    }
+
+    if (state.budget - player.price < 0) {
+      return { success: false, message: `Not enough budget left to add ${player.name}` };
+    }
+
+    set((s) => ({
+      draftPlayers: [...s.draftPlayers, { ...player, fantasyTeamPlayerId: 0, isStarting: false, isCaptain: false, isViceCaptain: false, weekPoints: 0 }],
+      budget: s.budget - player.price,
     }));
+    return { success: true };
   },
 
   removePlayer: (playerId) => {
@@ -156,30 +191,37 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const team = await fantasyService.createTeam(teamName);
+      const fantasyTeamId = team.teamId;
 
+      // addPlayerToSquad requires fantasyTeamId alongside playerId (backend
+      // 400s otherwise), and returns the created row's id (fantasyTeamPlayerId)
+      // - captain/vice-captain endpoints need THAT id, not the player's id,
+      // so track the mapping directly from these responses rather than
+      // re-fetching the team afterward (GET /fantasy-teams/my-team doesn't
+      // actually return the squad list, so that lookup always silently
+      // failed before).
+      const playerIdToRowId = new Map<number, number>();
       for (const player of draftPlayers) {
-        await fantasyService.addPlayerToSquad(player.id);
+        const { fantasyTeamPlayerId } = await fantasyService.addPlayerToSquad(player.id, fantasyTeamId);
+        playerIdToRowId.set(player.id, fantasyTeamPlayerId);
       }
 
       if (startingPlayerIds.length > 0) {
         await fantasyService.setLineup(
-          draftPlayers
-            .filter((p) => startingPlayerIds.includes(p.id))
-            .map((p) => p.id),
+          startingPlayerIds
+            .map((id) => playerIdToRowId.get(id))
+            .filter((id): id is number => id != null),
         );
       }
 
-      const teamData = await fantasyService.getMyTeam();
-      if (!teamData) throw new Error('Failed to load team after creation');
-
-      const updatedCaptain = teamData.players.find((p) => p.id === captainId);
-      if (updatedCaptain) {
-        await fantasyService.setCaptain(updatedCaptain.fantasyTeamPlayerId);
+      const captainRowId = playerIdToRowId.get(captainId);
+      if (captainRowId != null) {
+        await fantasyService.setCaptain(captainRowId);
       }
       if (viceCaptainId) {
-        const updatedVC = teamData.players.find((p) => p.id === viceCaptainId);
-        if (updatedVC) {
-          await fantasyService.setViceCaptain(updatedVC.fantasyTeamPlayerId);
+        const viceCaptainRowId = playerIdToRowId.get(viceCaptainId);
+        if (viceCaptainRowId != null) {
+          await fantasyService.setViceCaptain(viceCaptainRowId);
         }
       }
 
@@ -197,9 +239,13 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
         loading: false,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to submit squad';
+      // Axios errors default to a generic "Request failed with status code
+      // 409" message - getApiErrorMessage pulls the backend's actual reason
+      // (e.g. "You already have a fantasy team") out of the response body
+      // instead, so the user (and we, debugging) can actually see why.
+      const message = getApiErrorMessage(err, 'Failed to submit squad');
       set({ loading: false, error: message });
-      throw err;
+      throw new Error(message);
     }
   },
 

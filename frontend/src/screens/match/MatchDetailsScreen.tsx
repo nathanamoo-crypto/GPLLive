@@ -20,6 +20,9 @@ import { Logos } from '../../constants/logos';
 import { getScrollBottomPadding } from '../../constants/layout';
 import type { Match } from '../../types';
 import { getMatchDetails } from '../../services/matchService';
+import { getPlayerStatsByFixture } from '../../services/fantasyService';
+import type { FixturePlayerStats } from '../../services/fantasyService';
+import { getApiErrorMessage } from '../../services/api';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
@@ -33,7 +36,15 @@ export default function MatchDetailsScreen() {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'events' | 'lineups' | 'stats'>('events');
+
+  // Events and Lineups tabs were removed - there's no real data source for
+  // either right now (no matchday-lineup tracking, and the live sports-data
+  // API research came back a dead end on the free tier - see
+  // docs/FUTURE_FEATURES.md). Stats is the one tab with real data, so it's
+  // no longer gated behind tab-switching.
+  const [stats, setStats] = useState<FixturePlayerStats[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +64,28 @@ export default function MatchDetailsScreen() {
         if (!cancelled) setLoading(false);
       });
 
+    return () => { cancelled = true; };
+  }, [matchId]);
+
+  // GET /scoring/fixture/{id} only returns rows for players an admin has
+  // actually recorded stats for, so this can legitimately come back empty
+  // for a match nobody's entered stats for yet.
+  useEffect(() => {
+    let cancelled = false;
+    setStatsLoading(true);
+    setStatsError(null);
+    getPlayerStatsByFixture(matchId)
+      .then((data) => {
+        if (cancelled) return;
+        setStats(data.slice().sort((a, b) => b.fantasyPoint - a.fantasyPoint));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStatsError(getApiErrorMessage(err, 'Failed to load stats.'));
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
     return () => { cancelled = true; };
   }, [matchId]);
 
@@ -149,37 +182,51 @@ export default function MatchDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tabBar}>
-          {(['events', 'lineups', 'stats'] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
-                {tab.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeaderText}>PLAYER STATS</Text>
         </View>
 
         <View style={styles.content}>
-          {activeTab === 'events' && (
+          {statsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
+          ) : statsError ? (
             <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Match events will appear here.</Text>
+              <Text style={styles.placeholderText}>{statsError}</Text>
             </View>
-          )}
-
-          {activeTab === 'lineups' && (
+          ) : stats.length === 0 ? (
             <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Lineups will be available 1 hour before kickoff.</Text>
+              <Text style={styles.placeholderText}>
+                No stats recorded for this match yet.
+              </Text>
             </View>
-          )}
-
-          {activeTab === 'stats' && (
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Match statistics will update in real-time.</Text>
-            </View>
+          ) : (
+            <>
+              <View style={styles.statsHeaderRow}>
+                <Text style={[styles.statsHeaderCell, styles.statsNameCol]}>Player</Text>
+                <Text style={styles.statsHeaderCell}>Min</Text>
+                <Text style={styles.statsHeaderCell}>G</Text>
+                <Text style={styles.statsHeaderCell}>A</Text>
+                <Text style={styles.statsHeaderCell}>Pts</Text>
+              </View>
+              {stats.map((s) => (
+                <View key={s.id} style={styles.statsRow}>
+                  <View style={styles.statsNameCol}>
+                    <Text style={styles.statsPlayerName} numberOfLines={1}>{s.playerName}</Text>
+                    <Text style={styles.statsPlayerMeta} numberOfLines={1}>
+                      {s.clubName} · {s.position}
+                      {s.cleanSheet ? ' · CS' : ''}
+                      {s.yellowCard > 0 ? ` · ${'🟨'.repeat(Math.min(s.yellowCard, 2))}` : ''}
+                      {s.redCard ? ' · 🟥' : ''}
+                      {s.saves > 0 ? ` · ${s.saves} sv` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.statsCell}>{s.minutesPlayed}</Text>
+                  <Text style={styles.statsCell}>{s.goalsScored}</Text>
+                  <Text style={styles.statsCell}>{s.assists}</Text>
+                  <Text style={[styles.statsCell, styles.statsPtsCell]}>{s.fantasyPoint}</Text>
+                </View>
+              ))}
+            </>
           )}
         </View>
       </ScrollView>
@@ -244,18 +291,38 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  tabBar: { flexDirection: 'row', backgroundColor: Colors.surface, paddingHorizontal: 16 },
-  tabItem: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: Colors.primary },
-  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.textTertiary },
-  tabLabelActive: { color: Colors.primary },
+  sectionHeaderRow: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  sectionHeaderText: { fontSize: 12, fontWeight: '800', color: Colors.textTertiary, letterSpacing: 0.5 },
   content: { padding: 16 },
-  eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
-  eventIcon: { width: 30, alignItems: 'center' },
-  eventPlayer: { fontSize: 14, color: Colors.textPrimary },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
   placeholderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  statsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  statsHeaderCell: { width: 40, fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textAlign: 'center' },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  statsNameCol: { flex: 1, minWidth: 0, paddingRight: 8 },
+  statsPlayerName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  statsPlayerMeta: { fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
+  statsCell: { width: 40, fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  statsPtsCell: { fontWeight: '800', color: Colors.primary },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
 });

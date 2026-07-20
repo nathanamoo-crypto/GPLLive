@@ -3,53 +3,57 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
-import { activateChip, deactivateChip } from '../../services/fantasyService';
+import { activateChip } from '../../services/fantasyService';
 import type { ChipType } from '../../types';
 
 interface ChipCardProps {
   name: string;
   icon: keyof typeof Ionicons.glyphMap;
-  available?: boolean;
-  chipType?: ChipType;
+  /** True once this chip has already been used this season - chips can't be undone. */
+  used?: boolean;
+  chipType: ChipType;
+  fantasyTeamId: number;
+  gameweekId: number | null;
+  onActivated?: () => void;
 }
 
-export default function ChipCard({ name, icon, available = false, chipType }: ChipCardProps) {
-  const [toggling, setToggling] = useState(false);
+export default function ChipCard({ name, icon, used = false, chipType, fantasyTeamId, gameweekId, onActivated }: ChipCardProps) {
+  const [activating, setActivating] = useState(false);
 
   const handlePress = async () => {
-    if (!chipType || toggling) return;
-    setToggling(true);
+    if (used || activating || !gameweekId) return;
+    setActivating(true);
     try {
-      if (available) {
-        await deactivateChip(chipType);
-      } else {
-        await activateChip(chipType);
-      }
+      await activateChip(chipType, fantasyTeamId, gameweekId);
+      onActivated?.();
     } catch {
-      // chip toggle failed silently
+      // chip activation failed - leave the card in its current state so the
+      // user can retry rather than showing a false "used" state
     } finally {
-      setToggling(false);
+      setActivating(false);
     }
   };
 
+  const disabled = used || activating || !gameweekId;
+
   return (
     <TouchableOpacity
-      style={[styles.card, toggling && styles.cardDisabled]}
+      style={[styles.card, disabled && styles.cardDisabled]}
       activeOpacity={0.7}
       onPress={handlePress}
-      disabled={toggling}
+      disabled={disabled}
     >
       <View style={styles.iconWrap}>
-        {toggling ? (
+        {activating ? (
           <ActivityIndicator size="small" color={Colors.yellow} />
         ) : (
           <Ionicons name={icon} size={20} color={Colors.yellow} />
         )}
       </View>
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
-      <View style={[styles.pill, available ? styles.pillAvailable : styles.pillUnavailable]}>
-        <Text style={[styles.pillText, available ? styles.pillTextAvailable : styles.pillTextUnavailable]}>
-          {available ? 'Play' : 'Unavailable'}
+      <View style={[styles.pill, !used ? styles.pillAvailable : styles.pillUnavailable]}>
+        <Text style={[styles.pillText, !used ? styles.pillTextAvailable : styles.pillTextUnavailable]}>
+          {used ? 'Used' : 'Play'}
         </Text>
       </View>
     </TouchableOpacity>

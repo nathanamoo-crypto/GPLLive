@@ -80,7 +80,7 @@ export default function SubscribeScreen() {
   const activePlan = PLANS.find((p) => p.id === selectedPlan);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       {/* Close button */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
