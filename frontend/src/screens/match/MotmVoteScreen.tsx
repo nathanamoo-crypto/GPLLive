@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
+import { useTheme } from '../../context/ThemeContext';
 import { CLUB_COLORS } from '../../constants/clubs';
 import SubScreenHeader from '../../components/shared/SubScreenHeader';
 import PrimaryButton from '../../components/shared/PrimaryButton';
@@ -32,6 +33,8 @@ export default function MotmVoteScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<MotmVoteRouteProp>();
   const { matchId } = route.params;
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,14 +132,14 @@ export default function MotmVoteScreen() {
 
       {loading && (
         <View style={styles.centeredMessage}>
-          <ActivityIndicator size="large" color={Colors.yellow} />
+          <ActivityIndicator size="large" color={colors.yellow} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       )}
 
       {!loading && error && (
         <View style={styles.centeredMessage}>
-          <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.grey2} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -151,7 +154,7 @@ export default function MotmVoteScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.resultsHeader}>
-            <Ionicons name="trophy" size={28} color={Colors.yellow} />
+            <Ionicons name="trophy" size={28} color={colors.yellow} />
             <Text style={styles.resultsTitle}>{votingOpen ? 'Voting Results' : 'Final Results'}</Text>
             <Text style={styles.resultsSubtitle}>
               {votingOpen ? 'Here are the results so far' : 'Voting has closed for this match'}
@@ -168,7 +171,7 @@ export default function MotmVoteScreen() {
                 <View style={styles.resultRank}>
                   <Text style={styles.resultRankText}>{index + 1}</Text>
                 </View>
-                <View style={[styles.resultAccent, { backgroundColor: CLUB_COLORS[localClubId(result.clubId)] || Colors.grey1 }]} />
+                <View style={[styles.resultAccent, { backgroundColor: CLUB_COLORS[localClubId(result.clubId)] || colors.grey1 }]} />
                 <View style={styles.resultInfo}>
                   <Text style={[styles.resultName, isVotedPlayer && styles.resultNameVoted]}>
                     {result.playerName}
@@ -199,7 +202,7 @@ export default function MotmVoteScreen() {
 
           {candidates.map((candidate) => {
             const isSelected = candidate.id === selectedPlayerId;
-            const clubColor = CLUB_COLORS[localClubId(candidate.clubId)] || Colors.grey1;
+            const clubColor = CLUB_COLORS[localClubId(candidate.clubId)] || colors.grey1;
             return (
               <TouchableOpacity
                 key={candidate.id}
@@ -213,7 +216,7 @@ export default function MotmVoteScreen() {
                   <Text style={styles.candidatePosition}>{candidate.position}</Text>
                 </View>
                 {isSelected && (
-                  <Ionicons name="checkmark-circle" size={22} color={Colors.yellow} />
+                  <Ionicons name="checkmark-circle" size={22} color={colors.yellow} />
                 )}
               </TouchableOpacity>
             );
@@ -233,7 +236,7 @@ export default function MotmVoteScreen() {
 
       {!loading && !error && !hasVoted && !isFinished && (
         <View style={styles.centeredMessage}>
-          <Ionicons name="hourglass-outline" size={48} color={Colors.grey2} />
+          <Ionicons name="hourglass-outline" size={48} color={colors.grey2} />
           <Text style={styles.waitingTitle}>Voting Not Yet Open</Text>
           <Text style={styles.waitingText}>
             MOTM voting opens once this match has finished. Check back after full time.
@@ -243,7 +246,7 @@ export default function MotmVoteScreen() {
 
       {!loading && !error && !hasVoted && isFinished && !votingOpen && results.length === 0 && (
         <View style={styles.centeredMessage}>
-          <Ionicons name="lock-closed-outline" size={48} color={Colors.grey2} />
+          <Ionicons name="lock-closed-outline" size={48} color={colors.grey2} />
           <Text style={styles.waitingTitle}>Voting Has Closed</Text>
           <Text style={styles.waitingText}>
             The 24-hour voting window for this match has ended, and no votes were cast.
@@ -254,27 +257,28 @@ export default function MotmVoteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.black },
   scrollContent: { flex: 1 },
 
   centeredMessage: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  loadingText: { fontSize: 14, color: Colors.grey1, marginTop: 12 },
-  errorText: { fontSize: 14, color: Colors.grey1, marginTop: 12, textAlign: 'center' },
-  retryButton: { marginTop: 16, backgroundColor: Colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
+  loadingText: { fontSize: 14, color: colors.grey1, marginTop: 12 },
+  errorText: { fontSize: 14, color: colors.grey1, marginTop: 12, textAlign: 'center' },
+  retryButton: { marginTop: 16, backgroundColor: colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
   retryButtonText: { fontSize: 14, fontWeight: '800', color: '#000000', fontFamily: fonts.display, textTransform: 'uppercase' },
 
   waitingTitle: {
     fontSize: 18,
     fontWeight: '800',
     fontFamily: fonts.display,
-    color: Colors.white,
+    color: colors.white,
     textAlign: 'center',
     marginTop: 16,
   },
   waitingText: {
     fontSize: 14,
-    color: Colors.grey1,
+    color: colors.grey1,
     textAlign: 'center',
     paddingHorizontal: 32,
     marginTop: 8,
@@ -289,29 +293,29 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     fontFamily: fonts.display,
-    color: Colors.white,
+    color: colors.white,
     textTransform: 'uppercase',
     marginTop: 12,
   },
   resultsSubtitle: {
     fontSize: 14,
-    color: Colors.grey1,
+    color: colors.grey1,
     marginTop: 4,
   },
 
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginHorizontal: 16,
     marginBottom: 8,
     overflow: 'hidden',
   },
   resultRowVoted: {
-    borderColor: Colors.yellow,
+    borderColor: colors.yellow,
     backgroundColor: 'rgba(245,197,24,0.08)',
   },
   resultRank: {
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     fontFamily: fonts.display,
-    color: Colors.grey1,
+    color: colors.grey1,
   },
   resultAccent: {
     width: 3,
@@ -337,15 +341,15 @@ const styles = StyleSheet.create({
   resultName: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.white,
+    color: colors.white,
     fontFamily: fonts.bodySemiBold,
   },
   resultNameVoted: {
-    color: Colors.yellow,
+    color: colors.yellow,
   },
   yourVoteLabel: {
     fontSize: 11,
-    color: Colors.yellow,
+    color: colors.yellow,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -357,17 +361,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     fontFamily: fonts.display,
-    color: Colors.white,
+    color: colors.white,
   },
   resultPercent: {
     fontSize: 12,
-    color: Colors.grey1,
+    color: colors.grey1,
     marginTop: 2,
   },
 
   promptText: {
     fontSize: 15,
-    color: Colors.grey1,
+    color: colors.grey1,
     textAlign: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -376,16 +380,16 @@ const styles = StyleSheet.create({
   candidateCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginHorizontal: 16,
     marginBottom: 8,
     overflow: 'hidden',
   },
   candidateCardSelected: {
-    borderColor: Colors.yellow,
+    borderColor: colors.yellow,
     backgroundColor: 'rgba(245,197,24,0.08)',
   },
   candidateAccent: {
@@ -400,12 +404,12 @@ const styles = StyleSheet.create({
   candidateName: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.white,
+    color: colors.white,
     fontFamily: fonts.bodySemiBold,
   },
   candidatePosition: {
     fontSize: 12,
-    color: Colors.grey1,
+    color: colors.grey1,
     marginTop: 2,
   },
 
@@ -414,4 +418,5 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 8,
   },
-});
+  });
+}

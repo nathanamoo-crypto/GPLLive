@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
+import { useTheme } from '../../context/ThemeContext';
 import type { Match, StandingRow } from '../../types';
 import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
@@ -32,6 +33,8 @@ export default function FixturesRoot() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<FixturesNavProp>();
   const route = useRoute<FixturesRootRouteProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [filter, setFilter] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'fixtures' | 'table'>(route.params?.defaultTab || 'fixtures');
 
@@ -121,7 +124,7 @@ export default function FixturesRoot() {
           <Ionicons
             name="chevron-back"
             size={20}
-            color={currentGameweek === gameweeks[gameweeks.length - 1] ? Colors.surface2 : Colors.grey1}
+            color={currentGameweek === gameweeks[gameweeks.length - 1] ? colors.surface2 : colors.grey1}
           />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -140,7 +143,7 @@ export default function FixturesRoot() {
           <Ionicons
             name="chevron-forward"
             size={20}
-            color={currentGameweek === gameweeks[0] ? Colors.surface2 : Colors.grey1}
+            color={currentGameweek === gameweeks[0] ? colors.surface2 : colors.grey1}
           />
         </TouchableOpacity>
       </View>
@@ -169,7 +172,7 @@ export default function FixturesRoot() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : fetchError ? (
         <View style={styles.center}>
@@ -206,7 +209,7 @@ export default function FixturesRoot() {
           >
             {filtered.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={48} color={Colors.textTertiary} />
+                <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
                 <Text style={styles.emptyText}>No matches found</Text>
               </View>
             ) : (
@@ -237,6 +240,8 @@ type StandingsSortKey = 'pts' | 'gd' | 'w';
 // hardcoded/generated rows - so it stays correct as results get entered,
 // this season or a future one, with nothing to update here by hand.
 function StandingsView() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [sortBy, setSortBy] = useState<StandingsSortKey>('pts');
   const [rows, setRows] = useState<StandingRow[]>([]);
   const [season, setSeason] = useState('');
@@ -268,7 +273,7 @@ function StandingsView() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -331,7 +336,7 @@ function StandingsView() {
             style={[
               styles.cellPos,
               { width: 28 },
-              i < 3 && { color: Colors.fantasyGold, fontWeight: '900' },
+              i < 3 && { color: colors.fantasyGold, fontWeight: '900' },
             ]}
           >
             {s.position}
@@ -354,8 +359,8 @@ function StandingsView() {
             style={[
               styles.cellGd,
               { width: 32, textAlign: 'center' },
-              s.goalDifference > 0 && { color: Colors.win },
-              s.goalDifference < 0 && { color: Colors.loss },
+              s.goalDifference > 0 && { color: colors.win },
+              s.goalDifference < 0 && { color: colors.loss },
             ]}
           >
             {s.goalDifference > 0 ? '+' : ''}{s.goalDifference}
@@ -367,15 +372,16 @@ function StandingsView() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.black },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: Colors.black,
+    backgroundColor: colors.black,
   },
   headerCenter: {
     flexDirection: 'row',
@@ -386,11 +392,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     fontFamily: fonts.display,
-    color: Colors.white,
+    color: colors.white,
     textTransform: 'uppercase',
   },
   currentBadge: {
-    backgroundColor: Colors.red,
+    backgroundColor: colors.red,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -398,11 +404,11 @@ const styles = StyleSheet.create({
   currentBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.white,
+    color: colors.white,
     textTransform: 'uppercase',
   },
   dateSubtitle: {
-    color: Colors.grey1,
+    color: colors.grey1,
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 6,
@@ -415,7 +421,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 4,
     borderRadius: 8,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
     padding: 2,
   },
   tab: {
@@ -426,13 +432,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: Colors.yellow,
+    backgroundColor: colors.yellow,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
     fontFamily: fonts.display,
-    color: Colors.grey1,
+    color: colors.grey1,
     textTransform: 'uppercase',
     letterSpacing: 0.06,
   },
@@ -442,7 +448,7 @@ const styles = StyleSheet.create({
   filterRow: {
   height: 40,
   marginBottom: 0,
-  backgroundColor: Colors.black,
+  backgroundColor: colors.black,
   borderBottomWidth: 0,
   },
   filterContent: {
@@ -455,11 +461,11 @@ const styles = StyleSheet.create({
   paddingHorizontal: 22,
   paddingVertical: 10,
   borderRadius: 20,
-  backgroundColor: Colors.surface2,
+  backgroundColor: colors.surface2,
   marginRight: 6,
   },
-  filterChipActive: { backgroundColor: Colors.yellow },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
+  filterChipActive: { backgroundColor: colors.yellow },
+  filterText: { fontSize: 12, fontWeight: '600', color: colors.grey1 },
   filterTextActive: { color: '#000000' },
   list: { flex: 1 },
   listContent: {
@@ -469,14 +475,14 @@ const styles = StyleSheet.create({
   gap: 6,
   },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 15, color: Colors.grey2 },
+  emptyText: { fontSize: 15, color: colors.grey2 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
+  errorText: { fontSize: 16, color: colors.live, textAlign: 'center', paddingHorizontal: 32 },
   standingsContent: { padding: 16, paddingBottom: 40 },
   seasonLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.grey2,
+    color: colors.grey2,
     textTransform: 'uppercase',
     letterSpacing: 0.06,
     marginBottom: 10,
@@ -489,13 +495,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginRight: 8,
   },
-  sortChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
-  sortText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
+  sortChipActive: { backgroundColor: colors.yellow, borderColor: colors.yellow },
+  sortText: { fontSize: 12, fontWeight: '600', color: colors.grey1 },
   sortTextActive: { color: '#000000', fontWeight: '700' },
   tableHead: {
     flexDirection: 'row',
@@ -503,14 +509,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
     marginBottom: 4,
   },
   th: {
     fontSize: 10,
     fontWeight: '700',
     fontFamily: fonts.display,
-    color: Colors.grey2,
+    color: colors.grey2,
     textTransform: 'uppercase',
     letterSpacing: 0.08,
   },
@@ -521,15 +527,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
   },
-  rowAlt: { backgroundColor: Colors.surface2 },
+  rowAlt: { backgroundColor: colors.surface2 },
   rowTop: { backgroundColor: 'rgba(245,197,24,0.06)' },
-  cell: { fontSize: 13, color: Colors.grey1 },
-  cellPts: { fontSize: 15, fontWeight: '900', color: Colors.fantasyGold },
-  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
-  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
-  cellGd: { fontSize: 12, fontWeight: '700', color: Colors.grey2 },
+  cell: { fontSize: 13, color: colors.grey1 },
+  cellPts: { fontSize: 15, fontWeight: '900', color: colors.fantasyGold },
+  cellPos: { fontSize: 12, fontWeight: '800', color: colors.grey2, fontFamily: fonts.display },
+  cellClub: { fontSize: 13, fontWeight: '600', color: colors.white },
+  cellGd: { fontSize: 12, fontWeight: '700', color: colors.grey2 },
   clubLogo: {
   width: 24,
   height: 24,
 },
-});
+  });
+}

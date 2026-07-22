@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { fonts } from '../../constants/layout';
 import { Match } from '../../types';
 import { Logos } from '../../constants/logos';
+import { useTheme } from '../../context/ThemeContext';
 import Badge from './Badge';
 
 interface FixtureRowProps {
@@ -12,6 +13,8 @@ interface FixtureRowProps {
 }
 
 export default function FixtureRow({ match, onPress }: FixtureRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const matchDate = new Date(match.kickoffTime);
   const timeStr = matchDate.toLocaleTimeString('en-GB', {
     hour: '2-digit',
@@ -81,83 +84,85 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  rowLive: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.red,
-  },
-  teamRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  teamWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  teamWrapRight: {
-    justifyContent: 'flex-end',
-  },
-  teamName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.white,
-    flexShrink: 1,
-  },
-  badge: {
-    width: 20,
-    height: 20,
-  },
-  badgePlaceholder: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.surface2,
-  },
-  scoreWrap: {
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  score: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.grey2,
-  },
-  scorePlayed: {
-    color: Colors.white,
-  },
-  scoreSep: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.grey2,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  liveMinute: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.red,
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    row: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    rowLive: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.red,
+    },
+    teamRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    teamWrap: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    teamWrapRight: {
+      justifyContent: 'flex-end',
+    },
+    teamName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.white,
+      flexShrink: 1,
+    },
+    badge: {
+      width: 20,
+      height: 20,
+    },
+    badgePlaceholder: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: colors.surface2,
+    },
+    scoreWrap: {
+      alignItems: 'center',
+      minWidth: 80,
+    },
+    scoreRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    score: {
+      fontSize: 18,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.grey2,
+    },
+    scorePlayed: {
+      color: colors.white,
+    },
+    scoreSep: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.grey2,
+    },
+    timeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      marginTop: 6,
+    },
+    liveMinute: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.red,
+    },
+  });
+}

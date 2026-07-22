@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -16,24 +17,29 @@ import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
 import { getMyPremiumStatus } from '../../services/subscriptionService';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
+
+const badgeImage = require('../../assets/badge/badge.jpeg');
 
 type SubscribeNavProp = NativeStackNavigationProp<HomeStackParamList, 'Subscribe'>;
 
 // Mirrors PlayerAnalysisService's real premium fields (PlayerDetailsScreen)
-// plus the crown badge shown on the profile/discussion - this list should
-// stay in sync with what actually unlocks, not aspirational marketing copy.
+// plus the badge shown on the profile/discussion - this list should stay in
+// sync with what actually unlocks, not aspirational marketing copy.
 const FEATURES = [
   { icon: 'stats-chart' as const, label: 'Average Fantasy Points per player' },
   { icon: 'pulse' as const, label: 'Recent form - last 5 gameweeks' },
   { icon: 'trending-up' as const, label: 'Performance trend (improving/declining/stable)' },
   { icon: 'bulb' as const, label: 'Fantasy insights for every player' },
-  { icon: 'ribbon' as const, label: '👑 Premium badge on your profile & comments' },
+  { icon: 'ribbon' as const, label: 'Premium badge on your profile & comments' },
 ];
 
 export default function SubscribeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<SubscribeNavProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [checking, setChecking] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
 
@@ -49,7 +55,7 @@ export default function SubscribeScreen() {
   if (checking) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={Colors.yellow} />
+        <ActivityIndicator size="large" color={colors.yellow} />
       </View>
     );
   }
@@ -58,7 +64,7 @@ export default function SubscribeScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <View style={styles.crownIconWrap}>
-          <Text style={styles.crownEmoji}>👑</Text>
+          <Image source={badgeImage} style={styles.crownImage} resizeMode="contain" />
         </View>
         <Text style={styles.screenTitle}>YOU'RE ALREADY PRO</Text>
         <Text style={styles.screenSub}>Your GPL Live Premium is active - enjoy full player analysis everywhere.</Text>
@@ -86,7 +92,7 @@ export default function SubscribeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.crownIconWrap}>
-          <Text style={styles.crownEmoji}>👑</Text>
+          <Image source={badgeImage} style={styles.crownImage} resizeMode="contain" />
         </View>
 
         <Text style={styles.proLabel}>GPL LIVE PRO</Text>
@@ -110,7 +116,7 @@ export default function SubscribeScreen() {
             {FEATURES.map((f, i) => (
               <View key={i} style={styles.featureRow}>
                 <View style={styles.featureIconWrap}>
-                  <Ionicons name={f.icon} size={16} color={Colors.yellow} />
+                  <Ionicons name={f.icon} size={16} color={colors.yellow} />
                 </View>
                 <Text style={styles.featureText}>{f.label}</Text>
               </View>
@@ -124,7 +130,7 @@ export default function SubscribeScreen() {
           style={styles.cta}
           onPress={() => navigation.navigate('Payment')}
         >
-          <Text style={styles.crownCta}>👑</Text>
+          <Image source={badgeImage} style={styles.crownCtaImage} resizeMode="contain" />
           <Text style={styles.ctaText}>SUBSCRIBE NOW - GH₵1.00</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.laterButton} onPress={() => navigation.goBack()}>
@@ -135,108 +141,110 @@ export default function SubscribeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  centered: { alignItems: 'center', justifyContent: 'center', padding: 24 },
-  headerBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  closeText: { color: Colors.grey1, fontSize: 14 },
-  list: { flex: 1 },
-  listContent: { padding: 20, alignItems: 'center' },
-  crownIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.yellow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  crownEmoji: { fontSize: 32 },
-  proLabel: {
-    color: Colors.yellow,
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: fonts.display,
-    letterSpacing: 0.1,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.white,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  screenSub: { fontSize: 13, color: Colors.grey1, marginBottom: 24, textAlign: 'center' },
-  planCard: {
-    width: '100%',
-    padding: 16,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: Colors.yellow,
-    backgroundColor: Colors.surface2,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  planIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: Colors.yellow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planInfo: { flex: 1 },
-  planName: { fontSize: 15, fontWeight: '700', color: Colors.white },
-  planPeriod: { fontSize: 12, color: Colors.grey2, marginTop: 2 },
-  planPrice: { fontSize: 22, fontWeight: '800', color: Colors.yellow },
-  featureList: { gap: 10 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-  },
-  featureText: { fontSize: 13, color: Colors.grey1, flex: 1 },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.yellow,
-    paddingVertical: 16,
-    borderRadius: radius.button,
-    width: '100%',
-  },
-  crownCta: { fontSize: 18 },
-  ctaText: {
-    color: '#000000',
-    fontSize: 15,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    textTransform: 'uppercase',
-    letterSpacing: 0.06,
-  },
-  laterButton: { marginTop: 12 },
-  laterText: { color: Colors.grey1, fontSize: 13, textAlign: 'center' },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
+    centered: { alignItems: 'center', justifyContent: 'center', padding: 24 },
+    headerBar: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    closeText: { color: colors.grey1, fontSize: 14 },
+    list: { flex: 1 },
+    listContent: { padding: 20, alignItems: 'center' },
+    crownIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.yellow,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    crownImage: { width: 36, height: 36 },
+    proLabel: {
+      color: colors.yellow,
+      fontSize: 12,
+      fontWeight: '700',
+      fontFamily: fonts.display,
+      letterSpacing: 0.1,
+      textTransform: 'uppercase',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    screenTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.white,
+      textTransform: 'uppercase',
+      textAlign: 'center',
+      marginBottom: 6,
+    },
+    screenSub: { fontSize: 13, color: colors.grey1, marginBottom: 24, textAlign: 'center' },
+    planCard: {
+      width: '100%',
+      padding: 16,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.yellow,
+      backgroundColor: colors.surface2,
+    },
+    planHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+    planIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.yellow,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    planInfo: { flex: 1 },
+    planName: { fontSize: 15, fontWeight: '700', color: colors.white },
+    planPeriod: { fontSize: 12, color: colors.grey2, marginTop: 2 },
+    planPrice: { fontSize: 22, fontWeight: '800', color: colors.yellow },
+    featureList: { gap: 10 },
+    featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    featureIconWrap: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    featureText: { fontSize: 13, color: colors.grey1, flex: 1 },
+    footer: {
+      padding: 20,
+      alignItems: 'center',
+    },
+    cta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.yellow,
+      paddingVertical: 16,
+      borderRadius: radius.button,
+      width: '100%',
+    },
+    crownCtaImage: { width: 18, height: 18 },
+    ctaText: {
+      color: '#000000',
+      fontSize: 15,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      textTransform: 'uppercase',
+      letterSpacing: 0.06,
+    },
+    laterButton: { marginTop: 12 },
+    laterText: { color: colors.grey1, fontSize: 13, textAlign: 'center' },
+  });
+}

@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
+import { useTheme } from '../../context/ThemeContext';
 import { useFantasyStore } from '../../store/fantasyStore';
 import { fetchPlayers, getMyTeam } from '../../services/fantasyService';
 import { fetchClubsById, RealClub } from '../../services/clubService';
@@ -58,6 +59,8 @@ function computeDefaultStartingXI(squad: Player[]): number[] {
 
 export default function FantasyRoot() {
   const navigation = useNavigation<FantasyRootNavProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<'squad' | 'browse' | 'lineup'>('browse');
   const [teamName, setTeamName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -320,7 +323,7 @@ export default function FantasyRoot() {
     // oversized, device-dependent gap under the toggle.
     <View style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.readyText}>Checking your squad...</Text>
         </View>
       </View>
@@ -395,12 +398,12 @@ export default function FantasyRoot() {
       {activeTab === 'browse' ? (
         loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.readyText}>Loading players...</Text>
           </View>
         ) : error ? (
           <View style={styles.centered}>
-            <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+            <Ionicons name="cloud-offline-outline" size={48} color={colors.grey2} />
             <Text style={styles.readyText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => loadPlayers()}>
               <Text style={styles.retryButtonText}>Retry</Text>
@@ -409,11 +412,11 @@ export default function FantasyRoot() {
         ) : (
         <>
           <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color={Colors.textTertiary} style={styles.searchIcon} />
+            <Ionicons name="search" size={18} color={colors.textTertiary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search players..."
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -421,7 +424,7 @@ export default function FantasyRoot() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+                <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
           </View>
@@ -449,7 +452,7 @@ export default function FantasyRoot() {
 
           {visiblePlayers.length === 0 ? (
             <View style={styles.centered}>
-              <Ionicons name="search-outline" size={40} color={Colors.grey2} />
+              <Ionicons name="search-outline" size={40} color={colors.grey2} />
               <Text style={styles.readyText}>No players match your filters</Text>
             </View>
           ) : (
@@ -471,7 +474,7 @@ export default function FantasyRoot() {
                       {club?.badge ? (
                         <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                       ) : (
-                        <Ionicons name="shield-outline" size={20} color={Colors.textTertiary} />
+                        <Ionicons name="shield-outline" size={20} color={colors.textTertiary} />
                       )}
                     </View>
                     <View style={styles.playerInfo}>
@@ -485,7 +488,7 @@ export default function FantasyRoot() {
                       style={[styles.addButton, isSelected && styles.removeButton]}
                       onPress={() => isSelected ? removePlayer(item.id) : handleAddPlayer(item)}
                     >
-                      <Ionicons name={isSelected ? 'remove' : 'add'} size={20} color={Colors.textInverse} />
+                      <Ionicons name={isSelected ? 'remove' : 'add'} size={20} color={colors.textInverse} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -551,7 +554,7 @@ export default function FantasyRoot() {
                       <Ionicons
                         name={isCaptain ? 'star' : 'star-outline'}
                         size={20}
-                        color={isCaptain ? Colors.accent : !isStarting ? Colors.border : Colors.textTertiary}
+                        color={isCaptain ? colors.accent : !isStarting ? colors.border : colors.textTertiary}
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -562,7 +565,7 @@ export default function FantasyRoot() {
                       <Ionicons
                         name={isViceCaptain ? 'ribbon' : 'ribbon-outline'}
                         size={20}
-                        color={isViceCaptain ? Colors.primary : !isStarting ? Colors.border : Colors.textTertiary}
+                        color={isViceCaptain ? colors.primary : !isStarting ? colors.border : colors.textTertiary}
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -574,7 +577,7 @@ export default function FantasyRoot() {
                         {club?.badge ? (
                           <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                         ) : (
-                          <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                          <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
                         )}
                       </View>
                       <View style={styles.playerInfo}>
@@ -599,7 +602,7 @@ export default function FantasyRoot() {
                     </TouchableOpacity>
                     <Text style={styles.draftPrice}>GH₵{item.price}m</Text>
                     <TouchableOpacity onPress={() => removePlayer(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="trash-outline" size={20} color={Colors.live} />
+                      <Ionicons name="trash-outline" size={20} color={colors.live} />
                     </TouchableOpacity>
                   </View>
                 );
@@ -612,13 +615,13 @@ export default function FantasyRoot() {
         </View>
       ) : draftPlayers.length < 15 ? (
         <View style={styles.centered}>
-          <Ionicons name="football-outline" size={48} color={Colors.grey2} />
+          <Ionicons name="football-outline" size={48} color={colors.grey2} />
           <Text style={styles.readyText}>Complete your 15-man squad first</Text>
           <Text style={styles.hintText}>{draftPlayers.length}/15 players picked</Text>
         </View>
       ) : clubsLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.readyText}>Loading pitch...</Text>
         </View>
       ) : (
@@ -654,21 +657,21 @@ export default function FantasyRoot() {
                       {club?.badge ? (
                         <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                       ) : (
-                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                        <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
                       )}
                     </View>
                     <View style={styles.playerInfo}>
                       <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
                       <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
                     </View>
-                    <Ionicons name="arrow-up-circle-outline" size={26} color={Colors.primary} />
+                    <Ionicons name="arrow-up-circle-outline" size={26} color={colors.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
                     onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.textTertiary} />
                   </TouchableOpacity>
                 </View>
               );
@@ -692,21 +695,21 @@ export default function FantasyRoot() {
                       {club?.badge ? (
                         <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                       ) : (
-                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                        <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
                       )}
                     </View>
                     <View style={styles.playerInfo}>
                       <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
                       <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
                     </View>
-                    <Ionicons name="arrow-down-circle-outline" size={26} color={Colors.textTertiary} />
+                    <Ionicons name="arrow-down-circle-outline" size={26} color={colors.textTertiary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
                     onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.textTertiary} />
                   </TouchableOpacity>
                 </View>
               );
@@ -716,7 +719,7 @@ export default function FantasyRoot() {
 
       <Modal visible={submitting} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.submitOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.submitLabel}>{submitProgress?.label ?? 'Creating your team...'}</Text>
           <View style={styles.progressTrack}>
             <View
@@ -735,26 +738,27 @@ export default function FantasyRoot() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: 20, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
-  headerSubtitle: { fontSize: 16, color: Colors.primary, fontWeight: '700', marginTop: 4 },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
+  headerSubtitle: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
   tabRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 16, gap: 8 },
-  tabButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderBottomColor: Colors.border },
-  tabActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  tabText: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, textAlign: 'center' },
-  tabTextActive: { color: Colors.textInverse },
+  tabButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center', borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderBottomColor: colors.border },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
+  tabTextActive: { color: colors.textInverse },
   listContent: { padding: 16 },
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   playerInfo: { flex: 1 },
   // Wraps the badge+name+sub portion of a player row as its own tappable
@@ -763,10 +767,10 @@ const styles = StyleSheet.create({
   // gestures working without nesting one TouchableOpacity inside another.
   playerCardMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   infoButton: { marginLeft: 10, padding: 2 },
-  playerName: { flex: 1, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  playerName: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   captainStar: { marginRight: 12 },
-  progressText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 12 },
-  playerSub: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
+  progressText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 12 },
+  playerSub: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
   playerSubRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   startingTag: {
     paddingHorizontal: 6,
@@ -774,36 +778,36 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(34,197,94,0.15)',
   },
-  startingTagText: { fontSize: 9, fontWeight: '800', color: Colors.win, letterSpacing: 0.4 },
+  startingTagText: { fontSize: 9, fontWeight: '800', color: colors.win, letterSpacing: 0.4 },
   benchTag: {
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
   },
-  benchTagText: { fontSize: 9, fontWeight: '800', color: Colors.textTertiary, letterSpacing: 0.4 },
+  benchTagText: { fontSize: 9, fontWeight: '800', color: colors.textTertiary, letterSpacing: 0.4 },
   playerAction: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  playerPrice: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
-  draftPrice: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginRight: 12 },
-  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  removeButton: { backgroundColor: Colors.live },
+  playerPrice: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  draftPrice: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginRight: 12 },
+  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  removeButton: { backgroundColor: colors.live },
   flex: { flex: 1 },
-  nameInput: { backgroundColor: Colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: Colors.border, fontSize: 16, color: Colors.textPrimary },
-  hintText: { fontSize: 12, color: Colors.textTertiary, marginBottom: 12, marginTop: -6 },
+  nameInput: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: colors.border, fontSize: 16, color: colors.textPrimary },
+  hintText: { fontSize: 12, color: colors.textTertiary, marginBottom: 12, marginTop: -6 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginHorizontal: 16,
     marginTop: 4,
     paddingHorizontal: 12,
     gap: 8,
   },
   searchIcon: { marginRight: 2 },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: Colors.textPrimary },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: colors.textPrimary },
   filterDropdownRow: {
     flexDirection: 'row',
     gap: 10,
@@ -815,7 +819,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textTertiary,
+    color: colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginHorizontal: 16,
@@ -834,52 +838,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  filterChipTextActive: { color: Colors.textInverse },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+  filterChipTextActive: { color: colors.textInverse },
   quotaRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
     gap: 8,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   quotaPill: {
     flex: 1,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: 'center',
   },
-  quotaPillComplete: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: Colors.win },
-  quotaText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
-  quotaTextComplete: { color: Colors.win },
+  quotaPillComplete: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: colors.win },
+  quotaText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  quotaTextComplete: { color: colors.win },
   badgeWrap: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
     overflow: 'hidden',
   },
   badgeImg: { width: 24, height: 24 },
-  emptyText: { textAlign: 'center', color: Colors.textTertiary, marginTop: 40 },
-  saveButton: { margin: 16, backgroundColor: Colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
-  saveButtonText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
+  emptyText: { textAlign: 'center', color: colors.textTertiary, marginTop: 40 },
+  saveButton: { margin: 16, backgroundColor: colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
+  saveButtonText: { color: colors.textInverse, fontSize: 16, fontWeight: '800' },
   // Full-screen dimmed backdrop shown while submitSquad() runs its ~19-call
   // sequence against the backend - no card, just the spinner/label/progress
   // bar floating directly on the dimmed backdrop (blocks taps elsewhere on
@@ -896,10 +900,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.white,
+    color: colors.white,
     textAlign: 'center',
   },
-  submitStep: { marginTop: 10, fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  submitStep: { marginTop: 10, fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   progressTrack: {
     width: '100%',
     maxWidth: 240,
@@ -908,10 +912,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: Colors.primary },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.primary },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  readyText: { fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 20, color: Colors.textPrimary },
-  pointsText: { fontSize: 32, fontWeight: '800', color: Colors.primary, marginTop: 12 },
-  retryButton: { marginTop: 16, backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
-  retryButtonText: { fontSize: 14, fontWeight: '800', color: Colors.textInverse, textTransform: 'uppercase' },
-});
+  readyText: { fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 20, color: colors.textPrimary },
+  pointsText: { fontSize: 32, fontWeight: '800', color: colors.primary, marginTop: 12 },
+  retryButton: { marginTop: 16, backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
+  retryButtonText: { fontSize: 14, fontWeight: '800', color: colors.textInverse, textTransform: 'uppercase' },
+  });
+}

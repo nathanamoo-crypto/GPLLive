@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,6 +10,7 @@ import FixturesStack from './FixturesStack';
 import ProfileStack from './ProfileStack';
 import { useMatches } from '../hooks/useMatches';
 import { Colors } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 
 // 'Table' used to be its own bottom tab, but FixturesRoot already has a
 // built-in Fixtures/Table toggle at the top of the screen (same pattern as
@@ -29,6 +30,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const matches = useMatches();
   const hasLiveMatch = matches.some((match) => match.status === 'live');
 
@@ -48,8 +51,8 @@ export default function MainTabNavigator() {
           styles.tabBar,
           { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6 },
         ],
-        tabBarActiveTintColor: '#F5C518',
-        tabBarInactiveTintColor: '#4B5563',
+        tabBarActiveTintColor: colors.yellow,
+        tabBarInactiveTintColor: colors.grey2,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabBarItem,
         tabBarAllowFontScaling: false,
@@ -101,31 +104,33 @@ export default function MainTabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#111111',
-    borderTopColor: '#2A2A2A',
-    borderTopWidth: 1,
-    paddingTop: 8,
-  },
-  tabBarItem: {
-    // Explicit space for icon + label so the label never gets squeezed
-    // out regardless of screen width - 5 tabs across even a 375pt-wide
-    // phone still leaves enough room per item at this size.
-    paddingVertical: 2,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
-    marginTop: 3,
-    includeFontPadding: false,
-  },
-  liveBadge: {
-    backgroundColor: '#D0021B',
-    minWidth: 8,
-    height: 8,
-    borderRadius: 4,
-    padding: 0,
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    tabBar: {
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      paddingTop: 8,
+    },
+    tabBarItem: {
+      // Explicit space for icon + label so the label never gets squeezed
+      // out regardless of screen width - 5 tabs across even a 375pt-wide
+      // phone still leaves enough room per item at this size.
+      paddingVertical: 2,
+    },
+    tabBarLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      fontFamily: 'Inter-SemiBold',
+      marginTop: 3,
+      includeFontPadding: false,
+    },
+    liveBadge: {
+      backgroundColor: colors.live,
+      minWidth: 8,
+      height: 8,
+      borderRadius: 4,
+      padding: 0,
+    },
+  });
+}

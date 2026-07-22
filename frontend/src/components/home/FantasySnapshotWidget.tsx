@@ -1,10 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { getMyTeam } from '../../services/fantasyService';
+import { useTheme } from '../../context/ThemeContext';
 import type { FantasyTeam } from '../../types';
 
 export default function FantasySnapshotWidget() {
@@ -13,6 +14,8 @@ export default function FantasySnapshotWidget() {
   // squad exists and shows the Squad Builder or the pitch view accordingly,
   // so this widget doesn't need to know which one applies.
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [team, setTeam] = useState<FantasyTeam | null>(null);
   // Only ever set to false (see below) - after the first successful fetch
   // it stays false permanently, so later re-fetches on refocus update the
@@ -44,7 +47,7 @@ export default function FantasySnapshotWidget() {
     return (
       <View style={styles.widget}>
         <Text style={styles.widgetTitle}>Fantasy Snapshot</Text>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -53,7 +56,7 @@ export default function FantasySnapshotWidget() {
     <TouchableOpacity style={styles.widget} activeOpacity={0.7} onPress={goToFantasy}>
       <View style={styles.titleRow}>
         <Text style={styles.widgetTitle}>Fantasy Snapshot</Text>
-        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
       </View>
       {team ? (
         <>
@@ -103,37 +106,39 @@ export default function FantasySnapshotWidget() {
   );
 }
 
-const styles = StyleSheet.create({
-  widget: {
-    backgroundColor: Colors.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  teamName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statBlock: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginRight: 8,
-  },
-  statLabel: { fontSize: 12, color: Colors.textSecondary, marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '800', color: Colors.primary },
-  cta: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  ctaText: { color: Colors.textInverse, fontWeight: '700' },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    widget: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 16,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    widgetTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    teamName: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    statBlock: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      marginRight: 8,
+    },
+    statLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+    statValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
+    cta: {
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    ctaText: { color: colors.textInverse, fontWeight: '700' },
+  });
+}
