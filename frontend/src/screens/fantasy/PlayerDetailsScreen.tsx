@@ -195,6 +195,16 @@ export default function PlayerDetailsScreen() {
                   ))}
                 </View>
               )}
+
+              {(!player.recentForm || player.recentForm.length === 0) &&
+                (!player.insights || player.insights.length === 0) && (
+                <View style={styles.noDataRow}>
+                  <Ionicons name="information-circle-outline" size={16} color={Colors.grey1} />
+                  <Text style={styles.noDataText}>
+                    No match data yet - form and insights will appear once {player.fullName.split(' ')[0]} has played a recorded gameweek.
+                  </Text>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.lockedSection}>
@@ -332,6 +342,15 @@ const styles = StyleSheet.create({
   formPoints: { fontSize: fontSize.lg, fontWeight: '800', color: Colors.yellow },
   formGw: { fontSize: fontSize.xs, color: Colors.grey1, marginTop: 2 },
   insightsSection: { gap: spacing.sm },
+  noDataRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: Colors.surface2,
+    borderRadius: radius.card,
+    padding: spacing.md,
+  },
+  noDataText: { flex: 1, fontSize: fontSize.base, color: Colors.grey1, lineHeight: 18 },
   insightRow: {
     backgroundColor: Colors.surface2,
     borderRadius: radius.card,
