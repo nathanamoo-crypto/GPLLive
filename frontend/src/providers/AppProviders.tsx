@@ -20,6 +20,7 @@ import {
 } from '@expo-google-fonts/barlow-condensed';
 
 import { Colors } from '../constants/colors';
+import { ThemeProvider } from '../context/ThemeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,7 +54,9 @@ export default function AppProviders({ children }: { children: React.ReactNode }
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
