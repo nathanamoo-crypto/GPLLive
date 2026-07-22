@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { CLUB_COLORS } from '../../constants/clubs';
 import { Jerseys, GoalkeeperJerseys } from '../../constants/jerseys';
 import { backendClubIdToLocalClub, RealClub } from '../../services/clubService';
+import { useTheme } from '../../context/ThemeContext';
 import JerseyIcon from './JerseyIcon';
 import type { FantasyPlayer } from '../../types';
 
@@ -35,12 +36,14 @@ interface PlayerChipProps {
   clubsById?: Record<number, RealClub>;
 }
 
-const POSITION_COLORS: Record<string, string> = {
-  GK: Colors.roleGk,
-  DEF: Colors.roleDef,
-  MID: Colors.roleMid,
-  FWD: Colors.roleFwd,
-};
+function getPositionColors(colors: typeof Colors): Record<string, string> {
+  return {
+    GK: colors.roleGk,
+    DEF: colors.roleDef,
+    MID: colors.roleMid,
+    FWD: colors.roleFwd,
+  };
+}
 
 export default function PlayerChip({
   player,
@@ -52,17 +55,19 @@ export default function PlayerChip({
   scale = 1,
   clubsById,
 }: PlayerChipProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   // player.clubId is the raw BACKEND club id - CLUB_COLORS/Jerseys are keyed
   // by this app's LOCAL club id, so it must be resolved via clubsById first
   // (same pattern used in MyTeamScreen/FantasyRoot/MotmVoteScreen). Without
   // this, colors/jerseys were effectively indexed by the wrong id.
   const localClub = clubsById ? backendClubIdToLocalClub(player.clubId, clubsById) : null;
-  const clubColor = (localClub ? CLUB_COLORS[localClub.id] : null) || Colors.grey2;
+  const clubColor = (localClub ? CLUB_COLORS[localClub.id] : null) || colors.grey2;
   const isGoalkeeper = player.position === 'GK';
   const jerseySource = localClub
     ? (isGoalkeeper ? GoalkeeperJerseys[localClub.id] : Jerseys[localClub.id])
     : undefined;
-  const posColor = POSITION_COLORS[player.position] || Colors.grey1;
+  const posColor = getPositionColors(colors)[player.position] || colors.grey1;
   const isBench = size === 'bench';
   const Wrapper: any = onPress ? TouchableOpacity : View;
 
@@ -125,94 +130,96 @@ export default function PlayerChip({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    width: 78,
-  },
-  wrapperBench: {
-    width: 64,
-    opacity: 0.65,
-  },
-  shirtCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.1)',
-    // Plain white box behind every jersey - a couple of the source photos
-    // weren't shot on a clean white backdrop, so a neutral/dark chip
-    // background let their backdrop color show through. White keeps every
-    // jersey looking consistent regardless of what the source photo used.
-    backgroundColor: Colors.white,
-  },
-  shirtCircleBench: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1.5,
-  },
-  shirtCircleSelected: {
-    borderColor: Colors.yellow,
-    borderWidth: 3,
-  },
-  jerseyImage: {
-    width: 46,
-    height: 46,
-  },
-  jerseyImageBench: {
-    width: 36,
-    height: 36,
-  },
-  armband: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-    borderWidth: 1.5,
-    borderColor: Colors.black,
-  },
-  captainBand: {
-    backgroundColor: Colors.yellow,
-  },
-  viceBand: {
-    backgroundColor: Colors.grey1,
-  },
-  armbandText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: Colors.black,
-  },
-  name: {
-    fontSize: 13,
-    fontFamily: fonts.bodySemiBold,
-    color: Colors.white,
-    textAlign: 'center',
-  },
-  nameBench: {
-    fontSize: 12,
-  },
-  posTag: {
-    marginTop: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  posText: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: fonts.bodySemiBold,
-    color: Colors.white,
-  },
-  posTextBench: {
-    fontSize: 9,
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    wrapper: {
+      alignItems: 'center',
+      width: 78,
+    },
+    wrapperBench: {
+      width: 64,
+      opacity: 0.65,
+    },
+    shirtCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+      borderWidth: 1.5,
+      borderColor: 'rgba(0,0,0,0.1)',
+      // Plain white box behind every jersey - a couple of the source photos
+      // weren't shot on a clean white backdrop, so a neutral/dark chip
+      // background let their backdrop color show through. White keeps every
+      // jersey looking consistent regardless of what the source photo used.
+      backgroundColor: colors.white,
+    },
+    shirtCircleBench: {
+      width: 44,
+      height: 44,
+      borderRadius: 8,
+      borderWidth: 1.5,
+    },
+    shirtCircleSelected: {
+      borderColor: colors.yellow,
+      borderWidth: 3,
+    },
+    jerseyImage: {
+      width: 46,
+      height: 46,
+    },
+    jerseyImageBench: {
+      width: 36,
+      height: 36,
+    },
+    armband: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1,
+      borderWidth: 1.5,
+      borderColor: colors.black,
+    },
+    captainBand: {
+      backgroundColor: colors.yellow,
+    },
+    viceBand: {
+      backgroundColor: colors.grey1,
+    },
+    armbandText: {
+      fontSize: 9,
+      fontWeight: '900',
+      color: colors.black,
+    },
+    name: {
+      fontSize: 13,
+      fontFamily: fonts.bodySemiBold,
+      color: colors.white,
+      textAlign: 'center',
+    },
+    nameBench: {
+      fontSize: 12,
+    },
+    posTag: {
+      marginTop: 3,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    posText: {
+      fontSize: 10,
+      fontWeight: '700',
+      fontFamily: fonts.bodySemiBold,
+      color: colors.white,
+    },
+    posTextBench: {
+      fontSize: 9,
+    },
+  });
+}

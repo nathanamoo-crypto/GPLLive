@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { fonts, radius } from '../../constants/layout';
 import { Logos } from '../../constants/logos';
 import { getMatches } from '../../services/matchService';
 import { getMotmVotes } from '../../services/motmService';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 import type { Match } from '../../types';
 
@@ -21,6 +22,8 @@ const CHECK_LIMIT = 6;
 
 export default function MotmVoteSpotlight() {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -78,7 +81,7 @@ export default function MotmVoteSpotlight() {
       onPress={() => navigation.navigate('MotmVote', { matchId: match.id })}
     >
       <View style={styles.titleRow}>
-        <Ionicons name="star" size={16} color={Colors.yellow} />
+        <Ionicons name="star" size={16} color={colors.yellow} />
         <Text style={styles.widgetTitle}>Man of the Match</Text>
       </View>
       <Text style={styles.subtitle}>Voting is open - who was the standout player?</Text>
@@ -102,52 +105,54 @@ export default function MotmVoteSpotlight() {
 
       <View style={styles.voteButton}>
         <Text style={styles.voteButtonText}>Vote Now</Text>
-        <Ionicons name="chevron-forward" size={16} color={Colors.textInverse} />
+        <Ionicons name="chevron-forward" size={16} color={colors.textInverse} />
       </View>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  widget: {
-    backgroundColor: Colors.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  widgetTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: 14 },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  clubBlock: { flex: 1, alignItems: 'center', gap: 6 },
-  badge: { width: 40, height: 40 },
-  clubName: {
-    fontSize: 12,
-    fontFamily: fonts.bodySemiBold,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  scoreBlock: { alignItems: 'center', paddingHorizontal: 12 },
-  score: { fontSize: 18, fontWeight: '800', color: Colors.white },
-  ft: { fontSize: 10, color: Colors.textTertiary, fontWeight: '700', marginTop: 2 },
-  voteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: radius.pill,
-    paddingVertical: 12,
-  },
-  voteButtonText: { color: Colors.textInverse, fontWeight: '700', fontSize: 14 },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    widget: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 16,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
+    widgetTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: 14 },
+    matchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    clubBlock: { flex: 1, alignItems: 'center', gap: 6 },
+    badge: { width: 40, height: 40 },
+    clubName: {
+      fontSize: 12,
+      fontFamily: fonts.bodySemiBold,
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    scoreBlock: { alignItems: 'center', paddingHorizontal: 12 },
+    score: { fontSize: 18, fontWeight: '800', color: colors.white },
+    ft: { fontSize: 10, color: colors.textTertiary, fontWeight: '700', marginTop: 2 },
+    voteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      backgroundColor: colors.primary,
+      borderRadius: radius.pill,
+      paddingVertical: 12,
+    },
+    voteButtonText: { color: colors.textInverse, fontWeight: '700', fontSize: 14 },
+  });
+}

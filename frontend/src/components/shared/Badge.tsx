@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { useTheme } from '../../context/ThemeContext';
 
 interface BadgeProps {
   label: string;
@@ -9,20 +10,23 @@ interface BadgeProps {
 }
 
 export default function Badge({ label, variant = 'status', color }: BadgeProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
   const bgColor =
     color ??
-    (variant === 'live' || variant === 'current' ? Colors.red :
-     variant === 'ft' ? Colors.surface2 :
+    (variant === 'live' || variant === 'current' ? colors.red :
+     variant === 'ft' ? colors.surface2 :
      variant === 'upcoming' ? 'transparent' :
-     variant === 'form' ? Colors.surface2 :
-     variant === 'score' ? Colors.yellow :
-     Colors.grey2);
+     variant === 'form' ? colors.surface2 :
+     variant === 'score' ? colors.yellow :
+     colors.grey2);
 
   const txtColor =
-    variant === 'upcoming' ? Colors.yellow :
-    variant === 'ft' ? Colors.grey2 :
-    variant === 'status' ? Colors.grey2 :
-    Colors.white;
+    variant === 'upcoming' ? colors.yellow :
+    variant === 'ft' ? colors.grey2 :
+    variant === 'status' ? colors.grey2 :
+    colors.white;
 
   const isUpcoming = variant === 'upcoming';
 
@@ -33,27 +37,29 @@ export default function Badge({ label, variant = 'status', color }: BadgeProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgeUpcoming: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  text: {
-    color: Colors.white,
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.08,
-  },
-  textUpcoming: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    badge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    badgeUpcoming: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    text: {
+      color: colors.white,
+      fontSize: 9,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.08,
+    },
+    textUpcoming: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+  });
+}

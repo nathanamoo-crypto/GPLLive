@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifications } from '../../hooks/useNotifications';
 import { getMatches } from '../../services/matchService';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 import type { Match } from '../../types';
 
@@ -43,6 +44,8 @@ function isSameLocalDay(isoDate: string, reference: Date): boolean {
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
   const [todaysMatches, setTodaysMatches] = useState<Match[]>([]);
@@ -102,14 +105,14 @@ export default function HomeScreen() {
             style={styles.iconButton}
             onPress={() => navigation.navigate('Search')}
           >
-            <Ionicons name="search" size={22} color={Colors.grey1} />
+            <Ionicons name="search" size={22} color={colors.grey1} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('NotificationInbox')}
           >
-            <Ionicons name="notifications-outline" size={22} color={Colors.grey1} />
+            <Ionicons name="notifications-outline" size={22} color={colors.grey1} />
             {unreadCount > 0 ? (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadText}>{unreadCount}</Text>
@@ -139,41 +142,43 @@ export default function HomeScreen() {
 );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  headerBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  logoImage: {
-    width: 90,
-    height: 38,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconButton: { padding: 6 },
-  unreadBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: Colors.live,
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unreadText: { color: Colors.textInverse, fontSize: 10, fontWeight: '700' },
-  content: { padding: 16 },
-  greeting: { fontSize: 16, color: Colors.textSecondary, marginBottom: 16 },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    headerBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    logoImage: {
+      width: 90,
+      height: 38,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    iconButton: { padding: 6 },
+    unreadBadge: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      backgroundColor: colors.live,
+      borderRadius: 8,
+      paddingHorizontal: 5,
+      minWidth: 16,
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    unreadText: { color: colors.textInverse, fontSize: 10, fontWeight: '700' },
+    content: { padding: 16 },
+    greeting: { fontSize: 16, color: colors.textSecondary, marginBottom: 16 },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { CLUB_BY_LEGACY_ID } from '../../constants/clubs';
 import { usePredictionStore } from '../../store/predictionStore';
+import { useTheme } from '../../context/ThemeContext';
 import type { Club, Match } from '../../types';
 
 function requireClub(id: string): Club {
@@ -49,6 +50,8 @@ const MOCK_FIXTURES: Match[] = [
 ];
 
 export default function PredictRoot() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const { predictions, setPrediction, setExactScore, submitAll } = usePredictionStore();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -159,7 +162,7 @@ export default function PredictRoot() {
 
       {submitSuccess ? (
         <View style={styles.successBanner}>
-          <Ionicons name="checkmark-circle" size={20} color={Colors.textInverse} />
+          <Ionicons name="checkmark-circle" size={20} color={colors.textInverse} />
           <Text style={styles.successText}>Predictions locked in!</Text>
         </View>
       ) : (
@@ -169,7 +172,7 @@ export default function PredictRoot() {
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Text style={styles.submitText}>Submit Predictions</Text>
           )}
@@ -182,31 +185,33 @@ export default function PredictRoot() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: 20, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
-  headerSubtitle: { fontSize: 16, color: Colors.primary, fontWeight: '700', marginTop: 4 },
-  content: { padding: 16 },
-  infoBox: { backgroundColor: Colors.tagFE.bg, padding: 12, borderRadius: 12, color: Colors.primary, fontSize: 13, fontWeight: '600', marginBottom: 20 },
-  matchCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
-  teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  teamInfo: { flex: 1 },
-  teamName: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
-  predictRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  scoreInput: { width: 40, height: 45, backgroundColor: Colors.background, borderRadius: 8, textAlign: 'center', fontSize: 20, fontWeight: '800', color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border },
-  vsText: { fontSize: 18, fontWeight: '800', color: Colors.textTertiary },
-  outcomeRow: { flexDirection: 'row', gap: 8 },
-  outcomeButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
-  outcomeButtonActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  outcomeLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
-  outcomeLabelActive: { color: Colors.textInverse },
-  submitButton: { margin: 16, backgroundColor: Colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
-  successBanner: { margin: 16, backgroundColor: '#2E7D32', padding: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  successText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
-  errorText: { marginHorizontal: 16, marginBottom: 8, color: Colors.live, fontSize: 13, textAlign: 'center' },
-  disabledInput: { backgroundColor: Colors.border, color: Colors.textTertiary },
-  disabledButton: { opacity: 0.6 },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
+    headerSubtitle: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
+    content: { padding: 16 },
+    infoBox: { backgroundColor: colors.tagFE.bg, padding: 12, borderRadius: 12, color: colors.primary, fontSize: 13, fontWeight: '600', marginBottom: 20 },
+    matchCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+    teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+    teamInfo: { flex: 1 },
+    teamName: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+    predictRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    scoreInput: { width: 40, height: 45, backgroundColor: colors.background, borderRadius: 8, textAlign: 'center', fontSize: 20, fontWeight: '800', color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
+    vsText: { fontSize: 18, fontWeight: '800', color: colors.textTertiary },
+    outcomeRow: { flexDirection: 'row', gap: 8 },
+    outcomeButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+    outcomeButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    outcomeLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+    outcomeLabelActive: { color: colors.textInverse },
+    submitButton: { margin: 16, backgroundColor: colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
+    submitButtonDisabled: { opacity: 0.6 },
+    submitText: { color: colors.textInverse, fontSize: 16, fontWeight: '800' },
+    successBanner: { margin: 16, backgroundColor: '#2E7D32', padding: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+    successText: { color: colors.textInverse, fontSize: 16, fontWeight: '800' },
+    errorText: { marginHorizontal: 16, marginBottom: 8, color: colors.live, fontSize: 13, textAlign: 'center' },
+    disabledInput: { backgroundColor: colors.border, color: colors.textTertiary },
+    disabledButton: { opacity: 0.6 },
+  });
+}

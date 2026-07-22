@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Dimensions, LayoutChangeEvent } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import PlayerChip from './PlayerChip';
+import { useTheme } from '../../context/ThemeContext';
 import type { RealClub } from '../../services/clubService';
 import type { FantasyPlayer } from '../../types';
 
@@ -12,6 +13,11 @@ import type { FantasyPlayer } from '../../types';
 const BASE_CHIP_WIDTH = 78;
 const CHIP_GAP = 4;
 const MIN_CHIP_SCALE = 0.62;
+// Mirrors rowsContainer's paddingHorizontal in getStyles below - kept as a
+// plain constant (rather than read off the themed styles object) since this
+// value is needed to compute chipScale before styles is used, and it never
+// changes with theme anyway.
+const ROWS_CONTAINER_PADDING_H = 8;
 
 function scaleForRow(count: number, availableWidth: number): number {
   if (count <= 0 || availableWidth <= 0) return 1;
@@ -69,6 +75,8 @@ export default function PitchView({
   selectedPlayerId = null,
   clubsById,
 }: PitchViewProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   // Sort by id so each player has a fixed slot within their position row -
   // without this, a re-fetch after any update (setCaptain, a swap, etc.)
   // could come back with rows in a different order and make players appear
@@ -92,7 +100,7 @@ export default function PitchView({
   // attack.
   const [fieldWidth, setFieldWidth] = useState(() => Dimensions.get('window').width - 32);
   const onRowsLayout = (e: LayoutChangeEvent) => setFieldWidth(e.nativeEvent.layout.width);
-  const contentWidth = fieldWidth - styles.rowsContainer.paddingHorizontal * 2;
+  const contentWidth = fieldWidth - ROWS_CONTAINER_PADDING_H * 2;
   const widestRow = Math.max(1, ...grouped.map((g) => g.items.length));
   const chipScale = scaleForRow(widestRow, contentWidth);
 
@@ -160,70 +168,72 @@ export default function PitchView({
   );
 }
 
-const styles = StyleSheet.create({
-  outterWrap: {
-    gap: 12,
-  },
-  pitch: {
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    backgroundColor: Colors.pitchGrass,
-    minHeight: 340,
-    position: 'relative',
-  },
-  // The image itself already has goal boxes/center circle/halfway line/
-  // corner arcs drawn in, so it replaces the old hand-drawn marking Views
-  // entirely rather than sitting underneath them.
-  pitchImage: {
-    borderRadius: radius.card,
-  },
-  rowsContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 8,
-    gap: 16,
-  },
-  row: {
-    gap: 6,
-  },
-  rowLabel: {
-    fontSize: 10,
-    fontFamily: fonts.bodySemiBold,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  errorText: {
-    color: Colors.red,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    padding: 40,
-  },
-  benchSection: {
-    backgroundColor: Colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 12,
-  },
-  benchLabel: {
-    fontSize: 10,
-    fontFamily: fonts.bodySemiBold,
-    color: Colors.grey2,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  benchRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-    flexWrap: 'wrap',
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    outterWrap: {
+      gap: 12,
+    },
+    pitch: {
+      borderRadius: radius.card,
+      overflow: 'hidden',
+      backgroundColor: colors.pitchGrass,
+      minHeight: 340,
+      position: 'relative',
+    },
+    // The image itself already has goal boxes/center circle/halfway line/
+    // corner arcs drawn in, so it replaces the old hand-drawn marking Views
+    // entirely rather than sitting underneath them.
+    pitchImage: {
+      borderRadius: radius.card,
+    },
+    rowsContainer: {
+      paddingVertical: 20,
+      paddingHorizontal: ROWS_CONTAINER_PADDING_H,
+      gap: 16,
+    },
+    row: {
+      gap: 6,
+    },
+    rowLabel: {
+      fontSize: 10,
+      fontFamily: fonts.bodySemiBold,
+      color: 'rgba(255,255,255,0.4)',
+      textAlign: 'center',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    chipsRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 4,
+    },
+    errorText: {
+      color: colors.red,
+      fontFamily: fonts.body,
+      textAlign: 'center',
+      padding: 40,
+    },
+    benchSection: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+    },
+    benchLabel: {
+      fontSize: 10,
+      fontFamily: fonts.bodySemiBold,
+      color: colors.grey2,
+      textAlign: 'center',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 8,
+    },
+    benchRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 4,
+      flexWrap: 'wrap',
+    },
+  });
+}

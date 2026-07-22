@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { getMatchDetails } from '../../services/matchService';
 import { getPlayerStatsByFixture } from '../../services/fantasyService';
 import type { FixturePlayerStats } from '../../services/fantasyService';
 import { getApiErrorMessage } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
@@ -32,6 +33,8 @@ export default function MatchDetailsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const route = useRoute<MatchDetailsRouteProp>();
   const { matchId } = route.params;
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,13 +97,13 @@ export default function MatchDetailsScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Match Details</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </View>
     );
@@ -111,7 +114,7 @@ export default function MatchDetailsScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Match Details</Text>
           <View style={{ width: 40 }} />
@@ -127,7 +130,7 @@ export default function MatchDetailsScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Match Details</Text>
         <View style={{ width: 40 }} /> 
@@ -170,14 +173,14 @@ export default function MatchDetailsScreen() {
             style={styles.actionButton}
             onPress={() => navigation.navigate('MotmVote', { matchId })}
           >
-            <Ionicons name="trophy" size={18} color={Colors.yellow} />
+            <Ionicons name="trophy" size={18} color={colors.yellow} />
             <Text style={styles.actionLabel}>Vote MOTM</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('Discussion', { matchId })}
           >
-            <Ionicons name="chatbubbles" size={18} color={Colors.yellow} />
+            <Ionicons name="chatbubbles" size={18} color={colors.yellow} />
             <Text style={styles.actionLabel}>Discussion</Text>
           </TouchableOpacity>
         </View>
@@ -188,7 +191,7 @@ export default function MatchDetailsScreen() {
 
         <View style={styles.content}>
           {statsLoading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
           ) : statsError ? (
             <View style={styles.placeholderContainer}>
               <Text style={styles.placeholderText}>{statsError}</Text>
@@ -234,44 +237,45 @@ export default function MatchDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   scoreboard: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 32,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'space-around',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   teamContainer: { alignItems: 'center', width: '35%' },
   badgeImage: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
-  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.textPrimary },
+  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: colors.textPrimary },
   scoreContainer: { alignItems: 'center' },
-  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.textPrimary },
+  scoreText: { fontSize: 36, fontWeight: '800', color: colors.textPrimary },
   liveBadge: {
-    backgroundColor: Colors.live,
+    backgroundColor: colors.live,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     marginTop: 8,
   },
-  liveText: { color: Colors.textInverse, fontSize: 12, fontWeight: '700' },
+  liveText: { color: colors.textInverse, fontSize: 12, fontWeight: '700' },
   venueInfo: { padding: 16, alignItems: 'center' },
-  venueText: { fontSize: 14, color: Colors.textSecondary },
-  gameweekText: { fontSize: 12, color: Colors.textTertiary, marginTop: 4 },
+  venueText: { fontSize: 14, color: colors.textSecondary },
+  gameweekText: { fontSize: 12, color: colors.textTertiary, marginTop: 4 },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -282,47 +286,48 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     gap: 8,
   },
-  actionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  actionLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   sectionHeaderRow: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
-  sectionHeaderText: { fontSize: 12, fontWeight: '800', color: Colors.textTertiary, letterSpacing: 0.5 },
+  sectionHeaderText: { fontSize: 12, fontWeight: '800', color: colors.textTertiary, letterSpacing: 0.5 },
   content: { padding: 16 },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
-  placeholderText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  placeholderText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
   statsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingBottom: 8,
     marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
-  statsHeaderCell: { width: 40, fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textAlign: 'center' },
+  statsHeaderCell: { width: 40, fontSize: 11, fontWeight: '700', color: colors.textTertiary, textAlign: 'center' },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   statsNameCol: { flex: 1, minWidth: 0, paddingRight: 8 },
-  statsPlayerName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  statsPlayerMeta: { fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
-  statsCell: { width: 40, fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
-  statsPtsCell: { fontWeight: '800', color: Colors.primary },
+  statsPlayerName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  statsPlayerMeta: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+  statsCell: { width: 40, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+  statsPtsCell: { fontWeight: '800', color: colors.primary },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: Colors.live, textAlign: 'center', paddingHorizontal: 32 },
-});
+  errorText: { fontSize: 16, color: colors.live, textAlign: 'center', paddingHorizontal: 32 },
+  });
+}
