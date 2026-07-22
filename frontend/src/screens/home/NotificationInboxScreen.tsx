@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   getNotifications,
   markNotificationRead,
 } from '../../services/notificationService';
+import { useTheme } from '../../context/ThemeContext';
 import { Notification } from '../../types';
 
 // Backend only ever sends a single `message` string (no separate title), so
@@ -42,6 +43,8 @@ function relativeTime(isoDate: string): string {
 
 export default function NotificationInboxScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +118,7 @@ export default function NotificationInboxScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={styles.loading} />
+        <ActivityIndicator color={colors.primary} style={styles.loading} />
       ) : error ? (
         <Text style={styles.emptyText}>{error}</Text>
       ) : (
@@ -133,7 +136,7 @@ export default function NotificationInboxScreen() {
                 style={[styles.notificationItem, !item.read && styles.unreadItem]}
               >
                 {!item.read ? <View style={styles.indicator} /> : <View style={styles.indicatorSpacer} />}
-                <Ionicons name={meta.icon} size={20} color={Colors.primary} style={styles.typeIcon} />
+                <Ionicons name={meta.icon} size={20} color={colors.primary} style={styles.typeIcon} />
                 <View style={styles.notificationContent}>
                   <Text style={styles.notificationTitle}>{meta.label}</Text>
                   <Text style={styles.notificationBody}>{item.message}</Text>
@@ -149,41 +152,43 @@ export default function NotificationInboxScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 16, paddingBottom: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  loading: { marginTop: 40 },
-  markButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  markButtonText: { color: Colors.primary, fontWeight: '700' },
-  notificationItem: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  unreadItem: { borderColor: Colors.primary, borderWidth: 1 },
-  indicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-    marginRight: 10,
-  },
-  indicatorSpacer: { width: 10, marginRight: 10 },
-  typeIcon: { marginRight: 12 },
-  notificationContent: { flex: 1 },
-  notificationTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  notificationBody: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
-  notificationTime: { fontSize: 11, color: Colors.textTertiary, marginTop: 6 },
-  emptyText: { textAlign: 'center', marginTop: 32, color: Colors.textTertiary },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingBottom: 16 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
+    loading: { marginTop: 40 },
+    markButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    markButtonText: { color: colors.primary, fontWeight: '700' },
+    notificationItem: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      alignItems: 'center',
+    },
+    unreadItem: { borderColor: colors.primary, borderWidth: 1 },
+    indicator: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.primary,
+      marginRight: 10,
+    },
+    indicatorSpacer: { width: 10, marginRight: 10 },
+    typeIcon: { marginRight: 12 },
+    notificationContent: { flex: 1 },
+    notificationTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+    notificationBody: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
+    notificationTime: { fontSize: 11, color: colors.textTertiary, marginTop: 6 },
+    emptyText: { textAlign: 'center', marginTop: 32, color: colors.textTertiary },
+  });
+}

@@ -8,6 +8,10 @@ export interface DiscussionMessage {
   username: string;
   message: string;
   createdAt: string;
+  // Drives the crown badge next to the username in the discussion list -
+  // resolved server-side per message via SubscriptionService.isPremium, so
+  // this reflects the poster's premium status, not the viewer's.
+  userPremium: boolean;
 }
 
 function mapDiscussion(raw: any): DiscussionMessage {
@@ -18,6 +22,7 @@ function mapDiscussion(raw: any): DiscussionMessage {
     username: raw.username,
     message: raw.message,
     createdAt: raw.createdAt ?? raw.created_at,
+    userPremium: !!raw.userPremium,
   };
 }
 

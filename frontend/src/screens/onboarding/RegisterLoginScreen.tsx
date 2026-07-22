@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,13 +21,16 @@ import { getAuthErrorMessage, validateEmail, validatePassword } from '../../util
 import { fetchClubs, RealClub } from '../../services/clubService';
 import type { AuthFlowParamList } from '../../navigation/types';
 import { Colors } from '../../constants/colors';
-import { authFormStyles as styles } from './authFormStyles';
+import { getAuthFormStyles } from './authFormStyles';
+import { useTheme } from '../../context/ThemeContext';
 
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
 
 export default function RegisterLoginScreen() {
   const navigation = useNavigation<RegisterLoginNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getAuthFormStyles(colors), [colors]);
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
@@ -294,7 +297,7 @@ export default function RegisterLoginScreen() {
             <Text style={styles.label}>Favourite club</Text>
             {clubsLoading ? (
               <View style={styles.clubPickerLoading}>
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : clubsError ? (
               <View style={styles.clubPickerLoading}>
@@ -327,7 +330,7 @@ export default function RegisterLoginScreen() {
                         {item.badge ? (
                           <Image source={item.badge} style={styles.clubChipBadgeImage} resizeMode="contain" />
                         ) : (
-                          <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                          <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
                         )}
                       </View>
                       <Text
@@ -354,7 +357,7 @@ export default function RegisterLoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Text style={styles.submitButtonText}>
               {mode === 'register' ? 'Create account' : 'Log in'}
@@ -367,7 +370,7 @@ export default function RegisterLoginScreen() {
           onPress={handleGoogleSignIn}
           disabled={loading}
         >
-          <Ionicons name="logo-google" size={18} color={Colors.textPrimary} />
+          <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 

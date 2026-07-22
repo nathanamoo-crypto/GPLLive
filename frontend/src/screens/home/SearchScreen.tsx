@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 interface SearchResult {
@@ -48,6 +49,8 @@ type SearchNavProp = NativeStackNavigationProp<HomeStackParamList, 'Search'>;
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<SearchNavProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -64,8 +67,8 @@ export default function SearchScreen() {
   }, [query, filter]);
 
   const typeConfig: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-    player: { icon: 'shield', color: Colors.yellow },
-    club: { icon: 'people', color: Colors.yellow },
+    player: { icon: 'shield', color: colors.yellow },
+    club: { icon: 'people', color: colors.yellow },
     news: { icon: 'newspaper', color: '#4169E1' },
   };
 
@@ -89,21 +92,21 @@ export default function SearchScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={Colors.white} />
+          <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.searchWrap}>
-          <Ionicons name="search" size={18} color={Colors.grey2} style={styles.searchIcon} />
+          <Ionicons name="search" size={18} color={colors.grey2} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search players, clubs, news..."
-            placeholderTextColor={Colors.grey2}
+            placeholderTextColor={colors.grey2}
             value={query}
             onChangeText={setQuery}
             autoFocus
           />
           {query.length > 0 && (
             <TouchableOpacity style={styles.clearBtn} onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={Colors.grey2} />
+              <Ionicons name="close-circle" size={18} color={colors.grey2} />
             </TouchableOpacity>
           )}
         </View>
@@ -148,12 +151,12 @@ export default function SearchScreen() {
       >
         {query.trim().length > 0 && results.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color={Colors.grey2} />
+            <Ionicons name="search-outline" size={48} color={colors.grey2} />
             <Text style={styles.emptyText}>No results for "{query}"</Text>
           </View>
         ) : query.trim().length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="search" size={48} color={Colors.grey2} />
+            <Ionicons name="search" size={48} color={colors.grey2} />
             <Text style={styles.emptyText}>Search players, clubs, and news</Text>
           </View>
         ) : (
@@ -181,7 +184,7 @@ export default function SearchScreen() {
                   <Text style={styles.resultLabel}>{r.label}</Text>
                   <Text style={styles.resultSub}>{r.subtitle}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={Colors.grey2} />
+                <Ionicons name="chevron-forward" size={18} color={colors.grey2} />
               </TouchableOpacity>
             );
           })
@@ -191,68 +194,70 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: { padding: 4 },
-  searchWrap: { flex: 1, position: 'relative' },
-  searchIcon: { position: 'absolute', left: 14, top: 13, zIndex: 1 },
-  searchInput: {
-    width: '100%',
-    paddingVertical: 12,
-    paddingLeft: 42,
-    paddingRight: 36,
-    borderRadius: 12,
-    backgroundColor: Colors.surface2,
-    color: Colors.white,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  clearBtn: { position: 'absolute', right: 10, top: 12 },
-  filterRow: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  filterContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
-    backgroundColor: Colors.surface2,
-    marginRight: 8,
-  },
-  filterChipActive: { backgroundColor: Colors.yellow },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.grey1 },
-  filterTextActive: { color: Colors.black },
-  list: { flex: 1 },
-  listContent: { padding: 16, gap: 8 },
-  resultCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: radius.card,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  resultIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultInfo: { flex: 1 },
-  resultLabel: { fontSize: 15, fontWeight: '700', color: Colors.white },
-  resultSub: { fontSize: 12, color: Colors.grey2, marginTop: 2 },
-  emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 15, color: Colors.grey2, fontFamily: fonts.display, textTransform: 'uppercase' },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: { padding: 4 },
+    searchWrap: { flex: 1, position: 'relative' },
+    searchIcon: { position: 'absolute', left: 14, top: 13, zIndex: 1 },
+    searchInput: {
+      width: '100%',
+      paddingVertical: 12,
+      paddingLeft: 42,
+      paddingRight: 36,
+      borderRadius: 12,
+      backgroundColor: colors.surface2,
+      color: colors.white,
+      fontSize: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    clearBtn: { position: 'absolute', right: 10, top: 12 },
+    filterRow: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+    filterContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+    filterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 16,
+      backgroundColor: colors.surface2,
+      marginRight: 8,
+    },
+    filterChipActive: { backgroundColor: colors.yellow },
+    filterText: { fontSize: 12, fontWeight: '600', color: colors.grey1 },
+    filterTextActive: { color: colors.black },
+    list: { flex: 1 },
+    listContent: { padding: 16, gap: 8 },
+    resultCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: radius.card,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    resultIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    resultInfo: { flex: 1 },
+    resultLabel: { fontSize: 15, fontWeight: '700', color: colors.white },
+    resultSub: { fontSize: 12, color: colors.grey2, marginTop: 2 },
+    emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
+    emptyText: { fontSize: 15, color: colors.grey2, fontFamily: fonts.display, textTransform: 'uppercase' },
+  });
+}

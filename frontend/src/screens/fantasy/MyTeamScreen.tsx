@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors } from '../../constants/colors';
+import { useTheme } from '../../context/ThemeContext';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import { CLUB_COLORS } from '../../constants/clubs';
 import { useFantasyStore, FORMATIONS, canApplyFormation } from '../../store/fantasyStore';
@@ -39,6 +40,8 @@ const POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD'] as const;
 function MyTeamScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const team = useFantasyStore((s) => s.team);
   const hasSquad = useFantasyStore((s) => s.hasSquad);
   const setFormation = useFantasyStore((s) => s.setFormation);
@@ -56,38 +59,58 @@ function MyTeamScreen() {
   // rather than trusting the id directly, since the two club lists don't
   // share ids (see backendClubMap.ts).
   const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
+  // Club badges/colors are fetched separately from the team itself and
+  // PitchView used to render immediately with clubsById still {} - every
+  // jersey briefly showed fallback/neutral styling and then "popped" into
+  // its real club colors a moment later. Gating the pitch render on this
+  // (below) instead shows one loading spinner and then the finished view.
+  const [clubsLoading, setClubsLoading] = useState(true);
   // Two-tap swap flow: tap a starter or a bench player to select it, then
   // tap the other side to swap them. Tracks player.id (not
   // fantasyTeamPlayerId) since that's what PlayerChip/PitchView key on.
   const [swapSourceId, setSwapSourceId] = useState<number | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
     fetchClubsById(controller.signal)
       .then((byId) => setClubsById(byId))
-      .catch(() => { /* falls back to a neutral color below */ });
+      .catch(() => { /* falls back to a neutral color below */ })
+      .finally(() => setClubsLoading(false));
     return () => controller.abort();
   }, []);
 
-  const handleFetchTeam = useCallback(async () => {
-    setFetching(true);
-    setFetchError(null);
+  // `silent` skips the blocking spinner/error UI - used when the store
+  // already has a team to show (e.g. right after Confirm Squad, or just
+  // revisiting this tab) so a background refresh doesn't blank the screen
+  // out to "Loading your squad..." and then flash the pitch view back in a
+  // moment later. Only a genuinely empty store (no team cached at all) gets
+  // the full blocking loader.
+  const handleFetchTeam = useCallback(async (silent = false) => {
+    if (!silent) {
+      setFetching(true);
+      setFetchError(null);
+    }
     try {
       const data = await fantasyService.getMyTeam();
       useFantasyStore.setState({ team: data, hasSquad: data !== null });
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load team data');
+      if (!silent) {
+        setFetchError(err instanceof Error ? err.message : 'Failed to load team data');
+      }
     } finally {
-      setFetching(false);
+      if (!silent) setFetching(false);
     }
   }, []);
 
   useEffect(() => {
-    handleFetchTeam();
+    const alreadyHaveTeam = useFantasyStore.getState().team != null;
+    handleFetchTeam(alreadyHaveTeam);
     fantasyService.getCurrentGameweek()
       .then((gw) => setCurrentGameweekId(gw?.gameweekId ?? null))
       .catch(() => setCurrentGameweekId(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFetchTeam]);
 
   const handleFormationPress = useCallback(
@@ -143,6 +166,7 @@ function MyTeamScreen() {
         buttons.push({ text: 'Make Vice-Captain', onPress: () => handleSetRole(player, 'vice') });
       }
       buttons.push({ text: 'Swap with Bench', onPress: () => setSwapSourceId(player.id) });
+      buttons.push({ text: 'View Details', onPress: () => navigation.navigate('PlayerDetails', { playerId: player.id }) });
       buttons.push({ text: 'Cancel', style: 'cancel' });
       Alert.alert(
         player.name,
@@ -150,7 +174,7 @@ function MyTeamScreen() {
         buttons
       );
     },
-    [team, handleSetRole]
+    [team, handleSetRole, navigation]
   );
 
   // Swaps one starter for one bench player. The min/max-per-position rules
@@ -216,6 +240,11 @@ function MyTeamScreen() {
   // (and its squad/transfers/chips) server-side and drops the user back on
   // the Squad Builder.
   const handleDeleteTeam = useCallback(() => {
+    // No spinner previously shown while the DELETE call was in flight (which
+    // can take a while on a cold backend), so the button stayed tappable and
+    // a second tap could fire a second delete against an already-deleted
+    // team. Guard + a visible "Deleting..." state fix both.
+    if (deleting) return;
     Alert.alert(
       'Delete this team?',
       'This permanently removes your squad, transfers, and chip usage so you can build a new one. This cannot be undone.',
@@ -225,6 +254,7 @@ function MyTeamScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            setDeleting(true);
             try {
               await fantasyService.deleteMyTeam();
               useFantasyStore.setState({ team: null, hasSquad: false });
@@ -232,18 +262,20 @@ function MyTeamScreen() {
               navigation.navigate('GamesRoot', { defaultTab: 'fantasy' });
             } catch (err) {
               Alert.alert('Could not delete team', getApiErrorMessage(err, 'Failed to delete team'));
+            } finally {
+              setDeleting(false);
             }
           },
         },
       ]
     );
-  }, [navigation]);
+  }, [navigation, deleting]);
 
   if (fetching) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.yellow} />
+          <ActivityIndicator size="large" color={colors.yellow} />
           <Text style={styles.emptySub}>Loading your squad...</Text>
         </View>
       </View>
@@ -256,7 +288,7 @@ function MyTeamScreen() {
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Something went wrong</Text>
           <Text style={styles.emptySub}>{fetchError}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleFetchTeam}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => handleFetchTeam()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -268,9 +300,24 @@ function MyTeamScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.centered}>
-          <Ionicons name="football-outline" size={64} color={Colors.grey2} />
+          <Ionicons name="football-outline" size={64} color={colors.grey2} />
           <Text style={styles.emptyTitle}>No Squad Yet</Text>
           <Text style={styles.emptySub}>Build your fantasy team to see it here.</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Club badges/colors feed straight into PitchView's jersey rendering -
+  // wait for them so the pitch appears fully styled the first time instead
+  // of painting once with fallback colors and again a moment later once
+  // clubsById arrives.
+  if (clubsLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.yellow} />
+          <Text style={styles.emptySub}>Loading your squad...</Text>
         </View>
       </View>
     );
@@ -288,7 +335,7 @@ function MyTeamScreen() {
   const groupedList = POSITION_ORDER.map((pos) => ({
     position: pos,
     label: pos === 'GK' ? 'Goalkeeper' : pos === 'DEF' ? 'Defenders' : pos === 'MID' ? 'Midfielders' : 'Forwards',
-    color: pos === 'GK' ? Colors.roleGk : pos === 'DEF' ? Colors.roleDef : pos === 'MID' ? Colors.roleMid : Colors.roleFwd,
+    color: pos === 'GK' ? colors.roleGk : pos === 'DEF' ? colors.roleDef : pos === 'MID' ? colors.roleMid : colors.roleFwd,
     items: team.players.filter((p: FantasyPlayer) => p.position === pos),
   }));
 
@@ -303,11 +350,16 @@ function MyTeamScreen() {
             <Text style={styles.headerTitle}>{team.teamName}</Text>
             <TouchableOpacity
               onPress={handleDeleteTeam}
+              disabled={deleting}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.deleteTeamButton}
             >
-              <Ionicons name="trash-outline" size={16} color={Colors.grey2} />
-              <Text style={styles.deleteTeamText}>Delete Team</Text>
+              {deleting ? (
+                <ActivityIndicator size="small" color={colors.grey2} />
+              ) : (
+                <Ionicons name="trash-outline" size={16} color={colors.grey2} />
+              )}
+              <Text style={styles.deleteTeamText}>{deleting ? 'Deleting...' : 'Delete Team'}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.headerStats}>
@@ -331,7 +383,7 @@ function MyTeamScreen() {
             style={styles.transfersButton}
             onPress={() => navigation.navigate('Transfers')}
           >
-            <Ionicons name="swap-horizontal" size={16} color={Colors.black} />
+            <Ionicons name="swap-horizontal" size={16} color={colors.black} />
             <Text style={styles.transfersButtonText}>Transfers</Text>
           </TouchableOpacity>
         </View>
@@ -341,14 +393,14 @@ function MyTeamScreen() {
             onPress={() => setGameweek((g) => Math.max(1, g - 1))}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.yellow} />
+            <Ionicons name="chevron-back" size={20} color={colors.yellow} />
           </TouchableOpacity>
           <Text style={styles.gameweekLabel}>Gameweek {gameweek}</Text>
           <TouchableOpacity
             onPress={() => setGameweek((g) => g + 1)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="chevron-forward" size={20} color={Colors.yellow} />
+            <Ionicons name="chevron-forward" size={20} color={colors.yellow} />
           </TouchableOpacity>
         </View>
 
@@ -366,7 +418,7 @@ function MyTeamScreen() {
                   chipType={chip.chipType}
                   fantasyTeamId={team.teamId}
                   gameweekId={currentGameweekId}
-                  onActivated={handleFetchTeam}
+                  onActivated={() => handleFetchTeam()}
                 />
               );
             })}
@@ -442,7 +494,7 @@ function MyTeamScreen() {
                 </View>
                 {group.items.map((player: FantasyPlayer, idx: number) => {
                   const localClub = backendClubIdToLocalClub(player.clubId, clubsById);
-                  const clubColor = (localClub ? CLUB_COLORS[localClub.id] : null) || Colors.grey2;
+                  const clubColor = (localClub ? CLUB_COLORS[localClub.id] : null) || colors.grey2;
                   const isStarter = startingPlayerIds.includes(player.id);
                   return (
                     <View key={player.id} style={[styles.listRow, idx === group.items.length - 1 && styles.listRowLast]}>
@@ -472,42 +524,43 @@ function MyTeamScreen() {
 
 export default MyTeamScreen;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.black },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  emptyTitle: { fontSize: 20, fontFamily: fonts.display, color: Colors.white, marginTop: 16, textTransform: 'uppercase' },
-  emptySub: { fontSize: 14, fontFamily: fonts.body, color: Colors.grey1, textAlign: 'center', marginTop: 8 },
+  emptyTitle: { fontSize: 20, fontFamily: fonts.display, color: colors.white, marginTop: 16, textTransform: 'uppercase' },
+  emptySub: { fontSize: 14, fontFamily: fonts.body, color: colors.grey1, textAlign: 'center', marginTop: 8 },
   header: { paddingHorizontal: 20, paddingVertical: 16, gap: 12 },
   headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 22, fontFamily: fonts.display, color: Colors.yellow, textTransform: 'uppercase', letterSpacing: 0.5 },
+  headerTitle: { fontSize: 22, fontFamily: fonts.display, color: colors.yellow, textTransform: 'uppercase', letterSpacing: 0.5 },
   deleteTeamButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  deleteTeamText: { fontSize: 11, fontFamily: fonts.bodySemiBold, color: Colors.grey2 },
+  deleteTeamText: { fontSize: 11, fontFamily: fonts.bodySemiBold, color: colors.grey2 },
   headerStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, rowGap: 8 },
   stat: { alignItems: 'center' },
-  statValue: { fontSize: 18, fontFamily: fonts.display, color: Colors.white },
-  statLabel: { fontSize: 10, fontFamily: fonts.bodySemiBold, color: Colors.grey1, textTransform: 'uppercase', marginTop: 2 },
+  statValue: { fontSize: 18, fontFamily: fonts.display, color: colors.white },
+  statLabel: { fontSize: 10, fontFamily: fonts.bodySemiBold, color: colors.grey1, textTransform: 'uppercase', marginTop: 2 },
   transfersButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.yellow,
+    backgroundColor: colors.yellow,
     borderRadius: 10,
     paddingVertical: 10,
   },
-  transfersButtonText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: Colors.black, fontWeight: '800' },
+  transfersButtonText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.black, fontWeight: '800' },
   gameweekBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.black,
+    backgroundColor: colors.black,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
-  gameweekLabel: { fontSize: 14, fontFamily: fonts.display, color: Colors.white, textTransform: 'uppercase', letterSpacing: 0.5 },
+  gameweekLabel: { fontSize: 14, fontFamily: fonts.display, color: colors.white, textTransform: 'uppercase', letterSpacing: 0.5 },
   chipStrip: { paddingVertical: 12 },
   chipStripContent: { paddingHorizontal: 20, gap: 8 },
   toggleRow: { paddingHorizontal: 20, marginBottom: 16 },
@@ -515,16 +568,16 @@ const styles = StyleSheet.create({
   swapHint: {
     fontSize: 12,
     fontFamily: fonts.body,
-    color: Colors.grey1,
+    color: colors.grey1,
     textAlign: 'center',
     marginBottom: 10,
   },
   listSection: { paddingHorizontal: 16, gap: 16 },
   groupBlock: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   groupHeader: {
@@ -534,33 +587,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderLeftWidth: 3,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
   },
-  groupTitle: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: Colors.white, textTransform: 'uppercase' },
-  groupCount: { fontSize: 12, fontFamily: fonts.bodySemiBold, color: Colors.grey1 },
+  groupTitle: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.white, textTransform: 'uppercase' },
+  groupCount: { fontSize: 12, fontFamily: fonts.bodySemiBold, color: colors.grey1 },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   listRowLast: { borderBottomWidth: 0 },
   listPosDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
-  listName: { flex: 1, fontSize: 14, fontFamily: fonts.bodySemiBold, color: Colors.white },
+  listName: { flex: 1, fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.white },
   listRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   listCaptainBadge: {
     width: 22, height: 22, borderRadius: 11,
-    backgroundColor: Colors.yellow,
+    backgroundColor: colors.yellow,
     alignItems: 'center', justifyContent: 'center',
   },
-  listCaptainText: { fontSize: 10, fontWeight: '900', color: Colors.black },
-  listPrice: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: Colors.white, minWidth: 40, textAlign: 'right' },
-  listPriceBench: { color: Colors.grey2 },
+  listCaptainText: { fontSize: 10, fontWeight: '900', color: colors.black },
+  listPrice: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.white, minWidth: 40, textAlign: 'right' },
+  listPriceBench: { color: colors.grey2 },
   retryButton: {
     marginTop: 20,
-    backgroundColor: Colors.yellow,
+    backgroundColor: colors.yellow,
     paddingVertical: 12,
     paddingHorizontal: 28,
     borderRadius: 12,
@@ -574,7 +627,7 @@ const styles = StyleSheet.create({
   currentFormationLabel: {
     fontSize: 11,
     fontFamily: fonts.body,
-    color: Colors.grey1,
+    color: colors.grey1,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -589,18 +642,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   formationChipActive: {
-    backgroundColor: Colors.yellow,
-    borderColor: Colors.yellow,
+    backgroundColor: colors.yellow,
+    borderColor: colors.yellow,
   },
   formationChipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.grey1,
+    color: colors.grey1,
   },
   formationChipTextActive: {
     color: '#000000',
@@ -610,13 +663,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.yellow,
+    borderColor: colors.yellow,
   },
   formationMsgText: {
     fontSize: 12,
-    color: Colors.yellow,
+    color: colors.yellow,
     lineHeight: 18,
   },
-});
+  });
+}

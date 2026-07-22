@@ -25,6 +25,8 @@ export const NOTIFICATION_URL = API_HOST;
 export const DISCUSSION_URL = API_HOST;
 export const NEWS_URL = API_HOST;
 export const STANDINGS_URL = API_HOST;
+export const SUBSCRIPTION_URL = API_HOST;
+export const PAYMENT_URL = API_HOST;
 
 export const AuthEndpoints = {
   LOGIN: '/auth/login',
@@ -97,4 +99,14 @@ export const NewsEndpoints = {
 
 export const StandingsEndpoints = {
   TABLE: '/standings',
+};
+
+export const SubscriptionEndpoints = {
+  ME: '/subscriptions/me',
+};
+
+export const PaymentEndpoints = {
+  INITIALIZE: '/payments/initialize',
+  // Append /{reference} when calling this.
+  VERIFY: '/payments/verify',
 };

@@ -8,6 +8,7 @@ import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
+import PremiumBadge from '../../components/shared/PremiumBadge';
 import { useTheme } from '../../context/ThemeContext';
 
 interface MenuItem {
@@ -117,6 +118,11 @@ export default function ProfileScreen() {
           <Text style={styles.subtext}>
             {user?.favouriteClub?.name ?? 'No club selected'}
           </Text>
+          {user?.isPremium && (
+            <View style={styles.premiumBadgeWrap}>
+              <PremiumBadge variant="full" />
+            </View>
+          )}
         </View>
       </View>
 
@@ -226,6 +232,7 @@ function getStyles(colors: typeof Colors) {
     cardText: { flex: 1 },
     name: { fontSize: 18, fontWeight: '700', color: colors.white },
     subtext: { fontSize: 14, color: colors.grey1, marginTop: 4 },
+    premiumBadgeWrap: { marginTop: 8 },
     section: { marginBottom: 20 },
     sectionTitle: {
       fontSize: 11,

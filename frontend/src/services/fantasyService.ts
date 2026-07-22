@@ -2,7 +2,7 @@ import api from './api';
 import { FantasyEndpoints, ChipEndpoints, FANTASY_URL } from '../constants/apiUrls';
 import type {
   Player, SquadPlayerDTO, FantasyTeam, ChipType,
-  ScoringStats, PlayerPrice, Gameweek,
+  ScoringStats, PlayerPrice, Gameweek, PlayerAnalysis,
 } from '../types';
 
 // Player prices are stored on the backend in whole cedis (e.g. 7500000).
@@ -113,6 +113,33 @@ function mapPlayer(p: any): Player {
     // silently producing NaN budget math downstream.
     price: rawPrice != null ? Number(rawPrice) / CEDIS_PER_MILLION : 0,
     photoUrl: p.photoUrl ?? p.photo_url,
+  };
+}
+
+// GET /players/{id}/analysis (PlayerAnalysisService) - powers the Player
+// Details screen, reused from Draft, Transfers, and the Pitch view alike.
+// `premium` on the response tells us whether the analysis fields below it
+// are populated - a free user gets the basics with those left undefined.
+export async function fetchPlayerAnalysis(playerId: number, signal?: AbortSignal): Promise<PlayerAnalysis> {
+  const { data } = await api.get<any>(`${FantasyEndpoints.PLAYERS}/${playerId}/analysis`, { baseURL: FANTASY_URL, signal });
+  // Same raw-cedis-to-millions conversion as mapPlayer() below - currentPrice
+  // here comes from the exact same PlayerPrice source as the /players list.
+  const rawPrice = data.currentPrice;
+  return {
+    id: data.id,
+    fullName: data.fullName,
+    photoUrl: data.photoUrl,
+    clubName: data.clubName,
+    position: data.position,
+    currentPrice: rawPrice != null ? Number(rawPrice) / CEDIS_PER_MILLION : null,
+    totalPoints: data.totalPoints ?? 0,
+    totalGoals: data.totalGoals ?? 0,
+    totalAssists: data.totalAssists ?? 0,
+    premium: !!data.premium,
+    averagePoints: data.averagePoints ?? undefined,
+    recentForm: data.recentForm ?? undefined,
+    trend: data.trend ?? undefined,
+    insights: data.insights ?? undefined,
   };
 }
 

@@ -10,12 +10,14 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
+import { useTheme } from '../../context/ThemeContext';
 import { useFantasyStore } from '../../store/fantasyStore';
 import { fetchPlayers, getMyTeam } from '../../services/fantasyService';
 import { fetchClubsById, RealClub } from '../../services/clubService';
@@ -24,6 +26,8 @@ import FilterDropdown from '../../components/shared/FilterDropdown';
 import MyTeamScreen from './MyTeamScreen';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { Player, Position } from '../../types';
+
+type FantasyRootNavProp = NativeStackNavigationProp<GamesStackParamList>;
 
 // Mirrors the quota enforced in fantasyStore's addPlayer (2 GK, 5 DEF, 5 MID,
 // 3 FWD) - duplicated here purely for the read-only progress checklist.
@@ -54,7 +58,9 @@ function computeDefaultStartingXI(squad: Player[]): number[] {
 }
 
 export default function FantasyRoot() {
-  const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const navigation = useNavigation<FantasyRootNavProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<'squad' | 'browse' | 'lineup'>('browse');
   const [teamName, setTeamName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -64,6 +70,10 @@ export default function FantasyRoot() {
   // mismatched one - resolve names via a live-fetched id->club map instead
   // of the old hardcoded CLUB_LOOKUP (see backendClubMap.ts for why).
   const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
+  // Same "don't paint half-styled, then pop into place" fix as MyTeamScreen -
+  // the Starting XI tab's PitchView also keys off clubsById for jersey
+  // colors/badges, so gate it behind a spinner until the fetch below lands.
+  const [clubsLoading, setClubsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState<'All' | 'GK' | 'DEF' | 'MID' | 'FWD'>('All');
   const [clubFilter, setClubFilter] = useState<number | 'All'>('All');
@@ -90,6 +100,11 @@ export default function FantasyRoot() {
     submitSquad,
     hasSquad,
     team,
+    // Renamed on destructure - `loading` above already means "player list is
+    // loading"; this one means "Confirm Squad is submitting" (a ~19-call
+    // sequence against the backend, see fantasyStore's submitSquad).
+    loading: submitting,
+    submitProgress,
   } = useFantasyStore();
 
   const loadPlayers = useCallback(async (signal?: AbortSignal) => {
@@ -132,7 +147,8 @@ export default function FantasyRoot() {
     const controller = new AbortController();
     fetchClubsById(controller.signal)
       .then((byId) => setClubsById(byId))
-      .catch(() => { /* club names fall back to 'Unknown' below */ });
+      .catch(() => { /* club names fall back to 'Unknown' below */ })
+      .finally(() => setClubsLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -186,6 +202,13 @@ export default function FantasyRoot() {
   }, [players, positionFilter, clubFilter, searchQuery]);
 
   const handleSaveSquad = async () => {
+    // Confirming is a long sequential run against the backend with a spinner
+    // as the only feedback (see the progress bar rendered on the button
+    // below) - block a second tap outright rather than firing a second
+    // submitSquad() that would race the first.
+    if (submitting) {
+      return;
+    }
     if (!teamName.trim()) {
       Alert.alert('Error', 'Please enter a team name');
       return;
@@ -216,9 +239,14 @@ export default function FantasyRoot() {
 
     try {
       await submitSquad(teamName);
-      Alert.alert('Success', 'Your fantasy team has been created!', [
-        { text: 'View My Team', onPress: () => navigation.navigate('MyTeam') },
-      ]);
+      // No navigation here on purpose - submitSquad() already set hasSquad
+      // and team in the store, so this component's own render below
+      // (`if (hasSquad && team) return <MyTeamScreen />`) has already
+      // swapped to the pitch view underneath this alert. Navigating to the
+      // separate 'MyTeam' stack route on top of that used to mount a SECOND
+      // MyTeamScreen instance (with its own fresh fetch), which is exactly
+      // the "pitch view appears, reloads, appears again" flash reported.
+      Alert.alert('Success', 'Your fantasy team has been created!');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -274,9 +302,13 @@ export default function FantasyRoot() {
         // if the user never visits the Starting XI tab - they can still
         // fine-tune it there before confirming.
         setStartingXI(computeDefaultStartingXI(latestDraft));
+        // Jump straight to My Draft instead of leaving the user on Browse
+        // once there's nothing left to browse for - picking a captain and
+        // confirming is the only thing left to do at this point.
+        setActiveTab('squad');
         Alert.alert(
           'Squad complete!',
-          "You've picked all 15 players and we've set a starting XI for you (4-3-3, your priciest players). Tweak it in the Starting XI tab, or head to My Draft to pick a captain and confirm."
+          "You've picked all 15 players and we've set a starting XI for you (4-3-3, your priciest players). Pick a captain below, tweak the lineup in Starting XI if you want, then confirm."
         );
       }
     }
@@ -291,7 +323,7 @@ export default function FantasyRoot() {
     // oversized, device-dependent gap under the toggle.
     <View style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.readyText}>Checking your squad...</Text>
         </View>
       </View>
@@ -366,12 +398,12 @@ export default function FantasyRoot() {
       {activeTab === 'browse' ? (
         loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.readyText}>Loading players...</Text>
           </View>
         ) : error ? (
           <View style={styles.centered}>
-            <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+            <Ionicons name="cloud-offline-outline" size={48} color={colors.grey2} />
             <Text style={styles.readyText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => loadPlayers()}>
               <Text style={styles.retryButtonText}>Retry</Text>
@@ -380,11 +412,11 @@ export default function FantasyRoot() {
         ) : (
         <>
           <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color={Colors.textTertiary} style={styles.searchIcon} />
+            <Ionicons name="search" size={18} color={colors.textTertiary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search players..."
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -392,7 +424,7 @@ export default function FantasyRoot() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+                <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
           </View>
@@ -420,7 +452,7 @@ export default function FantasyRoot() {
 
           {visiblePlayers.length === 0 ? (
             <View style={styles.centered}>
-              <Ionicons name="search-outline" size={40} color={Colors.grey2} />
+              <Ionicons name="search-outline" size={40} color={colors.grey2} />
               <Text style={styles.readyText}>No players match your filters</Text>
             </View>
           ) : (
@@ -433,24 +465,30 @@ export default function FantasyRoot() {
               const club = clubsById[item.clubId];
               return (
                 <View style={styles.playerCard}>
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={20} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName}>{item.name}</Text>
-                    <Text style={styles.playerSub}>{item.position} · {club?.shortName ?? club?.fullName ?? 'Unknown'}</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={20} color={colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName}>{item.name}</Text>
+                      <Text style={styles.playerSub}>{item.position} · {club?.shortName ?? club?.fullName ?? 'Unknown'}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <View style={styles.playerAction}>
                     <Text style={styles.playerPrice}>GH₵{item.price}m</Text>
                     <TouchableOpacity
                       style={[styles.addButton, isSelected && styles.removeButton]}
                       onPress={() => isSelected ? removePlayer(item.id) : handleAddPlayer(item)}
                     >
-                      <Ionicons name={isSelected ? 'remove' : 'add'} size={20} color={Colors.textInverse} />
+                      <Ionicons name={isSelected ? 'remove' : 'add'} size={20} color={colors.textInverse} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -516,7 +554,7 @@ export default function FantasyRoot() {
                       <Ionicons
                         name={isCaptain ? 'star' : 'star-outline'}
                         size={20}
-                        color={isCaptain ? Colors.accent : !isStarting ? Colors.border : Colors.textTertiary}
+                        color={isCaptain ? colors.accent : !isStarting ? colors.border : colors.textTertiary}
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -527,53 +565,64 @@ export default function FantasyRoot() {
                       <Ionicons
                         name={isViceCaptain ? 'ribbon' : 'ribbon-outline'}
                         size={20}
-                        color={isViceCaptain ? Colors.primary : !isStarting ? Colors.border : Colors.textTertiary}
+                        color={isViceCaptain ? colors.primary : !isStarting ? colors.border : colors.textTertiary}
                       />
                     </TouchableOpacity>
-                    <View style={styles.badgeWrap}>
-                      {club?.badge ? (
-                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                      ) : (
-                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                      )}
-                    </View>
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName} numberOfLines={1}>
-                        {item.name}{isCaptain ? ' (C)' : isViceCaptain ? ' (VC)' : ''}
-                      </Text>
-                      <View style={styles.playerSubRow}>
-                        <Text style={styles.playerSub} numberOfLines={1}>
-                          {item.position} · {club?.shortName ?? 'Unknown'}
-                        </Text>
-                        {isStarting ? (
-                          <View style={styles.startingTag}>
-                            <Text style={styles.startingTagText}>STARTING</Text>
-                          </View>
+                    <TouchableOpacity
+                      style={styles.playerCardMain}
+                      onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.badgeWrap}>
+                        {club?.badge ? (
+                          <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                         ) : (
-                          <View style={styles.benchTag}>
-                            <Text style={styles.benchTagText}>BENCH</Text>
-                          </View>
+                          <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
                         )}
                       </View>
-                    </View>
+                      <View style={styles.playerInfo}>
+                        <Text style={styles.playerName} numberOfLines={1}>
+                          {item.name}{isCaptain ? ' (C)' : isViceCaptain ? ' (VC)' : ''}
+                        </Text>
+                        <View style={styles.playerSubRow}>
+                          <Text style={styles.playerSub} numberOfLines={1}>
+                            {item.position} · {club?.shortName ?? 'Unknown'}
+                          </Text>
+                          {isStarting ? (
+                            <View style={styles.startingTag}>
+                              <Text style={styles.startingTagText}>STARTING</Text>
+                            </View>
+                          ) : (
+                            <View style={styles.benchTag}>
+                              <Text style={styles.benchTagText}>BENCH</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                     <Text style={styles.draftPrice}>GH₵{item.price}m</Text>
                     <TouchableOpacity onPress={() => removePlayer(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="trash-outline" size={20} color={Colors.live} />
+                      <Ionicons name="trash-outline" size={20} color={colors.live} />
                     </TouchableOpacity>
                   </View>
                 );
               })
             )}
           </ScrollView>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveSquad}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveSquad} disabled={submitting}>
             <Text style={styles.saveButtonText}>Confirm Squad</Text>
           </TouchableOpacity>
         </View>
       ) : draftPlayers.length < 15 ? (
         <View style={styles.centered}>
-          <Ionicons name="football-outline" size={48} color={Colors.grey2} />
+          <Ionicons name="football-outline" size={48} color={colors.grey2} />
           <Text style={styles.readyText}>Complete your 15-man squad first</Text>
           <Text style={styles.hintText}>{draftPlayers.length}/15 players picked</Text>
+        </View>
+      ) : clubsLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.readyText}>Loading pitch...</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent}>
@@ -598,24 +647,33 @@ export default function FantasyRoot() {
             .map((item) => {
               const club = clubsById[item.clubId];
               return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.playerCard}
-                  onPress={() => toggleStarting(item)}
-                >
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
-                  </View>
-                  <Ionicons name="arrow-up-circle-outline" size={26} color={Colors.primary} />
-                </TouchableOpacity>
+                <View key={item.id} style={styles.playerCard}>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => toggleStarting(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
+                    </View>
+                    <Ionicons name="arrow-up-circle-outline" size={26} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
               );
             })}
 
@@ -627,58 +685,92 @@ export default function FantasyRoot() {
             .map((item) => {
               const club = clubsById[item.clubId];
               return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.playerCard}
-                  onPress={() => toggleStarting(item)}
-                >
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
-                  </View>
-                  <Ionicons name="arrow-down-circle-outline" size={26} color={Colors.textTertiary} />
-                </TouchableOpacity>
+                <View key={item.id} style={styles.playerCard}>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => toggleStarting(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
+                    </View>
+                    <Ionicons name="arrow-down-circle-outline" size={26} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
               );
             })}
         </ScrollView>
       )}
+
+      <Modal visible={submitting} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.submitOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.submitLabel}>{submitProgress?.label ?? 'Creating your team...'}</Text>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${Math.min(100, Math.round(((submitProgress?.current ?? 0) / (submitProgress?.total ?? 1)) * 100))}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.submitStep}>
+            {submitProgress ? `${Math.min(submitProgress.current, submitProgress.total)} of ${submitProgress.total}` : ''}
+          </Text>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: 20, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
-  headerSubtitle: { fontSize: 16, color: Colors.primary, fontWeight: '700', marginTop: 4 },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
+  headerSubtitle: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
   tabRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 16, gap: 8 },
-  tabButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderBottomColor: Colors.border },
-  tabActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  tabText: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, textAlign: 'center' },
-  tabTextActive: { color: Colors.textInverse },
+  tabButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center', borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderBottomColor: colors.border },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
+  tabTextActive: { color: colors.textInverse },
   listContent: { padding: 16 },
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   playerInfo: { flex: 1 },
-  playerName: { flex: 1, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  // Wraps the badge+name+sub portion of a player row as its own tappable
+  // area (navigates to PlayerDetails) separate from the row's primary
+  // action (add/remove, captain toggle, bench/start toggle) - keeps both
+  // gestures working without nesting one TouchableOpacity inside another.
+  playerCardMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  infoButton: { marginLeft: 10, padding: 2 },
+  playerName: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   captainStar: { marginRight: 12 },
-  progressText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 12 },
-  playerSub: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
+  progressText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 12 },
+  playerSub: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
   playerSubRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   startingTag: {
     paddingHorizontal: 6,
@@ -686,36 +778,36 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(34,197,94,0.15)',
   },
-  startingTagText: { fontSize: 9, fontWeight: '800', color: Colors.win, letterSpacing: 0.4 },
+  startingTagText: { fontSize: 9, fontWeight: '800', color: colors.win, letterSpacing: 0.4 },
   benchTag: {
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
   },
-  benchTagText: { fontSize: 9, fontWeight: '800', color: Colors.textTertiary, letterSpacing: 0.4 },
+  benchTagText: { fontSize: 9, fontWeight: '800', color: colors.textTertiary, letterSpacing: 0.4 },
   playerAction: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  playerPrice: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
-  draftPrice: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginRight: 12 },
-  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  removeButton: { backgroundColor: Colors.live },
+  playerPrice: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  draftPrice: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginRight: 12 },
+  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  removeButton: { backgroundColor: colors.live },
   flex: { flex: 1 },
-  nameInput: { backgroundColor: Colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: Colors.border, fontSize: 16, color: Colors.textPrimary },
-  hintText: { fontSize: 12, color: Colors.textTertiary, marginBottom: 12, marginTop: -6 },
+  nameInput: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: colors.border, fontSize: 16, color: colors.textPrimary },
+  hintText: { fontSize: 12, color: colors.textTertiary, marginBottom: 12, marginTop: -6 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginHorizontal: 16,
     marginTop: 4,
     paddingHorizontal: 12,
     gap: 8,
   },
   searchIcon: { marginRight: 2 },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: Colors.textPrimary },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: colors.textPrimary },
   filterDropdownRow: {
     flexDirection: 'row',
     gap: 10,
@@ -727,7 +819,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textTertiary,
+    color: colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginHorizontal: 16,
@@ -746,55 +838,85 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  filterChipTextActive: { color: Colors.textInverse },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+  filterChipTextActive: { color: colors.textInverse },
   quotaRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
     gap: 8,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   quotaPill: {
     flex: 1,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: 'center',
   },
-  quotaPillComplete: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: Colors.win },
-  quotaText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
-  quotaTextComplete: { color: Colors.win },
+  quotaPillComplete: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: colors.win },
+  quotaText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  quotaTextComplete: { color: colors.win },
   badgeWrap: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.surface2,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
     overflow: 'hidden',
   },
   badgeImg: { width: 24, height: 24 },
-  emptyText: { textAlign: 'center', color: Colors.textTertiary, marginTop: 40 },
-  saveButton: { margin: 16, backgroundColor: Colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
-  saveButtonText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
+  emptyText: { textAlign: 'center', color: colors.textTertiary, marginTop: 40 },
+  saveButton: { margin: 16, backgroundColor: colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
+  saveButtonText: { color: colors.textInverse, fontSize: 16, fontWeight: '800' },
+  // Full-screen dimmed backdrop shown while submitSquad() runs its ~19-call
+  // sequence against the backend - no card, just the spinner/label/progress
+  // bar floating directly on the dimmed backdrop (blocks taps elsewhere on
+  // screen while a submission is actually in flight).
+  submitOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 48,
+  },
+  submitLabel: {
+    marginTop: 20,
+    marginBottom: 20,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    textAlign: 'center',
+  },
+  submitStep: { marginTop: 10, fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  progressTrack: {
+    width: '100%',
+    maxWidth: 240,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.primary },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  readyText: { fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 20, color: Colors.textPrimary },
-  pointsText: { fontSize: 32, fontWeight: '800', color: Colors.primary, marginTop: 12 },
-  retryButton: { marginTop: 16, backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
-  retryButtonText: { fontSize: 14, fontWeight: '800', color: Colors.textInverse, textTransform: 'uppercase' },
-});
+  readyText: { fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 20, color: colors.textPrimary },
+  pointsText: { fontSize: 32, fontWeight: '800', color: colors.primary, marginTop: 12 },
+  retryButton: { marginTop: 16, backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
+  retryButtonText: { fontSize: 14, fontWeight: '800', color: colors.textInverse, textTransform: 'uppercase' },
+  });
+}

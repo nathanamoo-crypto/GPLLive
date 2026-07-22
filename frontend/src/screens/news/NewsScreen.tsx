@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { NewsStackParamList } from '../../navigation/NewsStack';
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import { fetchNews, shuffleArticles } from '../../services/newsService';
+import { useTheme } from '../../context/ThemeContext';
 import type { Article } from '../../types';
 
 type NavigationProp = NativeStackNavigationProp<NewsStackParamList>;
@@ -37,6 +38,8 @@ function timeAgo(publishedAt: string): string {
 export default function NewsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,11 +79,11 @@ export default function NewsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.yellow} />
+          <ActivityIndicator size="large" color={colors.yellow} />
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Ionicons name="cloud-offline-outline" size={44} color={Colors.grey2} />
+          <Ionicons name="cloud-offline-outline" size={44} color={colors.grey2} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); load(); }}>
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -92,7 +95,7 @@ export default function NewsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: getScrollBottomPadding(insets.bottom) }]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.yellow} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />
           }
           ListHeaderComponent={<Text style={styles.screenTitle}>GPL News</Text>}
           ListEmptyComponent={
@@ -116,7 +119,7 @@ export default function NewsScreen() {
                 />
               ) : (
                 <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
-                  <Ionicons name="image-outline" size={32} color={Colors.grey2} />
+                  <Ionicons name="image-outline" size={32} color={colors.grey2} />
                 </View>
               )}
               <View style={styles.articleText}>
@@ -137,48 +140,50 @@ export default function NewsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.white,
-    textTransform: 'uppercase',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  list: { paddingBottom: 24 },
-  articleCard: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  thumbnail: { width: '100%', height: 180, backgroundColor: Colors.surface2 },
-  thumbnailPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  // minWidth: 0 keeps this column from ever being measured wider than the
-  // card itself, so the title/summary text always wraps and truncates
-  // inside the card instead of spilling past its edges.
-  articleText: { padding: 14, minWidth: 0 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  articleCategory: { fontSize: 11, color: Colors.yellow, fontWeight: '700', fontFamily: fonts.display, textTransform: 'uppercase', textAlign: 'left' },
-  articleTime: { fontSize: 11, color: Colors.grey2, fontWeight: '600', textAlign: 'right' },
-  articleTitle: { fontSize: 16, color: Colors.white, fontWeight: '800', lineHeight: 22, textAlign: 'left' },
-  articleSummary: { fontSize: 13, color: Colors.grey1, marginTop: 6, lineHeight: 18, textAlign: 'left' },
-  errorText: { fontSize: 14, color: Colors.grey1, textAlign: 'center' },
-  emptyText: { fontSize: 14, color: Colors.grey2, textAlign: 'center' },
-  retryButton: {
-    marginTop: 4,
-    backgroundColor: Colors.yellow,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  retryButtonText: { fontSize: 13, fontWeight: '800', color: '#000000', textTransform: 'uppercase' },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+    screenTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.white,
+      textTransform: 'uppercase',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    list: { paddingBottom: 24 },
+    articleCard: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      borderRadius: radius.card,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    thumbnail: { width: '100%', height: 180, backgroundColor: colors.surface2 },
+    thumbnailPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+    // minWidth: 0 keeps this column from ever being measured wider than the
+    // card itself, so the title/summary text always wraps and truncates
+    // inside the card instead of spilling past its edges.
+    articleText: { padding: 14, minWidth: 0 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    articleCategory: { fontSize: 11, color: colors.yellow, fontWeight: '700', fontFamily: fonts.display, textTransform: 'uppercase', textAlign: 'left' },
+    articleTime: { fontSize: 11, color: colors.grey2, fontWeight: '600', textAlign: 'right' },
+    articleTitle: { fontSize: 16, color: colors.white, fontWeight: '800', lineHeight: 22, textAlign: 'left' },
+    articleSummary: { fontSize: 13, color: colors.grey1, marginTop: 6, lineHeight: 18, textAlign: 'left' },
+    errorText: { fontSize: 14, color: colors.grey1, textAlign: 'center' },
+    emptyText: { fontSize: 14, color: colors.grey2, textAlign: 'center' },
+    retryButton: {
+      marginTop: 4,
+      backgroundColor: colors.yellow,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+    },
+    retryButtonText: { fontSize: 13, fontWeight: '800', color: '#000000', textTransform: 'uppercase' },
+  });
+}

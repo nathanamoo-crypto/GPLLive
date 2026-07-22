@@ -22,7 +22,7 @@ function resolveFavouriteClub(raw: { id?: number; fullName?: string } | null | u
   return backendClubToLocalClub(raw.fullName) ?? undefined;
 }
 
-function normalizeUser(raw: Partial<User> & { name?: string; fullName?: string; favouriteClub?: { id?: number; fullName?: string } | Club; subscription?: ClubSubscription }): User {
+function normalizeUser(raw: Partial<User> & { name?: string; fullName?: string; favouriteClub?: { id?: number; fullName?: string } | Club; subscription?: ClubSubscription; premium?: boolean }): User {
   const favouriteClub = raw.favouriteClub && 'slug' in raw.favouriteClub
     ? (raw.favouriteClub as Club)
     : resolveFavouriteClub(raw.favouriteClub as { id?: number; fullName?: string } | undefined);
@@ -38,6 +38,12 @@ function normalizeUser(raw: Partial<User> & { name?: string; fullName?: string; 
     reactionsPosted: raw.reactionsPosted ?? 0,
     badges: raw.badges ?? [],
     subscription: raw.subscription,
+    // Backend's UserProfileResponse field is `premium` (Lombok boolean,
+    // Jackson key "premium") - deliberately not named isPremium there to
+    // keep the getter/JSON key unambiguous (see PlayerAnalysisResponse for
+    // the same convention). Mapped to isPremium on this side to read
+    // naturally alongside the rest of the User type.
+    isPremium: !!raw.premium,
   };
 }
 
