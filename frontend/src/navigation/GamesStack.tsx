@@ -28,6 +28,7 @@ export default function GamesStack() {
       <Stack.Screen name="GamesRoot" component={GamesRoot} />
       <Stack.Screen name="MyTeam" component={MyTeamScreen} />
       <Stack.Screen name="Transfers" component={TransfersScreen} />
+      <Stack.Screen name="PlayerDetails" component={PlayerDetailsScreen} />
     </Stack.Navigator>
   );
 }
