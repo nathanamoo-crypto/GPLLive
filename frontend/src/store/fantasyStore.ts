@@ -79,6 +79,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
   draftFormation: '4-3-3',
   budget: INITIAL_BUDGET,
   loading: false,
+  submitProgress: null,
   error: null,
 
   // Mirrors the backend's per-position squad quota, per-club cap, and budget
@@ -187,11 +188,30 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
     if (draftPlayers.length < 15 || !captainId) {
       throw new Error('Complete squad and select a captain');
     }
+    // Confirming is ~19 sequential backend calls (create team, 15x add
+    // player, set lineup, captain, vice-captain) with no visual feedback
+    // beforehand - on a cold Render instance that easily runs 30-60s. Without
+    // this guard a user who thinks the tap didn't register can fire a SECOND
+    // full submitSquad() while the first is still in flight, which calls
+    // createTeam() again mid-flight and 409s while the original quietly
+    // succeeds behind it. The caller (FantasyRoot) also disables the button
+    // while `loading` is true, but this is the real backstop.
+    if (state.loading) {
+      return;
+    }
 
-    set({ loading: true, error: null });
+    const total = draftPlayers.length + 1 + (startingPlayerIds.length > 0 ? 1 : 0) + 1 + (viceCaptainId ? 1 : 0);
+    let step = 0;
+    const progress = (label: string) => {
+      step += 1;
+      set({ submitProgress: { label, current: step, total } });
+    };
+
+    set({ loading: true, error: null, submitProgress: { label: 'Creating team...', current: 0, total } });
     try {
       const team = await fantasyService.createTeam(teamName);
       const fantasyTeamId = team.teamId;
+      progress('Creating team...');
 
       // addPlayerToSquad requires fantasyTeamId alongside playerId (backend
       // 400s otherwise), and returns the created row's id (fantasyTeamPlayerId)
@@ -204,6 +224,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
       for (const player of draftPlayers) {
         const { fantasyTeamPlayerId } = await fantasyService.addPlayerToSquad(player.id, fantasyTeamId);
         playerIdToRowId.set(player.id, fantasyTeamPlayerId);
+        progress(`Adding ${player.name}...`);
       }
 
       if (startingPlayerIds.length > 0) {
@@ -212,16 +233,19 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
             .map((id) => playerIdToRowId.get(id))
             .filter((id): id is number => id != null),
         );
+        progress('Setting starting XI...');
       }
 
       const captainRowId = playerIdToRowId.get(captainId);
       if (captainRowId != null) {
         await fantasyService.setCaptain(captainRowId);
+        progress('Setting captain...');
       }
       if (viceCaptainId) {
         const viceCaptainRowId = playerIdToRowId.get(viceCaptainId);
         if (viceCaptainRowId != null) {
           await fantasyService.setViceCaptain(viceCaptainRowId);
+          progress('Setting vice-captain...');
         }
       }
 
@@ -237,6 +261,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
         draftFormation: '4-3-3',
         budget: INITIAL_BUDGET,
         loading: false,
+        submitProgress: null,
       });
     } catch (err: unknown) {
       // Axios errors default to a generic "Request failed with status code
@@ -244,7 +269,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
       // (e.g. "You already have a fantasy team") out of the response body
       // instead, so the user (and we, debugging) can actually see why.
       const message = getApiErrorMessage(err, 'Failed to submit squad');
-      set({ loading: false, error: message });
+      set({ loading: false, submitProgress: null, error: message });
       throw new Error(message);
     }
   },
@@ -292,6 +317,7 @@ export const useFantasyStore = create<FantasyState>((set, get) => ({
       draftFormation: '4-3-3',
       budget: INITIAL_BUDGET,
       loading: false,
+      submitProgress: null,
       error: null,
     });
   },
