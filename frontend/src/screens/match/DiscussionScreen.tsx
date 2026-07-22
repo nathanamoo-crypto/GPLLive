@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import SubScreenHeader from '../../components/shared/SubScreenHeader';
+import PremiumBadge from '../../components/shared/PremiumBadge';
 import {
   getDiscussionMessages,
   sendDiscussionMessage,
@@ -105,6 +106,7 @@ export default function DiscussionScreen() {
       <View style={styles.messageContent}>
         <View style={styles.messageHeader}>
           <Text style={styles.username}>{item.username}</Text>
+          {item.userPremium && <PremiumBadge variant="compact" />}
           <Text style={styles.timestamp}>{relativeTime(item.createdAt)}</Text>
         </View>
         <Text style={styles.messageText}>{item.message}</Text>

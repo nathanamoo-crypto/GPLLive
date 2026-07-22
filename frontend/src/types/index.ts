@@ -164,6 +164,36 @@ export interface User {
   reactionsPosted: number;
   badges: BadgeName[];
   subscription?: ClubSubscription;
+  // Premium (Paystack) subscription status - drives the crown badge next to
+  // the username. Named isPremium (not `subscription`, already taken above
+  // by the unrelated favourite-club-follow concept).
+  isPremium?: boolean;
+}
+
+// GET /players/{id}/analysis - `premium` tells you whether the fields below
+// it are populated; a free user gets everything down to totalAssists and
+// premium===false, with the rest left undefined.
+export interface PlayerAnalysis {
+  id: number;
+  fullName: string;
+  photoUrl?: string;
+  clubName: string;
+  position: Position;
+  currentPrice: number | null;
+  totalPoints: number;
+  totalGoals: number;
+  totalAssists: number;
+  premium: boolean;
+  averagePoints?: number;
+  recentForm?: { gameweek: number | null; points: number }[];
+  trend?: 'IMPROVING' | 'DECLINING' | 'STABLE';
+  insights?: string[];
+}
+
+export interface PremiumStatus {
+  premium: boolean;
+  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+  expiresAt: string | null;
 }
 
 // Matches the real backend NotificationResponse (id/message/isRead/
@@ -266,6 +296,11 @@ export interface FantasyState {
   draftFormation: FormationKey;
   budget: number;
   loading: boolean;
+  // Populated only while submitSquad() is running - each sequential backend
+  // call (create team, add each of the 15 players, set lineup, set
+  // captain/vice-captain) updates this so the UI can show real progress
+  // instead of a plain spinner for what can be a 20+ round-trip operation.
+  submitProgress: { label: string; current: number; total: number } | null;
   error: string | null;
   addPlayer: (player: Player) => { success: boolean; message?: string };
   removePlayer: (playerId: number) => void;

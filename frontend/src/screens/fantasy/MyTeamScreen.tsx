@@ -56,38 +56,58 @@ function MyTeamScreen() {
   // rather than trusting the id directly, since the two club lists don't
   // share ids (see backendClubMap.ts).
   const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
+  // Club badges/colors are fetched separately from the team itself and
+  // PitchView used to render immediately with clubsById still {} - every
+  // jersey briefly showed fallback/neutral styling and then "popped" into
+  // its real club colors a moment later. Gating the pitch render on this
+  // (below) instead shows one loading spinner and then the finished view.
+  const [clubsLoading, setClubsLoading] = useState(true);
   // Two-tap swap flow: tap a starter or a bench player to select it, then
   // tap the other side to swap them. Tracks player.id (not
   // fantasyTeamPlayerId) since that's what PlayerChip/PitchView key on.
   const [swapSourceId, setSwapSourceId] = useState<number | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
     fetchClubsById(controller.signal)
       .then((byId) => setClubsById(byId))
-      .catch(() => { /* falls back to a neutral color below */ });
+      .catch(() => { /* falls back to a neutral color below */ })
+      .finally(() => setClubsLoading(false));
     return () => controller.abort();
   }, []);
 
-  const handleFetchTeam = useCallback(async () => {
-    setFetching(true);
-    setFetchError(null);
+  // `silent` skips the blocking spinner/error UI - used when the store
+  // already has a team to show (e.g. right after Confirm Squad, or just
+  // revisiting this tab) so a background refresh doesn't blank the screen
+  // out to "Loading your squad..." and then flash the pitch view back in a
+  // moment later. Only a genuinely empty store (no team cached at all) gets
+  // the full blocking loader.
+  const handleFetchTeam = useCallback(async (silent = false) => {
+    if (!silent) {
+      setFetching(true);
+      setFetchError(null);
+    }
     try {
       const data = await fantasyService.getMyTeam();
       useFantasyStore.setState({ team: data, hasSquad: data !== null });
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load team data');
+      if (!silent) {
+        setFetchError(err instanceof Error ? err.message : 'Failed to load team data');
+      }
     } finally {
-      setFetching(false);
+      if (!silent) setFetching(false);
     }
   }, []);
 
   useEffect(() => {
-    handleFetchTeam();
+    const alreadyHaveTeam = useFantasyStore.getState().team != null;
+    handleFetchTeam(alreadyHaveTeam);
     fantasyService.getCurrentGameweek()
       .then((gw) => setCurrentGameweekId(gw?.gameweekId ?? null))
       .catch(() => setCurrentGameweekId(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFetchTeam]);
 
   const handleFormationPress = useCallback(
@@ -143,6 +163,7 @@ function MyTeamScreen() {
         buttons.push({ text: 'Make Vice-Captain', onPress: () => handleSetRole(player, 'vice') });
       }
       buttons.push({ text: 'Swap with Bench', onPress: () => setSwapSourceId(player.id) });
+      buttons.push({ text: 'View Details', onPress: () => navigation.navigate('PlayerDetails', { playerId: player.id }) });
       buttons.push({ text: 'Cancel', style: 'cancel' });
       Alert.alert(
         player.name,
@@ -150,7 +171,7 @@ function MyTeamScreen() {
         buttons
       );
     },
-    [team, handleSetRole]
+    [team, handleSetRole, navigation]
   );
 
   // Swaps one starter for one bench player. The min/max-per-position rules
@@ -216,6 +237,11 @@ function MyTeamScreen() {
   // (and its squad/transfers/chips) server-side and drops the user back on
   // the Squad Builder.
   const handleDeleteTeam = useCallback(() => {
+    // No spinner previously shown while the DELETE call was in flight (which
+    // can take a while on a cold backend), so the button stayed tappable and
+    // a second tap could fire a second delete against an already-deleted
+    // team. Guard + a visible "Deleting..." state fix both.
+    if (deleting) return;
     Alert.alert(
       'Delete this team?',
       'This permanently removes your squad, transfers, and chip usage so you can build a new one. This cannot be undone.',
@@ -225,6 +251,7 @@ function MyTeamScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            setDeleting(true);
             try {
               await fantasyService.deleteMyTeam();
               useFantasyStore.setState({ team: null, hasSquad: false });
@@ -232,12 +259,14 @@ function MyTeamScreen() {
               navigation.navigate('GamesRoot', { defaultTab: 'fantasy' });
             } catch (err) {
               Alert.alert('Could not delete team', getApiErrorMessage(err, 'Failed to delete team'));
+            } finally {
+              setDeleting(false);
             }
           },
         },
       ]
     );
-  }, [navigation]);
+  }, [navigation, deleting]);
 
   if (fetching) {
     return (
@@ -256,7 +285,7 @@ function MyTeamScreen() {
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Something went wrong</Text>
           <Text style={styles.emptySub}>{fetchError}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleFetchTeam}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => handleFetchTeam()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -271,6 +300,21 @@ function MyTeamScreen() {
           <Ionicons name="football-outline" size={64} color={Colors.grey2} />
           <Text style={styles.emptyTitle}>No Squad Yet</Text>
           <Text style={styles.emptySub}>Build your fantasy team to see it here.</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Club badges/colors feed straight into PitchView's jersey rendering -
+  // wait for them so the pitch appears fully styled the first time instead
+  // of painting once with fallback colors and again a moment later once
+  // clubsById arrives.
+  if (clubsLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.yellow} />
+          <Text style={styles.emptySub}>Loading your squad...</Text>
         </View>
       </View>
     );
@@ -303,11 +347,16 @@ function MyTeamScreen() {
             <Text style={styles.headerTitle}>{team.teamName}</Text>
             <TouchableOpacity
               onPress={handleDeleteTeam}
+              disabled={deleting}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.deleteTeamButton}
             >
-              <Ionicons name="trash-outline" size={16} color={Colors.grey2} />
-              <Text style={styles.deleteTeamText}>Delete Team</Text>
+              {deleting ? (
+                <ActivityIndicator size="small" color={Colors.grey2} />
+              ) : (
+                <Ionicons name="trash-outline" size={16} color={Colors.grey2} />
+              )}
+              <Text style={styles.deleteTeamText}>{deleting ? 'Deleting...' : 'Delete Team'}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.headerStats}>
@@ -366,7 +415,7 @@ function MyTeamScreen() {
                   chipType={chip.chipType}
                   fantasyTeamId={team.teamId}
                   gameweekId={currentGameweekId}
-                  onActivated={handleFetchTeam}
+                  onActivated={() => handleFetchTeam()}
                 />
               );
             })}

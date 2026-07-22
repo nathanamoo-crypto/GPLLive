@@ -10,10 +10,11 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 import { useFantasyStore } from '../../store/fantasyStore';
@@ -24,6 +25,8 @@ import FilterDropdown from '../../components/shared/FilterDropdown';
 import MyTeamScreen from './MyTeamScreen';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { Player, Position } from '../../types';
+
+type FantasyRootNavProp = NativeStackNavigationProp<GamesStackParamList>;
 
 // Mirrors the quota enforced in fantasyStore's addPlayer (2 GK, 5 DEF, 5 MID,
 // 3 FWD) - duplicated here purely for the read-only progress checklist.
@@ -54,7 +57,7 @@ function computeDefaultStartingXI(squad: Player[]): number[] {
 }
 
 export default function FantasyRoot() {
-  const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const navigation = useNavigation<FantasyRootNavProp>();
   const [activeTab, setActiveTab] = useState<'squad' | 'browse' | 'lineup'>('browse');
   const [teamName, setTeamName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -64,6 +67,10 @@ export default function FantasyRoot() {
   // mismatched one - resolve names via a live-fetched id->club map instead
   // of the old hardcoded CLUB_LOOKUP (see backendClubMap.ts for why).
   const [clubsById, setClubsById] = useState<Record<number, RealClub>>({});
+  // Same "don't paint half-styled, then pop into place" fix as MyTeamScreen -
+  // the Starting XI tab's PitchView also keys off clubsById for jersey
+  // colors/badges, so gate it behind a spinner until the fetch below lands.
+  const [clubsLoading, setClubsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState<'All' | 'GK' | 'DEF' | 'MID' | 'FWD'>('All');
   const [clubFilter, setClubFilter] = useState<number | 'All'>('All');
@@ -90,6 +97,11 @@ export default function FantasyRoot() {
     submitSquad,
     hasSquad,
     team,
+    // Renamed on destructure - `loading` above already means "player list is
+    // loading"; this one means "Confirm Squad is submitting" (a ~19-call
+    // sequence against the backend, see fantasyStore's submitSquad).
+    loading: submitting,
+    submitProgress,
   } = useFantasyStore();
 
   const loadPlayers = useCallback(async (signal?: AbortSignal) => {
@@ -132,7 +144,8 @@ export default function FantasyRoot() {
     const controller = new AbortController();
     fetchClubsById(controller.signal)
       .then((byId) => setClubsById(byId))
-      .catch(() => { /* club names fall back to 'Unknown' below */ });
+      .catch(() => { /* club names fall back to 'Unknown' below */ })
+      .finally(() => setClubsLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -186,6 +199,13 @@ export default function FantasyRoot() {
   }, [players, positionFilter, clubFilter, searchQuery]);
 
   const handleSaveSquad = async () => {
+    // Confirming is a long sequential run against the backend with a spinner
+    // as the only feedback (see the progress bar rendered on the button
+    // below) - block a second tap outright rather than firing a second
+    // submitSquad() that would race the first.
+    if (submitting) {
+      return;
+    }
     if (!teamName.trim()) {
       Alert.alert('Error', 'Please enter a team name');
       return;
@@ -216,9 +236,14 @@ export default function FantasyRoot() {
 
     try {
       await submitSquad(teamName);
-      Alert.alert('Success', 'Your fantasy team has been created!', [
-        { text: 'View My Team', onPress: () => navigation.navigate('MyTeam') },
-      ]);
+      // No navigation here on purpose - submitSquad() already set hasSquad
+      // and team in the store, so this component's own render below
+      // (`if (hasSquad && team) return <MyTeamScreen />`) has already
+      // swapped to the pitch view underneath this alert. Navigating to the
+      // separate 'MyTeam' stack route on top of that used to mount a SECOND
+      // MyTeamScreen instance (with its own fresh fetch), which is exactly
+      // the "pitch view appears, reloads, appears again" flash reported.
+      Alert.alert('Success', 'Your fantasy team has been created!');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -274,9 +299,13 @@ export default function FantasyRoot() {
         // if the user never visits the Starting XI tab - they can still
         // fine-tune it there before confirming.
         setStartingXI(computeDefaultStartingXI(latestDraft));
+        // Jump straight to My Draft instead of leaving the user on Browse
+        // once there's nothing left to browse for - picking a captain and
+        // confirming is the only thing left to do at this point.
+        setActiveTab('squad');
         Alert.alert(
           'Squad complete!',
-          "You've picked all 15 players and we've set a starting XI for you (4-3-3, your priciest players). Tweak it in the Starting XI tab, or head to My Draft to pick a captain and confirm."
+          "You've picked all 15 players and we've set a starting XI for you (4-3-3, your priciest players). Pick a captain below, tweak the lineup in Starting XI if you want, then confirm."
         );
       }
     }
@@ -433,17 +462,23 @@ export default function FantasyRoot() {
               const club = clubsById[item.clubId];
               return (
                 <View style={styles.playerCard}>
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={20} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName}>{item.name}</Text>
-                    <Text style={styles.playerSub}>{item.position} · {club?.shortName ?? club?.fullName ?? 'Unknown'}</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={20} color={Colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName}>{item.name}</Text>
+                      <Text style={styles.playerSub}>{item.position} · {club?.shortName ?? club?.fullName ?? 'Unknown'}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <View style={styles.playerAction}>
                     <Text style={styles.playerPrice}>GH₵{item.price}m</Text>
                     <TouchableOpacity
@@ -530,32 +565,38 @@ export default function FantasyRoot() {
                         color={isViceCaptain ? Colors.primary : !isStarting ? Colors.border : Colors.textTertiary}
                       />
                     </TouchableOpacity>
-                    <View style={styles.badgeWrap}>
-                      {club?.badge ? (
-                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                      ) : (
-                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                      )}
-                    </View>
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName} numberOfLines={1}>
-                        {item.name}{isCaptain ? ' (C)' : isViceCaptain ? ' (VC)' : ''}
-                      </Text>
-                      <View style={styles.playerSubRow}>
-                        <Text style={styles.playerSub} numberOfLines={1}>
-                          {item.position} · {club?.shortName ?? 'Unknown'}
-                        </Text>
-                        {isStarting ? (
-                          <View style={styles.startingTag}>
-                            <Text style={styles.startingTagText}>STARTING</Text>
-                          </View>
+                    <TouchableOpacity
+                      style={styles.playerCardMain}
+                      onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.badgeWrap}>
+                        {club?.badge ? (
+                          <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
                         ) : (
-                          <View style={styles.benchTag}>
-                            <Text style={styles.benchTagText}>BENCH</Text>
-                          </View>
+                          <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
                         )}
                       </View>
-                    </View>
+                      <View style={styles.playerInfo}>
+                        <Text style={styles.playerName} numberOfLines={1}>
+                          {item.name}{isCaptain ? ' (C)' : isViceCaptain ? ' (VC)' : ''}
+                        </Text>
+                        <View style={styles.playerSubRow}>
+                          <Text style={styles.playerSub} numberOfLines={1}>
+                            {item.position} · {club?.shortName ?? 'Unknown'}
+                          </Text>
+                          {isStarting ? (
+                            <View style={styles.startingTag}>
+                              <Text style={styles.startingTagText}>STARTING</Text>
+                            </View>
+                          ) : (
+                            <View style={styles.benchTag}>
+                              <Text style={styles.benchTagText}>BENCH</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                     <Text style={styles.draftPrice}>GH₵{item.price}m</Text>
                     <TouchableOpacity onPress={() => removePlayer(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="trash-outline" size={20} color={Colors.live} />
@@ -565,7 +606,7 @@ export default function FantasyRoot() {
               })
             )}
           </ScrollView>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveSquad}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveSquad} disabled={submitting}>
             <Text style={styles.saveButtonText}>Confirm Squad</Text>
           </TouchableOpacity>
         </View>
@@ -574,6 +615,11 @@ export default function FantasyRoot() {
           <Ionicons name="football-outline" size={48} color={Colors.grey2} />
           <Text style={styles.readyText}>Complete your 15-man squad first</Text>
           <Text style={styles.hintText}>{draftPlayers.length}/15 players picked</Text>
+        </View>
+      ) : clubsLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.readyText}>Loading pitch...</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent}>
@@ -598,24 +644,33 @@ export default function FantasyRoot() {
             .map((item) => {
               const club = clubsById[item.clubId];
               return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.playerCard}
-                  onPress={() => toggleStarting(item)}
-                >
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
-                  </View>
-                  <Ionicons name="arrow-up-circle-outline" size={26} color={Colors.primary} />
-                </TouchableOpacity>
+                <View key={item.id} style={styles.playerCard}>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => toggleStarting(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
+                    </View>
+                    <Ionicons name="arrow-up-circle-outline" size={26} color={Colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
               );
             })}
 
@@ -627,28 +682,55 @@ export default function FantasyRoot() {
             .map((item) => {
               const club = clubsById[item.clubId];
               return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.playerCard}
-                  onPress={() => toggleStarting(item)}
-                >
-                  <View style={styles.badgeWrap}>
-                    {club?.badge ? (
-                      <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                    ) : (
-                      <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                    )}
-                  </View>
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
-                  </View>
-                  <Ionicons name="arrow-down-circle-outline" size={26} color={Colors.textTertiary} />
-                </TouchableOpacity>
+                <View key={item.id} style={styles.playerCard}>
+                  <TouchableOpacity
+                    style={styles.playerCardMain}
+                    onPress={() => toggleStarting(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.badgeWrap}>
+                      {club?.badge ? (
+                        <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                      )}
+                    </View>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.playerSub} numberOfLines={1}>{item.position} · {club?.shortName ?? 'Unknown'}</Text>
+                    </View>
+                    <Ionicons name="arrow-down-circle-outline" size={26} color={Colors.textTertiary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={() => navigation.navigate('PlayerDetails', { playerId: item.id })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
               );
             })}
         </ScrollView>
       )}
+
+      <Modal visible={submitting} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.submitOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.submitLabel}>{submitProgress?.label ?? 'Creating your team...'}</Text>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${Math.min(100, Math.round(((submitProgress?.current ?? 0) / (submitProgress?.total ?? 1)) * 100))}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.submitStep}>
+            {submitProgress ? `${Math.min(submitProgress.current, submitProgress.total)} of ${submitProgress.total}` : ''}
+          </Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -675,6 +757,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   playerInfo: { flex: 1 },
+  // Wraps the badge+name+sub portion of a player row as its own tappable
+  // area (navigates to PlayerDetails) separate from the row's primary
+  // action (add/remove, captain toggle, bench/start toggle) - keeps both
+  // gestures working without nesting one TouchableOpacity inside another.
+  playerCardMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  infoButton: { marginLeft: 10, padding: 2 },
   playerName: { flex: 1, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
   captainStar: { marginRight: 12 },
   progressText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 12 },
@@ -792,6 +880,35 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', color: Colors.textTertiary, marginTop: 40 },
   saveButton: { margin: 16, backgroundColor: Colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' },
   saveButtonText: { color: Colors.textInverse, fontSize: 16, fontWeight: '800' },
+  // Full-screen dimmed backdrop shown while submitSquad() runs its ~19-call
+  // sequence against the backend - no card, just the spinner/label/progress
+  // bar floating directly on the dimmed backdrop (blocks taps elsewhere on
+  // screen while a submission is actually in flight).
+  submitOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 48,
+  },
+  submitLabel: {
+    marginTop: 20,
+    marginBottom: 20,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  submitStep: { marginTop: 10, fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  progressTrack: {
+    width: '100%',
+    maxWidth: 240,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: Colors.primary },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   readyText: { fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 20, color: Colors.textPrimary },
   pointsText: { fontSize: 32, fontWeight: '800', color: Colors.primary, marginTop: 12 },
