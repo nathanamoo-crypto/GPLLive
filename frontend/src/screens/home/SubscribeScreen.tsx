@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,74 +15,62 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { getScrollBottomPadding } from '../../constants/layout';
+import { getMyPremiumStatus } from '../../services/subscriptionService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type SubscribeNavProp = NativeStackNavigationProp<HomeStackParamList, 'Subscribe'>;
 
-interface Plan {
-  id: string;
-  name: string;
-  price: string;
-  period: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  popular?: boolean;
-  features: string[];
-}
-
-const PLANS: Plan[] = [
-  {
-    id: 'monthly',
-    name: 'Monthly',
-    price: 'GH₵15',
-    period: 'per month',
-    icon: 'flash',
-    features: [
-      'Live match updates',
-      'Basic statistics',
-      'Standard support',
-    ],
-  },
-  {
-    id: 'seasonal',
-    name: 'Seasonal',
-    price: 'GH₵75',
-    period: 'per season',
-    icon: 'trophy',
-    popular: true,
-    features: [
-      'Everything in Monthly',
-      'Ad-free experience',
-      'Fantasy football access',
-      'Match predictions',
-      'Priority support',
-    ],
-  },
-  {
-    id: 'annual',
-    name: 'Annual',
-    price: 'GH₵120',
-    period: 'per year',
-    icon: 'sparkles',
-    features: [
-      'Everything in Seasonal',
-      'Exclusive content',
-      'Early access to features',
-      'VIP event invites',
-      'Dedicated account manager',
-    ],
-  },
+// Mirrors PlayerAnalysisService's real premium fields (PlayerDetailsScreen)
+// plus the crown badge shown on the profile/discussion - this list should
+// stay in sync with what actually unlocks, not aspirational marketing copy.
+const FEATURES = [
+  { icon: 'stats-chart' as const, label: 'Average Fantasy Points per player' },
+  { icon: 'pulse' as const, label: 'Recent form - last 5 gameweeks' },
+  { icon: 'trending-up' as const, label: 'Performance trend (improving/declining/stable)' },
+  { icon: 'bulb' as const, label: 'Fantasy insights for every player' },
+  { icon: 'ribbon' as const, label: '👑 Premium badge on your profile & comments' },
 ];
 
 export default function SubscribeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<SubscribeNavProp>();
-  const [selectedPlan, setSelectedPlan] = useState('seasonal');
+  const [checking, setChecking] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
 
-  const activePlan = PLANS.find((p) => p.id === selectedPlan);
+  useEffect(() => {
+    const controller = new AbortController();
+    getMyPremiumStatus(controller.signal)
+      .then((status) => setIsPremium(status.premium))
+      .catch(() => { /* fall through to the normal subscribe flow */ })
+      .finally(() => setChecking(false));
+    return () => controller.abort();
+  }, []);
+
+  if (checking) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.yellow} />
+      </View>
+    );
+  }
+
+  if (isPremium) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <View style={styles.crownIconWrap}>
+          <Text style={styles.crownEmoji}>👑</Text>
+        </View>
+        <Text style={styles.screenTitle}>YOU'RE ALREADY PRO</Text>
+        <Text style={styles.screenSub}>Your GPL Live Premium is active - enjoy full player analysis everywhere.</Text>
+        <TouchableOpacity style={styles.cta} onPress={() => navigation.goBack()}>
+          <Text style={styles.ctaText}>DONE</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
-      {/* Close button */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.closeText}>Not now</Text>
@@ -96,52 +85,38 @@ export default function SubscribeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Crown icon */}
         <View style={styles.crownIconWrap}>
           <Text style={styles.crownEmoji}>👑</Text>
         </View>
 
         <Text style={styles.proLabel}>GPL LIVE PRO</Text>
-        <Text style={styles.screenTitle}>GO BEHIND THE SCENES WITH YOUR CLUB</Text>
-        <Text style={styles.screenSub}>Unlock premium features for your favourite club</Text>
+        <Text style={styles.screenTitle}>UNLOCK FULL PLAYER ANALYSIS</Text>
+        <Text style={styles.screenSub}>
+          See beyond the basics - average points, form, trend and insights for every player.
+        </Text>
 
-        {PLANS.map((plan) => {
-          const active = plan.id === selectedPlan;
-          return (
-            <TouchableOpacity
-              key={plan.id}
-              style={[styles.planCard, active && styles.planCardActive]}
-              onPress={() => setSelectedPlan(plan.id)}
-              activeOpacity={0.7}
-            >
-              {plan.popular && (
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularText}>POPULAR</Text>
+        <View style={styles.planCard}>
+          <View style={styles.planHeader}>
+            <View style={styles.planIconWrap}>
+              <Ionicons name="flash" size={24} color="#000000" />
+            </View>
+            <View style={styles.planInfo}>
+              <Text style={styles.planName}>GPL Live Premium</Text>
+              <Text style={styles.planPeriod}>per month</Text>
+            </View>
+            <Text style={styles.planPrice}>GH₵1.00</Text>
+          </View>
+          <View style={styles.featureList}>
+            {FEATURES.map((f, i) => (
+              <View key={i} style={styles.featureRow}>
+                <View style={styles.featureIconWrap}>
+                  <Ionicons name={f.icon} size={16} color={Colors.yellow} />
                 </View>
-              )}
-              <View style={styles.planHeader}>
-                <View style={[styles.planIconWrap, active && styles.planIconWrapActive]}>
-                  <Ionicons name={plan.icon} size={24} color={active ? '#000000' : Colors.yellow} />
-                </View>
-                <View style={styles.planInfo}>
-                  <Text style={styles.planName}>{plan.name}</Text>
-                  <Text style={styles.planPeriod}>{plan.period}</Text>
-                </View>
-                <Text style={styles.planPrice}>{plan.price}</Text>
+                <Text style={styles.featureText}>{f.label}</Text>
               </View>
-              <View style={styles.featureList}>
-                {plan.features.map((f, i) => (
-                  <View key={i} style={styles.featureRow}>
-                    <View style={styles.featureIconWrap}>
-                      <Ionicons name="checkmark-circle" size={14} color={Colors.yellow} />
-                    </View>
-                    <Text style={styles.featureText}>{f}</Text>
-                  </View>
-                ))}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+            ))}
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -150,9 +125,7 @@ export default function SubscribeScreen() {
           onPress={() => navigation.navigate('Payment')}
         >
           <Text style={styles.crownCta}>👑</Text>
-          <Text style={styles.ctaText}>
-            SUBSCRIBE NOW {activePlan ? `- ${activePlan.price}` : ''}
-          </Text>
+          <Text style={styles.ctaText}>SUBSCRIBE NOW - GH₵1.00</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.laterButton} onPress={() => navigation.goBack()}>
           <Text style={styles.laterText}>Maybe later</Text>
@@ -164,6 +137,7 @@ export default function SubscribeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.black },
+  centered: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -205,58 +179,41 @@ const styles = StyleSheet.create({
   screenSub: { fontSize: 13, color: Colors.grey1, marginBottom: 24, textAlign: 'center' },
   planCard: {
     width: '100%',
-    padding: 14,
+    padding: 16,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface2,
-    marginBottom: 8,
-    position: 'relative',
-  },
-  planCardActive: {
     borderColor: Colors.yellow,
+    backgroundColor: Colors.surface2,
   },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 16,
-    backgroundColor: Colors.yellow,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  popularText: { color: '#000', fontSize: 11, fontWeight: '800' },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   planIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: Colors.surface2,
+    backgroundColor: Colors.yellow,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  planIconWrapActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
   planInfo: { flex: 1 },
-  planName: { fontSize: 14, fontWeight: '600', color: Colors.white },
+  planName: { fontSize: 15, fontWeight: '700', color: Colors.white },
   planPeriod: { fontSize: 12, color: Colors.grey2, marginTop: 2 },
-  planPrice: { fontSize: 20, fontWeight: '800', color: Colors.yellow },
-  featureList: { gap: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  planPrice: { fontSize: 22, fontWeight: '800', color: Colors.yellow },
+  featureList: { gap: 10 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   featureIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.surface,
   },
-  featureText: { fontSize: 13, color: Colors.grey1 },
+  featureText: { fontSize: 13, color: Colors.grey1, flex: 1 },
   footer: {
     padding: 20,
     alignItems: 'center',

@@ -267,25 +267,33 @@ export default function TransfersScreen() {
                 {team.players.map((p) => {
                   const club = clubsById[p.clubId];
                   return (
-                    <TouchableOpacity
-                      key={p.fantasyTeamPlayerId}
-                      style={[styles.playerRow, isLocked && styles.playerRowDisabled]}
-                      disabled={isLocked}
-                      onPress={() => setOutgoing(p)}
-                    >
-                      <View style={styles.badgeWrap}>
-                        {club?.badge ? (
-                          <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                        ) : (
-                          <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                        )}
-                      </View>
-                      <View style={styles.playerInfo}>
-                        <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
-                        <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
-                      </View>
+                    <View key={p.fantasyTeamPlayerId} style={[styles.playerRow, isLocked && styles.playerRowDisabled]}>
+                      <TouchableOpacity
+                        style={styles.playerRowMain}
+                        disabled={isLocked}
+                        onPress={() => setOutgoing(p)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.badgeWrap}>
+                          {club?.badge ? (
+                            <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                          ) : (
+                            <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                          )}
+                        </View>
+                        <View style={styles.playerInfo}>
+                          <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
+                          <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => navigation.navigate('PlayerDetails', { playerId: p.id })}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="information-circle-outline" size={18} color={Colors.textTertiary} />
+                      </TouchableOpacity>
                       <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
-                    </TouchableOpacity>
+                    </View>
                   );
                 })}
               </>
@@ -324,24 +332,32 @@ export default function TransfersScreen() {
                       visibleCandidates.map((p) => {
                         const club = clubsById[p.clubId];
                         return (
-                          <TouchableOpacity
-                            key={p.id}
-                            style={styles.playerRow}
-                            onPress={() => setIncoming(p)}
-                          >
-                            <View style={styles.badgeWrap}>
-                              {club?.badge ? (
-                                <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
-                              ) : (
-                                <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
-                              )}
-                            </View>
-                            <View style={styles.playerInfo}>
-                              <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
-                              <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
-                            </View>
+                          <View key={p.id} style={styles.playerRow}>
+                            <TouchableOpacity
+                              style={styles.playerRowMain}
+                              onPress={() => setIncoming(p)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.badgeWrap}>
+                                {club?.badge ? (
+                                  <Image source={club.badge} style={styles.badgeImg} resizeMode="contain" />
+                                ) : (
+                                  <Ionicons name="shield-outline" size={18} color={Colors.textTertiary} />
+                                )}
+                              </View>
+                              <View style={styles.playerInfo}>
+                                <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
+                                <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => navigation.navigate('PlayerDetails', { playerId: p.id })}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="information-circle-outline" size={18} color={Colors.textTertiary} />
+                            </TouchableOpacity>
                             <Ionicons name="add-circle-outline" size={22} color={Colors.yellow} />
-                          </TouchableOpacity>
+                          </View>
                         );
                       })
                     )}
@@ -578,6 +594,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   playerRowDisabled: { opacity: 0.4 },
+  // Wraps badge+name/meta as its own tappable area (select outgoing/incoming
+  // player) separate from the row's trailing info button (view details) and
+  // decorative chevron/add icon - avoids nesting one TouchableOpacity inside
+  // another.
+  playerRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   badgeWrap: {
     width: 32,
     height: 32,
