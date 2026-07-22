@@ -19,7 +19,7 @@ import LeagueTableWidget from '../../components/home/LeagueTableWidget';
 import FantasySnapshotWidget from '../../components/home/FantasySnapshotWidget';
 import MotmVoteSpotlight from '../../components/home/MotmVoteSpotlight';
 import { Colors } from '../../constants/colors';
-import { fonts, getScrollBottomPadding } from '../../constants/layout';
+import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifications } from '../../hooks/useNotifications';
 import { getMatches } from '../../services/matchService';
@@ -90,16 +90,12 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.logoRow}>
-          <Image
-            source={require('../../../assets/GplLogo1.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.logo}>
-            GPL <Text style={styles.logoLIVE}>LIVE</Text>
-          </Text>
-        </View>
+        <Image
+          source={require('../../../assets/GplLogo1.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+          accessibilityLabel="GPL Live"
+        />
 
         <View style={styles.headerRight}>
           <TouchableOpacity
@@ -155,22 +151,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  logo: {
-    fontFamily: fonts.display,
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.white,
-  },
-  logoLIVE: {
-    color: Colors.yellow,
-  },
   logoImage: {
-    width: 38,
+    width: 90,
     height: 38,
   },
   headerRight: {
