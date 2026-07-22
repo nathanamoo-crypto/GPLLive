@@ -14,6 +14,7 @@ import { Colors } from '../../constants/colors';
 import { GPL_CLUBS } from '../../constants/clubs';
 import { fonts, getScrollBottomPadding } from '../../constants/layout';
 import { Logos } from '../../constants/logos';
+import { useTheme } from '../../context/ThemeContext';
 
 type SortKey = 'pts' | 'gd' | 'w';
 
@@ -46,6 +47,8 @@ const MOCK_STANDINGS: StandingRow[] = GPL_CLUBS.map((club, i) => ({
 
 export default function LeagueTableScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [sortBy, setSortBy] = useState<SortKey>('pts');
 
   const sorted = useMemo(() => {
@@ -116,7 +119,7 @@ export default function LeagueTableScreen() {
                 style={[
                   styles.cellPos,
                   { width: 28 },
-                  isTop && { color: Colors.fantasyGold, fontWeight: '900' },
+                  isTop && { color: colors.fantasyGold, fontWeight: '900' },
                 ]}
               >
                 {s.position}
@@ -141,8 +144,8 @@ export default function LeagueTableScreen() {
                 style={[
                   styles.cellGd,
                   { width: 32, textAlign: 'center' },
-                  s.goalDifference > 0 && { color: Colors.win },
-                  s.goalDifference < 0 && { color: Colors.loss },
+                  s.goalDifference > 0 && { color: colors.win },
+                  s.goalDifference < 0 && { color: colors.loss },
                 ]}
               >
                 {s.goalDifference > 0 ? '+' : ''}{s.goalDifference}
@@ -156,80 +159,82 @@ export default function LeagueTableScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: Colors.black,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.white,
-    textTransform: 'uppercase',
-  },
-  sortRow: {
-  backgroundColor: Colors.black,
-  borderBottomWidth: 1,
-  borderBottomColor: Colors.border,
-  },
-  sortContent: {
-  paddingHorizontal: 16,
-  flexDirection: 'row',
-  alignItems: 'center',
-  },
-  sortChip: {
-  height: 40,
-  paddingHorizontal: 18,
-  borderRadius: 20,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: Colors.surface2,
-  borderWidth: 1,
-  borderColor: Colors.border,
-  marginRight: 10,
-  },
-  sortChipActive: { backgroundColor: Colors.yellow, borderColor: Colors.yellow },
-  sortText: { fontSize: 13, fontWeight: '600', color: Colors.grey1 },
-  sortTextActive: { color: '#000000', fontWeight: '700' },
-  tableHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  th: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: fonts.display,
-    color: Colors.grey2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.08,
-  },
-  list: { flex: 1 },
-  listContent: { paddingHorizontal: 12, paddingBottom: 40 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.surface2,
-  },
-  rowAlt: { backgroundColor: Colors.surface2 },
-  rowTop: { borderLeftWidth: 3, borderLeftColor: Colors.yellow, paddingLeft: 8 },
-  cell: { fontSize: 12, color: Colors.grey1, textAlign: 'center' },
-  cellGd: { fontSize: 12, fontWeight: '700', color: Colors.grey2, textAlign: 'center' },
-  cellPts: { fontSize: 16, fontWeight: '800', color: Colors.fantasyGold, fontFamily: fonts.display, textAlign: 'center' },
-  cellPos: { fontSize: 12, fontWeight: '800', color: Colors.grey2, fontFamily: fonts.display },
-  cellClub: { fontSize: 13, fontWeight: '600', color: Colors.white },
-  badgeSmall: {
-  width: 24,
-  height: 24,
-  marginRight: 4,
-},
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
+    header: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: colors.black,
+    },
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.white,
+      textTransform: 'uppercase',
+    },
+    sortRow: {
+      backgroundColor: colors.black,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sortContent: {
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    sortChip: {
+      height: 40,
+      paddingHorizontal: 18,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 10,
+    },
+    sortChipActive: { backgroundColor: colors.yellow, borderColor: colors.yellow },
+    sortText: { fontSize: 13, fontWeight: '600', color: colors.grey1 },
+    sortTextActive: { color: '#000000', fontWeight: '700' },
+    tableHead: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    th: {
+      fontSize: 10,
+      fontWeight: '700',
+      fontFamily: fonts.display,
+      color: colors.grey2,
+      textTransform: 'uppercase',
+      letterSpacing: 0.08,
+    },
+    list: { flex: 1 },
+    listContent: { paddingHorizontal: 12, paddingBottom: 40 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.surface2,
+    },
+    rowAlt: { backgroundColor: colors.surface2 },
+    rowTop: { borderLeftWidth: 3, borderLeftColor: colors.yellow, paddingLeft: 8 },
+    cell: { fontSize: 12, color: colors.grey1, textAlign: 'center' },
+    cellGd: { fontSize: 12, fontWeight: '700', color: colors.grey2, textAlign: 'center' },
+    cellPts: { fontSize: 16, fontWeight: '800', color: colors.fantasyGold, fontFamily: fonts.display, textAlign: 'center' },
+    cellPos: { fontSize: 12, fontWeight: '800', color: colors.grey2, fontFamily: fonts.display },
+    cellClub: { fontSize: 13, fontWeight: '600', color: colors.white },
+    badgeSmall: {
+      width: 24,
+      height: 24,
+      marginRight: 4,
+    },
+  });
+}

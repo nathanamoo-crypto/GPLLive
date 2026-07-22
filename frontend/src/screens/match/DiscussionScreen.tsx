@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import SubScreenHeader from '../../components/shared/SubScreenHeader';
+import PremiumBadge from '../../components/shared/PremiumBadge';
 import {
   getDiscussionMessages,
   sendDiscussionMessage,
@@ -25,6 +26,7 @@ import {
 import type { DiscussionMessage } from '../../services/discussionService';
 import { getApiErrorMessage } from '../../services/api';
 import { getMatchDetails } from '../../services/matchService';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type DiscussionRouteProp = RouteProp<HomeStackParamList, 'Discussion'>;
@@ -43,6 +45,8 @@ function relativeTime(isoDate: string): string {
 
 export default function DiscussionScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const route = useRoute<DiscussionRouteProp>();
   const { matchId } = route.params;
 
@@ -105,6 +109,7 @@ export default function DiscussionScreen() {
       <View style={styles.messageContent}>
         <View style={styles.messageHeader}>
           <Text style={styles.username}>{item.username}</Text>
+          {item.userPremium && <PremiumBadge variant="compact" />}
           <Text style={styles.timestamp}>{relativeTime(item.createdAt)}</Text>
         </View>
         <Text style={styles.messageText}>{item.message}</Text>
@@ -122,14 +127,14 @@ export default function DiscussionScreen() {
 
         {loading && (
           <View style={styles.centeredMessage}>
-            <ActivityIndicator size="large" color={Colors.yellow} />
+            <ActivityIndicator size="large" color={colors.yellow} />
             <Text style={styles.loadingText}>Loading discussion...</Text>
           </View>
         )}
 
         {!loading && error && (
           <View style={styles.centeredMessage}>
-            <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey2} />
+            <Ionicons name="cloud-offline-outline" size={48} color={colors.grey2} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
               <Text style={styles.retryButtonText}>Retry</Text>
@@ -149,7 +154,7 @@ export default function DiscussionScreen() {
               ]}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="chatbubbles-outline" size={48} color={Colors.grey2} />
+                  <Ionicons name="chatbubbles-outline" size={48} color={colors.grey2} />
                   <Text style={styles.emptyText}>
                     No messages yet. Start the conversation!
                   </Text>
@@ -159,7 +164,7 @@ export default function DiscussionScreen() {
 
             {isFinished ? (
               <View style={[styles.closedBanner, { paddingBottom: insets.bottom + 12 }]}>
-                <Ionicons name="lock-closed-outline" size={16} color={Colors.grey2} />
+                <Ionicons name="lock-closed-outline" size={16} color={colors.grey2} />
                 <Text style={styles.closedText}>This discussion is closed - the match has ended.</Text>
               </View>
             ) : (
@@ -167,7 +172,7 @@ export default function DiscussionScreen() {
                 <TextInput
                   style={styles.textInput}
                   placeholder="Type a message..."
-                  placeholderTextColor={Colors.grey2}
+                  placeholderTextColor={colors.grey2}
                   value={inputText}
                   onChangeText={setInputText}
                   multiline
@@ -179,9 +184,9 @@ export default function DiscussionScreen() {
                   disabled={!inputText.trim() || submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator size="small" color={Colors.black} />
+                    <ActivityIndicator size="small" color={colors.black} />
                   ) : (
-                    <Ionicons name="send" size={18} color={Colors.black} />
+                    <Ionicons name="send" size={18} color={colors.black} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -193,101 +198,103 @@ export default function DiscussionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
 
-  centeredMessage: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  loadingText: { fontSize: 14, color: Colors.grey1, marginTop: 12 },
-  errorText: { fontSize: 14, color: Colors.grey1, marginTop: 12, textAlign: 'center' },
-  retryButton: { marginTop: 16, backgroundColor: Colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
-  retryButtonText: { fontSize: 14, fontWeight: '800', color: Colors.black, fontFamily: fonts.display, textTransform: 'uppercase' },
+    centeredMessage: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+    loadingText: { fontSize: 14, color: colors.grey1, marginTop: 12 },
+    errorText: { fontSize: 14, color: colors.grey1, marginTop: 12, textAlign: 'center' },
+    retryButton: { marginTop: 16, backgroundColor: colors.yellow, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.button },
+    retryButtonText: { fontSize: 14, fontWeight: '800', color: colors.black, fontFamily: fonts.display, textTransform: 'uppercase' },
 
-  listContent: { padding: 16 },
+    listContent: { padding: 16 },
 
-  emptyContainer: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 14, color: Colors.grey2, marginTop: 12, textAlign: 'center' },
+    emptyContainer: { alignItems: 'center', paddingVertical: 60 },
+    emptyText: { fontSize: 14, color: colors.grey2, marginTop: 12, textAlign: 'center' },
 
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.yellow,
-  },
-  messageContent: { flex: 1 },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  username: {
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: fonts.bodySemiBold,
-    color: Colors.white,
-  },
-  timestamp: {
-    fontSize: 11,
-    color: Colors.grey2,
-    marginLeft: 8,
-  },
-  messageText: {
-    fontSize: 14,
-    color: Colors.grey1,
-    lineHeight: 20,
-  },
+    messageRow: {
+      flexDirection: 'row',
+      marginBottom: 16,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    avatarText: {
+      fontSize: 14,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.yellow,
+    },
+    messageContent: { flex: 1 },
+    messageHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    username: {
+      fontSize: 13,
+      fontWeight: '700',
+      fontFamily: fonts.bodySemiBold,
+      color: colors.white,
+    },
+    timestamp: {
+      fontSize: 11,
+      color: colors.grey2,
+      marginLeft: 8,
+    },
+    messageText: {
+      fontSize: 14,
+      color: colors.grey1,
+      lineHeight: 20,
+    },
 
-  closedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  closedText: { fontSize: 13, color: Colors.grey2, fontWeight: '600' },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: Colors.surface2,
-    borderRadius: radius.card,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.white,
-    maxHeight: 100,
-    marginRight: 10,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.yellow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
-});
+    closedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    closedText: { fontSize: 13, color: colors.grey2, fontWeight: '600' },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    textInput: {
+      flex: 1,
+      backgroundColor: colors.surface2,
+      borderRadius: radius.card,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: colors.white,
+      maxHeight: 100,
+      marginRight: 10,
+    },
+    sendButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.yellow,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendButtonDisabled: {
+      opacity: 0.4,
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
+import { useTheme } from '../../context/ThemeContext';
 import type { OnboardingStackParamList } from '../../navigation/types';
 
 const { width } = Dimensions.get('window');
@@ -64,6 +65,8 @@ const slides: Slide[] = [
 export default function OnboardingSlides() {
   const navigation = useNavigation<SlidesNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
 
@@ -115,7 +118,7 @@ export default function OnboardingSlides() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.wordmark}>
-          GPL<Text style={{ color: Colors.yellow }}>Live</Text>
+          GPL<Text style={{ color: colors.yellow }}>Live</Text>
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate('RegisterLogin')}>
           <Text style={styles.skipText}>Skip</Text>
@@ -184,90 +187,95 @@ export default function OnboardingSlides() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  list: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  wordmark: {
-    fontFamily: fonts.display,
-    fontWeight: '800',
-    fontSize: 16,
-    color: Colors.white,
-  },
-  skipText: { color: Colors.yellow, fontSize: 14, fontWeight: '700' },
-  slideBackdrop: {
-    width,
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  slideTextBlock: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  eyebrow: {
-    color: Colors.yellow,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 2,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    color: Colors.white,
-    textTransform: 'uppercase',
-    lineHeight: 32,
-    marginBottom: 14,
-  },
-  description: {
-    fontSize: 15,
-    color: Colors.grey1,
-    lineHeight: 22,
-    maxWidth: '90%',
-  },
-  footer: { paddingHorizontal: 24, paddingTop: 24 },
-  pagination: { flexDirection: 'row', justifyContent: 'center', marginBottom: 18 },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.grey2,
-    marginHorizontal: 4,
-  },
-  dotActive: {
-    width: 24,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.yellow,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backText: { color: Colors.grey1, fontSize: 14, fontWeight: '600' },
-  primaryButton: {
-    backgroundColor: Colors.yellow,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    marginLeft: 'auto',
-  },
-  primaryButtonText: {
-    color: '#000000',
-    fontWeight: '800',
-    fontFamily: fonts.display,
-    fontSize: 15,
-    textTransform: 'uppercase',
-    letterSpacing: 0.06,
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.black },
+    list: { flex: 1 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+    },
+    wordmark: {
+      fontFamily: fonts.display,
+      fontWeight: '800',
+      fontSize: 16,
+      color: colors.white,
+    },
+    skipText: { color: colors.yellow, fontSize: 14, fontWeight: '700' },
+    // Slide backdrops are full-bleed marketing photos with a dark scrim for
+    // text legibility - this stays visually dark regardless of app theme
+    // (like a splash screen), so these colors are intentionally NOT themed.
+    slideBackdrop: {
+      width,
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    slideTextBlock: {
+      paddingHorizontal: 24,
+      paddingBottom: 32,
+    },
+    eyebrow: {
+      color: colors.yellow,
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 2,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      color: colors.white,
+      textTransform: 'uppercase',
+      lineHeight: 32,
+      marginBottom: 14,
+    },
+    description: {
+      fontSize: 15,
+      color: colors.grey1,
+      lineHeight: 22,
+      maxWidth: '90%',
+    },
+    footer: { paddingHorizontal: 24, paddingTop: 24 },
+    pagination: { flexDirection: 'row', justifyContent: 'center', marginBottom: 18 },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.grey2,
+      marginHorizontal: 4,
+    },
+    dotActive: {
+      width: 24,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.yellow,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    backText: { color: colors.grey1, fontSize: 14, fontWeight: '600' },
+    primaryButton: {
+      backgroundColor: colors.yellow,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      borderRadius: radius.button,
+      alignItems: 'center',
+      marginLeft: 'auto',
+    },
+    primaryButtonText: {
+      color: '#000000',
+      fontWeight: '800',
+      fontFamily: fonts.display,
+      fontSize: 15,
+      textTransform: 'uppercase',
+      letterSpacing: 0.06,
+    },
+  });
+}

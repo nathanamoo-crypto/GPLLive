@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Image, Animated, Easing } from 'react-native';
 
 import { Colors } from '../../constants/colors';
+import { useTheme } from '../../context/ThemeContext';
 
 // Synchronized with RootNavigator SPLASH_DELAY_MS = 2000
 // Phase 1 (0–650ms):  logo scale-in + fade
@@ -9,6 +10,8 @@ import { Colors } from '../../constants/colors';
 // Phase 3 (1000–1650ms): hold
 // Phase 4 (1650–2000ms): screen fade to black → clean handoff
 export default function SplashScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale   = useRef(new Animated.Value(0.82)).current;
   const lineWidth   = useRef(new Animated.Value(0)).current;
@@ -72,24 +75,26 @@ export default function SplashScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoWrap: {
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 280,
-    height: 280,
-  },
-  line: {
-    height: 2,
-    backgroundColor: Colors.yellow,
-    borderRadius: 1,
-    marginTop: 16,
-  },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    logoWrap: {
+      alignItems: 'center',
+    },
+    logoImage: {
+      width: 280,
+      height: 280,
+    },
+    line: {
+      height: 2,
+      backgroundColor: colors.yellow,
+      borderRadius: 1,
+      marginTop: 16,
+    },
+  });
+}
