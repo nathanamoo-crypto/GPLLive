@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
-  Image
+  Image,
+  FlatList,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,16 +18,19 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../../store/authStore';
 import { getAuthErrorMessage, validateEmail, validatePassword } from '../../utils/authValidation';
+import { fetchClubs, RealClub } from '../../services/clubService';
 import type { AuthFlowParamList } from '../../navigation/types';
 import { Colors } from '../../constants/colors';
-import { fonts } from '../../constants/layout';
-import { authFormStyles as styles } from './authFormStyles';
+import { getAuthFormStyles } from './authFormStyles';
+import { useTheme } from '../../context/ThemeContext';
 
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
 
 export default function RegisterLoginScreen() {
   const navigation = useNavigation<RegisterLoginNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getAuthFormStyles(colors), [colors]);
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
@@ -46,10 +50,48 @@ export default function RegisterLoginScreen() {
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [clubs, setClubs] = useState<RealClub[]>([]);
+  const [clubsLoading, setClubsLoading] = useState(false);
+  const [clubsError, setClubsError] = useState<string | null>(null);
+  const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
+  const [clubError, setClubError] = useState<string | null>(null);
+
+  const loadClubs = useCallback(async (signal?: AbortSignal) => {
+    setClubsLoading(true);
+    setClubsError(null);
+    try {
+      const data = await fetchClubs(signal);
+      if (signal?.aborted) return;
+      setClubs(data);
+    } catch (error) {
+      if (signal?.aborted) return;
+      setClubsError(getAuthErrorMessage(error, 'Failed to load clubs. Check your connection and try again.'));
+    } finally {
+      if (!signal?.aborted) setClubsLoading(false);
+    }
+  }, []);
+
+  // Tracks whether a club fetch has already been kicked off, using a ref
+  // (not state) so this effect doesn't depend on clubsLoading/clubs.length -
+  // depending on state that loadClubs itself sets would re-run this effect
+  // mid-fetch, aborting the in-flight request before it ever resolves and
+  // leaving clubsLoading stuck at true forever.
+  const clubsFetchStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (mode !== 'register' || clubsFetchStartedRef.current) {
+      return;
+    }
+    clubsFetchStartedRef.current = true;
+    const controller = new AbortController();
+    loadClubs(controller.signal);
+    return () => controller.abort();
+  }, [mode, loadClubs]);
+
   const goToNextStep = useCallback(() => {
     const user = useAuthStore.getState().user;
 
-    if (mode === 'login' && user?.favouriteClub) {
+    if (user?.favouriteClub) {
       if (!onboardingComplete) {
         completeOnboarding();
       }
@@ -57,7 +99,7 @@ export default function RegisterLoginScreen() {
     }
 
     navigation.navigate('PickClub');
-  }, [completeOnboarding, mode, navigation, onboardingComplete]);
+  }, [completeOnboarding, navigation, onboardingComplete]);
 
   const handleDemo = useCallback(async () => {
     if (loading) {
@@ -96,15 +138,18 @@ export default function RegisterLoginScreen() {
     const nextPasswordError = validatePassword(password);
     const nextConfirmPasswordError =
       mode === 'register' && password !== confirmPassword ? 'Passwords must match.' : null;
+    const nextClubError =
+      mode === 'register' && !selectedClubId ? 'Please choose your favourite club.' : null;
 
     setNameError(nextNameError);
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
     setConfirmPasswordError(nextConfirmPasswordError);
+    setClubError(nextClubError);
     setFormError(null);
     setForgotMessage(null);
 
-    if (nextNameError || nextEmailError || nextPasswordError || nextConfirmPasswordError) {
+    if (nextNameError || nextEmailError || nextPasswordError || nextConfirmPasswordError || nextClubError) {
       return;
     }
 
@@ -112,7 +157,7 @@ export default function RegisterLoginScreen() {
 
     try {
       if (mode === 'register') {
-        await register(name.trim(), email.trim(), password);
+        await register(name.trim(), email.trim(), password, selectedClubId as number);
       } else {
         await login(email.trim(), password);
       }
@@ -132,7 +177,15 @@ export default function RegisterLoginScreen() {
     name,
     password,
     register,
+    selectedClubId,
   ]);
+
+  const handleModeChange = useCallback((nextMode: 'register' | 'login') => {
+    setMode(nextMode);
+    setFormError(null);
+    setForgotMessage(null);
+    setClubError(null);
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -150,28 +203,8 @@ export default function RegisterLoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-         <Image
-          source={require('../../../assets/GplLogo1.png')}
-            style={{
-                    width: 120,
-                    height: 120,
-                    marginBottom: 12,
-                  }}
-         resizeMode="contain"
-  />
-
-  <Text
-    style={{
-      fontFamily: fonts.display,
-      fontSize: 20,
-      fontWeight: '800',
-      color: Colors.white,
-    }}
-  >
-    GPL <Text style={{ color: Colors.yellow }}>LIVE</Text>
-  </Text>
-</View>
+        <Text style={styles.heading}>Welcome to GPL Live</Text>
+        <Text style={styles.subheading}>Sign in or create an account to continue.</Text>
 
         {mode === 'register' && (
           <View style={styles.field}>
@@ -259,6 +292,62 @@ export default function RegisterLoginScreen() {
           </View>
         )}
 
+        {mode === 'register' && (
+          <View style={styles.field}>
+            <Text style={styles.label}>Favourite club</Text>
+            {clubsLoading ? (
+              <View style={styles.clubPickerLoading}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : clubsError ? (
+              <View style={styles.clubPickerLoading}>
+                <Text style={styles.errorText}>{clubsError}</Text>
+                <TouchableOpacity onPress={() => loadClubs()} disabled={loading}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={clubs}
+                keyExtractor={(item) => String(item.id)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.clubList}
+                renderItem={({ item }) => {
+                  const active = item.id === selectedClubId;
+                  return (
+                    <TouchableOpacity
+                      style={[styles.clubChip, active && styles.clubChipActive]}
+                      onPress={() => {
+                        setSelectedClubId(item.id);
+                        if (clubError) {
+                          setClubError(null);
+                        }
+                      }}
+                      disabled={loading}
+                    >
+                      <View style={styles.clubChipBadge}>
+                        {item.badge ? (
+                          <Image source={item.badge} style={styles.clubChipBadgeImage} resizeMode="contain" />
+                        ) : (
+                          <Ionicons name="shield-outline" size={18} color={colors.textTertiary} />
+                        )}
+                      </View>
+                      <Text
+                        style={[styles.clubChipText, active && styles.clubChipTextActive]}
+                        numberOfLines={1}
+                      >
+                        {item.shortName || item.fullName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+            {clubError ? <Text style={styles.errorText}>{clubError}</Text> : null}
+          </View>
+        )}
+
         {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
         {forgotMessage ? <Text style={styles.infoText}>{forgotMessage}</Text> : null}
 
@@ -268,7 +357,7 @@ export default function RegisterLoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Text style={styles.submitButtonText}>
               {mode === 'register' ? 'Create account' : 'Log in'}
@@ -281,12 +370,27 @@ export default function RegisterLoginScreen() {
           onPress={handleGoogleSignIn}
           disabled={loading}
         >
-          <Ionicons name="logo-google" size={18} color={Colors.textPrimary} />
+          <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.demoButton} onPress={handleDemo} disabled={loading}>
           <Text style={styles.demoButtonText}>Continue as Demo User (For Testing)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.switchModeRow}
+          onPress={() => handleModeChange(mode === 'register' ? 'login' : 'register')}
+          disabled={loading}
+        >
+          <Text style={styles.switchModeText}>
+            {mode === 'register'
+              ? 'Already have an account? '
+              : "New here? "}
+            <Text style={styles.switchModeLink}>
+              {mode === 'register' ? 'Log in' : 'Create account'}
+            </Text>
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

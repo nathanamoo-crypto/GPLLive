@@ -1,12 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import MatchCard from '../shared/MatchCard';
 import { Colors } from '../../constants/colors';
-import { fonts, radius } from '../../constants/layout';
 import { Match } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 interface TodayMatchesWidgetProps {
@@ -17,6 +17,8 @@ type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const renderItem = useCallback(
     ({ item }: { item: Match }) => (
@@ -31,7 +33,7 @@ export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps)
     [navigation]
   );
 
-  const keyExtractor = useCallback((item: Match) => item.id, []);
+  const keyExtractor = useCallback((item: Match) => String(item.id), []);
 
   return (
     <View style={styles.widget}>
@@ -55,21 +57,23 @@ export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps)
   );
 }
 
-const styles = StyleSheet.create({
-  widget: {
-    backgroundColor: Colors.surface,
-    borderRadius: radius.card,
-    padding: 16,
-    marginBottom: 16,
-  },
-  widgetTitle: { fontSize: 16, fontFamily: fonts.bodyBold, color: Colors.white, marginBottom: 12 },
-  horizontalList: { paddingVertical: 4 },
-  matchCardWrapper: { marginRight: 14 },
-  emptyState: {
-    backgroundColor: Colors.surface2,
-    borderRadius: radius.card,
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyText: { color: Colors.grey1, fontFamily: fonts.body, fontSize: 14 },
-});
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+    widget: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 16,
+    },
+    widgetTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
+    horizontalList: { paddingVertical: 4 },
+    matchCardWrapper: { marginRight: 14 },
+    emptyState: {
+      backgroundColor: colors.primaryLight,
+      borderRadius: 14,
+      padding: 20,
+      alignItems: 'center',
+    },
+    emptyText: { color: colors.textSecondary, fontWeight: '600' },
+  });
+}

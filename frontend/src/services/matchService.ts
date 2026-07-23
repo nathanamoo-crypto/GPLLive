@@ -1,31 +1,109 @@
-import { Match, MatchEvent } from '../types';
-import { DUMMY_MATCHES } from '../constants/homeDummyData';
+import api from './api';
+import { MatchEndpoints, MATCH_URL } from '../constants/apiUrls';
+import { Match, MatchStatus, FixtureResult, Club } from '../types';
+import { backendClubToLocalClub } from './clubService';
 
-/**
- * MOCK MATCH SERVICE
- * -------------------
- * This layer abstracts data fetching to make future API integration seamless.
- * 
- * TO REVERT/UPDATE: Replace mock returns with real 'api.get()' calls.
- */
+function normalizeStatus(status: string): MatchStatus {
+  const lower = (status ?? '').toLowerCase();
+  if (lower === 'live' || lower === 'in_progress' || lower === 'playing') return 'live';
+  if (lower === 'finished' || lower === 'completed') return 'finished';
+  return 'scheduled';
+}
 
-// TODO: Replace with API call to /matches
-export const getMatches = async (): Promise<Match[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return DUMMY_MATCHES;
-};
+// FixtureResponse only ever sends the club's real full name (homeClubName/
+// awayClubName), never an id or object - resolve it to this app's local Club
+// shape (badge/slug) via the same name mapping used for the club picker,
+// rather than trusting any id, since local and backend club ids don't match.
+function resolveFixtureClub(fullName: string | undefined): Club {
+  const resolved = fullName ? backendClubToLocalClub(fullName) : null;
+  if (resolved) return resolved;
+  const name = fullName ?? 'Unknown Club';
+  return {
+    id: 0,
+    name,
+    shortName: name.length > 12 ? name.slice(0, 12) : name,
+    slug: '',
+    badgeUrl: '',
+    city: '',
+  };
+}
 
-// TODO: Replace with API call to /matches/:id
-export const getMatchDetails = async (id: string): Promise<Match | null> => {
-  const match = DUMMY_MATCHES.find(m => m.id === id);
-  return match || null;
-};
+function mapFixture(data: any): Match {
+  return {
+    id: data.id ?? data.fixtureId,
+    homeClub: resolveFixtureClub(data.homeClubName ?? data.homeClub?.fullName),
+    awayClub: resolveFixtureClub(data.awayClubName ?? data.awayClub?.fullName),
+    homeScore: data.homeScore ?? null,
+    awayScore: data.awayScore ?? null,
+    status: normalizeStatus(data.fixtureStatus ?? data.status),
+    kickoffTime: data.matchDate ?? data.kickoffTime ?? data.kickoff,
+    liveMinute: data.liveMinute,
+    venue: data.venue ?? '',
+    round: data.gameweekNumber ?? data.gameweek ?? 0,
+    gameweek: data.gameweekNumber ?? data.gameweek ?? 0,
+  };
+}
 
-// TODO: Replace with API call to /matches/:id/events
-export const getMatchEvents = async (matchId: string): Promise<MatchEvent[]> => {
-  return [
-    { id: 'e1', matchId, type: 'goal', minute: 12, playerName: 'Frank Etouga', side: 'home' },
-    { id: 'e2', matchId, type: 'yellow_card', minute: 34, playerName: 'Awako', side: 'away' },
-  ];
-};
+export async function getMatches(gameweekId?: number, status?: string, signal?: AbortSignal): Promise<Match[]> {
+  let path: string;
+  if (gameweekId != null) {
+    path = `${MatchEndpoints.FIXTURES}/gameweek/${gameweekId}`;
+  } else if (status) {
+    const s = status.toLowerCase();
+    if (s === 'live') path = `${MatchEndpoints.FIXTURES}/live`;
+    else if (s === 'scheduled') path = `${MatchEndpoints.FIXTURES}/scheduled`;
+    else if (s === 'finished') path = `${MatchEndpoints.FIXTURES}/finished`;
+    else path = MatchEndpoints.FIXTURES;
+  } else {
+    path = MatchEndpoints.FIXTURES;
+  }
+
+  const { data } = await api.get<any[]>(path, { baseURL: MATCH_URL, signal });
+  return (data ?? []).map(mapFixture);
+}
+
+export async function getMatchDetails(id: number, signal?: AbortSignal): Promise<Match | null> {
+  try {
+    const { data } = await api.get<any>(`${MatchEndpoints.FIXTURES}/${id}`, { baseURL: MATCH_URL, signal });
+    return mapFixture(data);
+  } catch (err: any) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+}
+
+// mapFixture() above resolves club names down to this app's LOCAL club ids
+// (via name->slug->local id), discarding the backend's real club id/name in
+// the process - fine for display, but useless for calling anything that
+// needs the real id (e.g. GET /players/club/{clubId}). This returns the raw
+// backend names straight off FixtureResponse instead, so callers can match
+// them against fetchClubs() (which has real id + the same exact fullName)
+// to recover the real ids.
+export async function getFixtureClubNames(
+  fixtureId: number,
+  signal?: AbortSignal,
+): Promise<{ homeClubName: string; awayClubName: string } | null> {
+  try {
+    const { data } = await api.get<any>(`${MatchEndpoints.FIXTURES}/${fixtureId}`, { baseURL: MATCH_URL, signal });
+    return {
+      homeClubName: data.homeClubName,
+      awayClubName: data.awayClubName,
+    };
+  } catch (err: any) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function getFixtureResults(fixtureId: number, signal?: AbortSignal): Promise<FixtureResult | null> {
+  try {
+    const { data } = await api.get<FixtureResult>(
+      `${MatchEndpoints.FIXTURE_RESULTS}/${fixtureId}`,
+      { baseURL: MATCH_URL, signal },
+    );
+    return data;
+  } catch (err: any) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+}

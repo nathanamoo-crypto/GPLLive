@@ -4,25 +4,46 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import api, { configureApiAuth, getApiErrorMessage } from '../services/api';
-import { AuthState, User, Club } from '../types';
+import { AuthEndpoints } from '../constants/apiUrls';
+import { AuthState, User, Club, ClubSubscription } from '../types';
+import { backendClubToLocalClub } from '../services/clubService';
 
 function isOfflineError(error: unknown): boolean {
   const axiosError = error as AxiosError;
   return !axiosError.response || axiosError.message === 'Network Error';
 }
 
-function normalizeUser(rawUser: Partial<User> & { name?: string }): User {
+// Backend's GET/PATCH /auth/users/me returns favouriteClub as
+// {id, fullName, shortName, logoUrl} (the real backend club) - resolve that
+// to this app's local Club shape (for badge/asset lookups) via the explicit
+// name mapping, rather than trusting the backend's id against local data.
+function resolveFavouriteClub(raw: { id?: number; fullName?: string } | null | undefined): Club | undefined {
+  if (!raw?.fullName) return undefined;
+  return backendClubToLocalClub(raw.fullName) ?? undefined;
+}
+
+function normalizeUser(raw: Partial<User> & { name?: string; fullName?: string; favouriteClub?: { id?: number; fullName?: string } | Club; subscription?: ClubSubscription; premium?: boolean }): User {
+  const favouriteClub = raw.favouriteClub && 'slug' in raw.favouriteClub
+    ? (raw.favouriteClub as Club)
+    : resolveFavouriteClub(raw.favouriteClub as { id?: number; fullName?: string } | undefined);
+
   return {
-    id: rawUser.id ?? '',
-    username: rawUser.username ?? rawUser.name ?? 'Fan',
-    email: rawUser.email ?? '',
-    avatarUrl: rawUser.avatarUrl,
-    favouriteClub: rawUser.favouriteClub,
-    fantasyRank: rawUser.fantasyRank,
-    predictionPoints: rawUser.predictionPoints ?? 0,
-    reactionsPosted: rawUser.reactionsPosted ?? 0,
-    badges: rawUser.badges ?? [],
-    subscription: rawUser.subscription,
+    id: raw.id ?? 0,
+    username: raw.username ?? raw.name ?? raw.fullName ?? 'Fan',
+    email: raw.email ?? '',
+    avatarUrl: raw.avatarUrl,
+    favouriteClub,
+    fantasyRank: raw.fantasyRank,
+    predictionPoints: raw.predictionPoints ?? 0,
+    reactionsPosted: raw.reactionsPosted ?? 0,
+    badges: raw.badges ?? [],
+    subscription: raw.subscription,
+    // Backend's UserProfileResponse field is `premium` (Lombok boolean,
+    // Jackson key "premium") - deliberately not named isPremium there to
+    // keep the getter/JSON key unambiguous (see PlayerAnalysisResponse for
+    // the same convention). Mapped to isPremium on this side to read
+    // naturally alongside the rest of the User type.
+    isPremium: !!raw.premium,
   };
 }
 
@@ -36,41 +57,86 @@ export const useAuthStore = create<AuthState>()(
       splashKey: 0,
       login: async (email, password) => {
         try {
-          const response = await api.post('/auth/login', { email, password });
-          const token = response.data?.token as string | undefined;
-          const user = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
-            : null;
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.LOGIN, { email, password },
+          );
+          const { token, username, userId } = response.data;
 
-          if (!token || !user) {
+          if (!token || !username) {
             throw new Error('Invalid auth response');
           }
 
+          const user: User = {
+            id: userId ?? 0,
+            username,
+            email: '',
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
+
           set({ user, token, isAuthenticated: true });
+
+          // Best-effort - backend's GET /auth/users/me returns the profile
+          // flat (no wrapper), including favouriteClub if one was set at
+          // registration. If this fails, the login already succeeded above.
+          try {
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
         } catch (error) {
           throw new Error(getApiErrorMessage(error, 'Login failed'));
         }
       },
-      register: async (name, email, password) => {
+      register: async (username, email, password, favouriteClubId) => {
         try {
-          const response = await api.post('/auth/register', { name, email, password });
-          const token = response.data?.token as string | undefined;
-          const user = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
-            : null;
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.REGISTER,
+            { username, email, password, fullName: username, favouriteClubId },
+          );
+          const { token, username: returnedUsername, userId } = response.data;
 
-          if (!token || !user) {
+          if (!token || !returnedUsername) {
             throw new Error('Invalid register response');
           }
 
+          const user: User = {
+            id: userId ?? 0,
+            username: returnedUsername,
+            email,
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
+
           set({ user, token, isAuthenticated: true });
+
+          // Fetch the full profile so `user.favouriteClub` is populated -
+          // RegisterLoginScreen relies on this being set to skip the
+          // fallback club-picker step after a fresh registration.
+          try {
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
         } catch (error) {
           throw new Error(getApiErrorMessage(error, 'Registration failed'));
         }
       },
       loginDemo: async () => {
         const demoUser: User = {
-          id: 'demo-user-1',
+          id: 999,
           username: 'Demo User',
           email: 'demo@example.com',
           predictionPoints: 0,
@@ -86,14 +152,15 @@ export const useAuthStore = create<AuthState>()(
       resetOnboarding: () => {
         set({ onboardingComplete: false, splashKey: get().splashKey + 1 });
       },
-      setFavouriteClub: async (club: Club) => {
+      setFavouriteClub: async (club: { id: number; fullName: string }) => {
         const currentUser = get().user;
         if (!currentUser) {
           throw new Error('No user available');
         }
 
+        const localClub = resolveFavouriteClub(club);
         const saveLocally = () => {
-          set({ user: { ...currentUser, favouriteClub: club } });
+          set({ user: { ...currentUser, favouriteClub: localClub } });
         };
 
         const token = get().token;
@@ -103,13 +170,13 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await api.patch('/auth/users/me', {
-            favouriteClubId: club.id,
-          });
+          const response = await api.patch<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+            AuthEndpoints.UPDATE_ME, { favouriteClubId: club.id },
+          );
 
-          const updatedUser = response.data?.user
-            ? normalizeUser(response.data.user as Partial<User> & { name?: string })
-            : { ...currentUser, favouriteClub: club };
+          const updatedUser = response.data
+            ? normalizeUser(response.data)
+            : { ...currentUser, favouriteClub: localClub };
 
           set({ user: updatedUser });
         } catch (error) {

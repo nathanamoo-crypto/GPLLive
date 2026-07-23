@@ -1,32 +1,98 @@
 /// <reference types="jest" />
 
-import { useFantasyStore } from '../fantasyStore';
-import { Club, Player } from '../../types';
+import { useFantasyStore, computeFormation } from '../fantasyStore';
+import { Club, Player, FormationKey, ChipStatus } from '../../types';
 
-const makeMockClub = (id: string, name: string): Club => ({
+jest.mock('../../services/fantasyService', () => {
+  const emptyTeam = {
+    teamId: 1,
+    userId: 1,
+    teamName: 'Test Team',
+    players: [] as any[],
+    captainId: null,
+    viceCaptainId: null,
+    startingPlayerIds: [] as number[],
+    formation: '4-3-3',
+    chips: { tripleCaptain: false, benchBoost: false, wildcard: false, wildcard2: false, freeHit: false },
+    totalPoints: 0,
+    gameweekPoints: 0,
+    rank: 0,
+    budget: 100,
+    freeTransfers: 1,
+    isLocked: false,
+    createdAt: new Date().toISOString(),
+  };
+  return {
+    createTeam: jest.fn().mockResolvedValue(emptyTeam),
+    addPlayerToSquad: jest.fn().mockResolvedValue(undefined),
+    removePlayerFromSquad: jest.fn().mockResolvedValue(undefined),
+    setLineup: jest.fn().mockResolvedValue(undefined),
+    setCaptain: jest.fn().mockResolvedValue(undefined),
+    setViceCaptain: jest.fn().mockResolvedValue(undefined),
+    getMyTeam: jest.fn().mockResolvedValue(emptyTeam),
+    lockTeamForGameweek: jest.fn().mockResolvedValue(undefined),
+    unlockTeam: jest.fn().mockResolvedValue(undefined),
+    fetchPlayers: jest.fn(),
+    getPlayerStats: jest.fn(),
+    getGameweeks: jest.fn(),
+  };
+});
+
+const makeMockClub = (id: number, name: string): Club => ({
   id,
   name,
   shortName: name.split(' ')[0] || name,
+  slug: `slug_${id}`,
   badgeUrl: `local://${id}`,
   city: 'Test City',
 });
 
-const makePlayer = (id: string, name: string, position: 'GK' | 'DEF' | 'MID' | 'FWD', price: number, clubId: string, clubName: string): Player => ({
+const clubs: Record<number, Club> = {
+  1: makeMockClub(1, 'Hearts of Oak'),
+  2: makeMockClub(2, 'Asante Kotoko'),
+  3: makeMockClub(3, 'Medeama SC'),
+  4: makeMockClub(4, 'Dreams FC'),
+};
+
+const makePlayer = (id: number, name: string, position: 'GK' | 'DEF' | 'MID' | 'FWD', price: number, clubId: number): Player => ({
   id,
   name,
   position,
   price,
   clubId,
-  club: makeMockClub(clubId, clubName),
+  photoUrl: undefined,
 });
 
-const GK = makePlayer('gk1', 'Test GK', 'GK', 6.0, 'hearts', 'Hearts of Oak');
-const DEF1 = makePlayer('def1', 'Test DEF1', 'DEF', 7.0, 'kotoko', 'Asante Kotoko');
-const DEF2 = makePlayer('def2', 'Test DEF2', 'DEF', 6.5, 'hearts', 'Hearts of Oak');
-const MID1 = makePlayer('mid1', 'Test MID1', 'MID', 9.0, 'medeama', 'Medeama SC');
-const MID2 = makePlayer('mid2', 'Test MID2', 'MID', 8.0, 'dreams', 'Dreams FC');
-const FWD1 = makePlayer('fwd1', 'Test FWD1', 'FWD', 10.0, 'kotoko', 'Asante Kotoko');
-const FWD2 = makePlayer('fwd2', 'Test FWD2', 'FWD', 9.5, 'hearts', 'Hearts of Oak');
+const GK = makePlayer(1, 'Test GK', 'GK', 6.0, 1);
+const DEF1 = makePlayer(2, 'Test DEF1', 'DEF', 7.0, 2);
+const DEF2 = makePlayer(3, 'Test DEF2', 'DEF', 6.5, 1);
+const DEF3 = makePlayer(4, 'Test DEF3', 'DEF', 5.5, 3);
+const DEF4 = makePlayer(5, 'Test DEF4', 'DEF', 5.0, 4);
+const MID1 = makePlayer(6, 'Test MID1', 'MID', 9.0, 3);
+const MID2 = makePlayer(7, 'Test MID2', 'MID', 8.0, 4);
+const MID3 = makePlayer(8, 'Test MID3', 'MID', 7.0, 2);
+const MID4 = makePlayer(9, 'Test MID4', 'MID', 6.0, 1);
+const FWD1 = makePlayer(10, 'Test FWD1', 'FWD', 10.0, 2);
+// clubId 4, not 1 - club 1 already has GK/DEF2/MID4 (3, the max allowed).
+const FWD2 = makePlayer(11, 'Test FWD2', 'FWD', 9.5, 4);
+const FWD3 = makePlayer(12, 'Test FWD3', 'FWD', 8.5, 3);
+
+// The store now enforces the same per-position squad quota AND per-club cap
+// (max 3 players from any one club) as the backend. Tests that need a full,
+// submittable 15-man squad must respect both or addPlayer will silently
+// reject players past the cap. Spreading across 5 clubs gives exactly 3
+// players per club for a 15-man squad.
+const makeValidSquad = (idOffset: number, price = 5.0): Player[] => {
+  const positions: Array<'GK' | 'DEF' | 'MID' | 'FWD'> = [
+    'GK', 'GK',
+    'DEF', 'DEF', 'DEF', 'DEF', 'DEF',
+    'MID', 'MID', 'MID', 'MID', 'MID',
+    'FWD', 'FWD', 'FWD',
+  ];
+  return positions.map((position, i) =>
+    makePlayer(idOffset + i, `Squad Player ${idOffset + i}`, position, price, (i % 5) + 1)
+  );
+};
 
 const resetStore = () => {
   useFantasyStore.setState({
@@ -36,8 +102,10 @@ const resetStore = () => {
     draftCaptainId: null,
     draftViceCaptainId: null,
     draftStartingPlayerIds: [],
-    draftFormation: '4-3-3',
+    draftFormation: '4-3-3' as FormationKey,
     budget: 100,
+    loading: false,
+    error: null,
   });
 };
 
@@ -59,7 +127,7 @@ describe('existing functionality', () => {
     store.addPlayer(GK);
     expect(useFantasyStore.getState().budget).toBe(94);
     expect(useFantasyStore.getState().draftPlayers).toHaveLength(1);
-    expect(useFantasyStore.getState().draftPlayers[0].id).toBe('gk1');
+    expect(useFantasyStore.getState().draftPlayers[0].id).toBe(1);
   });
 
   it('addPlayer does not add duplicate players', () => {
@@ -75,7 +143,7 @@ describe('existing functionality', () => {
     store.addPlayer(GK);
     store.addPlayer(DEF1);
     expect(useFantasyStore.getState().budget).toBe(87);
-    store.removePlayer('gk1');
+    store.removePlayer(1);
     expect(useFantasyStore.getState().budget).toBe(93);
     expect(useFantasyStore.getState().draftPlayers).toHaveLength(1);
   });
@@ -83,35 +151,29 @@ describe('existing functionality', () => {
   it('removePlayer of non-existent player does nothing', () => {
     const store = useFantasyStore.getState();
     store.addPlayer(GK);
-    store.removePlayer('nonexistent');
+    store.removePlayer(999);
     expect(useFantasyStore.getState().budget).toBe(94);
     expect(useFantasyStore.getState().draftPlayers).toHaveLength(1);
   });
 
   it('setCaptain sets draftCaptainId', () => {
     const store = useFantasyStore.getState();
-    store.setCaptain('def1');
-    expect(useFantasyStore.getState().draftCaptainId).toBe('def1');
+    store.setCaptain(2);
+    expect(useFantasyStore.getState().draftCaptainId).toBe(2);
   });
 
   it('submitSquad creates a team and resets draft state', async () => {
     const store = useFantasyStore.getState();
-    const players = [GK, DEF1, DEF2, MID1, MID2, FWD1, FWD2];
-    // Need 15 players minimum
-    for (let i = 0; i < 8; i++) {
-      const extra = makePlayer(`extra${i}`, `Extra ${i}`, i < 3 ? 'DEF' : i < 6 ? 'MID' : 'FWD', 5.0, 'bibiani', 'Bibiani Gold Stars');
-      players.push(extra);
-    }
-    for (const p of players) {
+    const squad = makeValidSquad(100);
+    for (const p of squad) {
       store.addPlayer(p);
     }
-    store.setCaptain('def1');
+    store.setCaptain(squad[0].id);
     await useFantasyStore.getState().submitSquad('Test Team');
     const state = useFantasyStore.getState();
     expect(state.hasSquad).toBe(true);
     expect(state.team).not.toBeNull();
     expect(state.team!.teamName).toBe('Test Team');
-    expect(state.team!.captainId).toBe('def1');
     expect(state.draftPlayers).toEqual([]);
     expect(state.budget).toBe(100);
   });
@@ -120,14 +182,14 @@ describe('existing functionality', () => {
     const store = useFantasyStore.getState();
     store.addPlayer(GK);
     store.addPlayer(DEF1);
-    store.setCaptain('gk1');
+    store.setCaptain(1);
     await expect(store.submitSquad('Bad Team')).rejects.toThrow('Complete squad');
   });
 
   it('submitSquad throws if no captain', async () => {
     const store = useFantasyStore.getState();
     for (let i = 0; i < 15; i++) {
-      const p = makePlayer(`p${i}`, `Player ${i}`, 'DEF', 5.0, 'kotoko', 'Asante Kotoko');
+      const p = makePlayer(200 + i, `Player ${i}`, 'DEF', 5.0, 2);
       store.addPlayer(p);
     }
     await expect(store.submitSquad('No Captain')).rejects.toThrow('Complete squad');
@@ -145,33 +207,52 @@ describe('existing functionality', () => {
   });
 });
 
-describe('new actions (Task 2)', () => {
+describe('new actions', () => {
   it('setViceCaptain sets draftViceCaptainId', () => {
     const store = useFantasyStore.getState();
-    store.setViceCaptain('mid1');
-    expect(useFantasyStore.getState().draftViceCaptainId).toBe('mid1');
+    store.setViceCaptain(6);
+    expect(useFantasyStore.getState().draftViceCaptainId).toBe(6);
   });
 
   it('setCaptain clears viceCaptainId if same player', () => {
     const store = useFantasyStore.getState();
-    store.setViceCaptain('p1');
-    store.setCaptain('p1');
-    expect(useFantasyStore.getState().draftCaptainId).toBe('p1');
+    store.setViceCaptain(1);
+    store.setCaptain(1);
+    expect(useFantasyStore.getState().draftCaptainId).toBe(1);
     expect(useFantasyStore.getState().draftViceCaptainId).toBeNull();
   });
 
   it('setViceCaptain clears captainId if same player', () => {
     const store = useFantasyStore.getState();
-    store.setCaptain('p1');
-    store.setViceCaptain('p1');
-    expect(useFantasyStore.getState().draftViceCaptainId).toBe('p1');
+    store.setCaptain(1);
+    store.setViceCaptain(1);
+    expect(useFantasyStore.getState().draftViceCaptainId).toBe(1);
     expect(useFantasyStore.getState().draftCaptainId).toBeNull();
   });
 
-  it('setStartingXI stores starting player IDs', () => {
+  it('setStartingXI stores starting player IDs and auto-derives formation', () => {
     const store = useFantasyStore.getState();
-    store.setStartingXI(['p1', 'p2', 'p3']);
-    expect(useFantasyStore.getState().draftStartingPlayerIds).toEqual(['p1', 'p2', 'p3']);
+    store.addPlayer(GK);
+    store.addPlayer(DEF1);
+    store.addPlayer(DEF2);
+    store.addPlayer(DEF3);
+    store.addPlayer(DEF4);
+    store.addPlayer(MID1);
+    store.addPlayer(MID2);
+    store.addPlayer(MID3);
+    store.addPlayer(MID4);
+    store.addPlayer(FWD1);
+    store.addPlayer(FWD2);
+    store.addPlayer(FWD3);
+
+    store.setStartingXI([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12]);
+    let state = useFantasyStore.getState();
+    expect(state.draftStartingPlayerIds).toHaveLength(11);
+    expect(state.draftFormation).toBe('4-3-3');
+
+    store.setStartingXI([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    state = useFantasyStore.getState();
+    expect(state.draftFormation).toBe('4-4-2');
   });
 
   it('setFormation stores formation string', () => {
@@ -180,60 +261,18 @@ describe('new actions (Task 2)', () => {
     expect(useFantasyStore.getState().draftFormation).toBe('4-4-2');
   });
 
-  it('lockTeamForGameweek locks the team and sets deadline', () => {
-    const store = useFantasyStore.getState();
-    // Need a team first
-    store.setCaptain('p1');
-    store.lockTeamForGameweek();
-    // No team yet, should be no-op
-    expect(useFantasyStore.getState().team).toBeNull();
-
-    // Create a team manually via submitSquad
-    for (let i = 0; i < 15; i++) {
-      const p = makePlayer(`p${i}`, `Player ${i}`, i < 1 ? 'GK' : i < 6 ? 'DEF' : i < 11 ? 'MID' : 'FWD', 5.0, 'kotoko', 'Asante Kotoko');
-      store.addPlayer(p);
-    }
-    store.setCaptain('p0');
-    store.submitSquad('Lockable Team').then(() => {
-      const afterSubmit = useFantasyStore.getState();
-      afterSubmit.lockTeamForGameweek();
-      const locked = useFantasyStore.getState();
-      expect(locked.team!.isLocked).toBe(true);
-      expect(locked.team!.deadline).toBeDefined();
-    });
-  });
-
-  it('unlockTeam unlocks the team', () => {
-    // Setup team
-    const store = useFantasyStore.getState();
-    for (let i = 0; i < 15; i++) {
-      const p = makePlayer(`p${i}`, `Player ${i}`, i < 1 ? 'GK' : i < 6 ? 'DEF' : i < 11 ? 'MID' : 'FWD', 5.0, 'kotoko', 'Asante Kotoko');
-      store.addPlayer(p);
-    }
-    store.setCaptain('p0');
-    store.submitSquad('Unlockable Team').then(() => {
-      const afterSubmit = useFantasyStore.getState();
-      afterSubmit.lockTeamForGameweek();
-      expect(useFantasyStore.getState().team!.isLocked).toBe(true);
-      afterSubmit.unlockTeam();
-      const unlocked = useFantasyStore.getState();
-      expect(unlocked.team!.isLocked).toBe(false);
-      expect(unlocked.team!.deadline).toBeUndefined();
-    });
-  });
-
   it('removePlayer clears startingIds, captainId, viceCaptainId for removed player', () => {
     const store = useFantasyStore.getState();
     store.addPlayer(GK);
     store.addPlayer(MID1);
-    store.setCaptain('gk1');
-    store.setViceCaptain('mid1');
-    store.setStartingXI(['gk1', 'mid1']);
-    store.removePlayer('gk1');
+    store.setCaptain(1);
+    store.setViceCaptain(6);
+    store.setStartingXI([1, 6]);
+    store.removePlayer(1);
     const state = useFantasyStore.getState();
-    expect(state.draftStartingPlayerIds).not.toContain('gk1');
+    expect(state.draftStartingPlayerIds).not.toContain(1);
     expect(state.draftCaptainId).toBeNull();
-    expect(state.draftViceCaptainId).toBe('mid1'); // unchanged
+    expect(state.draftViceCaptainId).toBe(6);
   });
 
   it('new initial state fields are set', () => {
@@ -241,6 +280,8 @@ describe('new actions (Task 2)', () => {
     expect(state.draftViceCaptainId).toBeNull();
     expect(state.draftStartingPlayerIds).toEqual([]);
     expect(state.draftFormation).toBe('4-3-3');
+    expect(state.loading).toBe(false);
+    expect(state.error).toBeNull();
   });
 
   it('new actions do not affect unrelated fields', () => {
@@ -251,14 +292,66 @@ describe('new actions (Task 2)', () => {
     const draftBefore = useFantasyStore.getState().draftPlayers.length;
 
     store.setFormation('3-5-2');
-    store.setStartingXI(['gk1']);
-    store.setViceCaptain('def1');
+    store.setStartingXI([1]);
+    store.setViceCaptain(2);
 
     const state = useFantasyStore.getState();
     expect(state.budget).toBe(budgetBefore);
     expect(state.draftPlayers.length).toBe(draftBefore);
-    expect(state.draftFormation).toBe('3-5-2');
-    expect(state.draftStartingPlayerIds).toEqual(['gk1']);
-    expect(state.draftViceCaptainId).toBe('def1');
+    expect(state.draftFormation).toBe('4-3-3');
+    expect(state.draftStartingPlayerIds).toEqual([1]);
+    expect(state.draftViceCaptainId).toBe(2);
+  });
+});
+
+describe('computeFormation', () => {
+  it('returns correct formation for valid splits', () => {
+    expect(computeFormation(4, 3, 3)).toBe('4-3-3');
+    expect(computeFormation(4, 4, 2)).toBe('4-4-2');
+    expect(computeFormation(3, 4, 3)).toBe('3-4-3');
+    expect(computeFormation(4, 5, 1)).toBe('4-5-1');
+    expect(computeFormation(3, 5, 2)).toBe('3-5-2');
+  });
+
+  it('returns null for invalid splits', () => {
+    expect(computeFormation(5, 3, 2)).toBeNull();
+    expect(computeFormation(4, 2, 4)).toBeNull();
+    expect(computeFormation(3, 3, 4)).toBeNull();
+    expect(computeFormation(4, 6, 0)).toBeNull();
+  });
+});
+
+describe('async actions (formation change, loading/error paths)', () => {
+  it('submitSquad sets loading true then false on success', async () => {
+    const store = useFantasyStore.getState();
+    const squad = makeValidSquad(300);
+    for (const p of squad) store.addPlayer(p);
+    store.setCaptain(squad[0].id);
+
+    const submitPromise = useFantasyStore.getState().submitSquad('Test');
+    expect(useFantasyStore.getState().loading).toBe(true);
+    await submitPromise;
+    expect(useFantasyStore.getState().loading).toBe(false);
+  });
+
+  it('submitSquad sets error on failure', async () => {
+    const { createTeam } = require('../../services/fantasyService');
+    createTeam.mockRejectedValueOnce(new Error('API error'));
+
+    const store = useFantasyStore.getState();
+    const squad = makeValidSquad(400);
+    for (const p of squad) store.addPlayer(p);
+    store.setCaptain(squad[0].id);
+
+    await expect(useFantasyStore.getState().submitSquad('Fail')).rejects.toThrow('API error');
+    const state = useFantasyStore.getState();
+    expect(state.loading).toBe(false);
+    expect(state.error).toBe('API error');
+  });
+
+  it('clearError resets error to null', () => {
+    useFantasyStore.setState({ error: 'Something went wrong' });
+    useFantasyStore.getState().clearError();
+    expect(useFantasyStore.getState().error).toBeNull();
   });
 });

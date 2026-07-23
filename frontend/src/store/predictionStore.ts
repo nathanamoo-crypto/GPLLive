@@ -1,9 +1,6 @@
-/**
- * TODO: Replace `submitAll` mock with real API call.
- * See APIDocs.md → Predictions section.
- */
 import { create } from 'zustand';
 import { Prediction, PredictionState } from '../types';
+import { submitPredictions } from '../services/predictionService';
 
 export const usePredictionStore = create<PredictionState>((set) => ({
   predictions: {},
@@ -11,8 +8,8 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     set((state) => ({
       predictions: {
         ...state.predictions,
-        [fixtureId]: {
-          ...(state.predictions[fixtureId] ?? {
+        [String(fixtureId)]: {
+          ...(state.predictions[String(fixtureId)] ?? {
             fixtureId,
             outcome: null,
             exactHomeGoals: undefined,
@@ -29,8 +26,8 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     set((state) => ({
       predictions: {
         ...state.predictions,
-        [fixtureId]: {
-          ...(state.predictions[fixtureId] ?? {
+        [String(fixtureId)]: {
+          ...(state.predictions[String(fixtureId)] ?? {
             fixtureId,
             outcome: null,
             exactHomeGoals: undefined,
@@ -45,14 +42,16 @@ export const usePredictionStore = create<PredictionState>((set) => ({
     }));
   },
   submitAll: async () => {
-    set((state) => ({
+    const state = usePredictionStore.getState();
+    await submitPredictions(state.predictions);
+    set({
       predictions: Object.fromEntries(
         Object.entries(state.predictions).map(([fixtureId, prediction]) => [
           fixtureId,
           { ...prediction, submitted: true, locked: true },
         ])
       ),
-    }));
+    });
   },
   reset: () => {
     set({ predictions: {} });

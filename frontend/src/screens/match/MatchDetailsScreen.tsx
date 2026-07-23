@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,72 +6,131 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../constants/colors';
-import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
-import type { Match, MatchEvent } from '../../types';
-import { getMatchDetails, getMatchEvents } from '../../services/matchService';
+import { Logos } from '../../constants/logos';
+import { getScrollBottomPadding } from '../../constants/layout';
+import type { Match } from '../../types';
+import { getMatchDetails } from '../../services/matchService';
+import { getPlayerStatsByFixture } from '../../services/fantasyService';
+import type { FixturePlayerStats } from '../../services/fantasyService';
+import { getApiErrorMessage } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
 
-/*
-TEMP FIX: Service Layer Abstraction
-This ensures the UI is ready for API integration.
-TO REVERT: Direct import from constants or local mock arrays.
-*/
-
-/**
- * MOCK DATA SECTION
- * -----------------
- * This data will be replaced by an API call once the backend is ready.
- */
-const MOCK_MATCH: Match = {
-  id: 'match-1',
-  homeClub: { id: 'kotoko', name: 'Asante Kotoko', shortName: 'Kotoko', badgeUrl: '', city: 'Kumasi' },
-  awayClub: { id: 'hearts', name: 'Hearts of Oak', shortName: 'Hearts', badgeUrl: '', city: 'Accra' },
-  homeScore: 2,
-  awayScore: 1,
-  status: 'live',
-  kickoffTime: new Date().toISOString(),
-  liveMinute: 67,
-  venue: 'Baba Yara Stadium',
-  round: 24,
-  gameweek: 24,
-};
-
-const MOCK_EVENTS: MatchEvent[] = [
-  { id: 'e1', matchId: 'match-1', type: 'goal', minute: 12, playerName: 'Frank Etouga', side: 'home' },
-  { id: 'e2', matchId: 'match-1', type: 'yellow_card', minute: 34, playerName: 'Awako', side: 'away' },
-  { id: 'e3', matchId: 'match-1', type: 'goal', minute: 45, playerName: 'Barnieh', side: 'away' },
-  { id: 'e4', matchId: 'match-1', type: 'goal', minute: 58, playerName: 'Mbella', side: 'home' },
-];
+type MatchDetailsRouteProp = RouteProp<HomeStackParamList, 'MatchDetails'>;
 
 export default function MatchDetailsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const route = useRoute();
-  // @ts-ignore
-  const { matchId } = route.params || {};
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const route = useRoute<MatchDetailsRouteProp>();
+  const { matchId } = route.params;
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
-  const [activeTab, setActiveTab] = useState<'events' | 'lineups' | 'stats'>('events');
+  const [match, setMatch] = useState<Match | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  /**
-   * API INTEGRATION PLACEHOLDER
-   * ---------------------------
-   * TODO: Implement data fetching here.
-   * useEffect(() => {
-   *   fetchMatchDetails(matchId);
-   * }, [matchId]);
-   */
+  // Events and Lineups tabs were removed - there's no real data source for
+  // either right now (no matchday-lineup tracking, and the live sports-data
+  // API research came back a dead end on the free tier - see
+  // docs/FUTURE_FEATURES.md). Stats is the one tab with real data, so it's
+  // no longer gated behind tab-switching.
+  const [stats, setStats] = useState<FixturePlayerStats[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    getMatchDetails(matchId)
+      .then((data) => {
+        if (cancelled) return;
+        setMatch(data);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setError(err?.message ?? 'Failed to load match details.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [matchId]);
+
+  // GET /scoring/fixture/{id} only returns rows for players an admin has
+  // actually recorded stats for, so this can legitimately come back empty
+  // for a match nobody's entered stats for yet.
+  useEffect(() => {
+    let cancelled = false;
+    setStatsLoading(true);
+    setStatsError(null);
+    getPlayerStatsByFixture(matchId)
+      .then((data) => {
+        if (cancelled) return;
+        setStats(data.slice().sort((a, b) => b.fantasyPoint - a.fantasyPoint));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStatsError(getApiErrorMessage(err, 'Failed to load stats.'));
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [matchId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Match Details</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !match) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Match Details</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'Match not found.'}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header with Back Button */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Match Details</Text>
         <View style={{ width: 40 }} /> 
@@ -81,82 +140,96 @@ export default function MatchDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: getScrollBottomPadding(insets.bottom) }}
       >
-        {/* Match Scoreboard */}
         <View style={styles.scoreboard}>
           <View style={styles.teamContainer}>
-            <View style={styles.badgePlaceholder} />
-            <Text style={styles.teamName}>{MOCK_MATCH.homeClub.name}</Text>
+            <Image source={Logos[match.homeClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
+            <Text style={styles.teamName}>{match.homeClub.name}</Text>
           </View>
 
           <View style={styles.scoreContainer}>
             <Text style={styles.scoreText}>
-              {MOCK_MATCH.homeScore} - {MOCK_MATCH.awayScore}
+              {match.homeScore ?? '-'} - {match.awayScore ?? '-'}
             </Text>
-            {MOCK_MATCH.status === 'live' && (
+            {match.status === 'live' && (
               <View style={styles.liveBadge}>
-                <Text style={styles.liveText}>{MOCK_MATCH.liveMinute}'</Text>
+                <Text style={styles.liveText}>{match.liveMinute ?? ''}'</Text>
               </View>
             )}
           </View>
 
           <View style={styles.teamContainer}>
-            <View style={styles.badgePlaceholder} />
-            <Text style={styles.teamName}>{MOCK_MATCH.awayClub.name}</Text>
+            <Image source={Logos[match.awayClub.id] as ImageSourcePropType} style={styles.badgeImage} resizeMode="contain" />
+            <Text style={styles.teamName}>{match.awayClub.name}</Text>
           </View>
         </View>
 
         <View style={styles.venueInfo}>
-          <Text style={styles.venueText}>{MOCK_MATCH.venue}</Text>
-          <Text style={styles.gameweekText}>Round {MOCK_MATCH.round}</Text>
+          <Text style={styles.venueText}>{match.venue}</Text>
+          <Text style={styles.gameweekText}>Round {match.round}</Text>
         </View>
 
-        {/* Tabs */}
-        <View style={styles.tabBar}>
-          {(['events', 'lineups', 'stats'] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
-                {tab.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('MotmVote', { matchId })}
+          >
+            <Ionicons name="trophy" size={18} color={colors.yellow} />
+            <Text style={styles.actionLabel}>Vote MOTM</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Discussion', { matchId })}
+          >
+            <Ionicons name="chatbubbles" size={18} color={colors.yellow} />
+            <Text style={styles.actionLabel}>Discussion</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Tab Content */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeaderText}>PLAYER STATS</Text>
+        </View>
+
         <View style={styles.content}>
-          {activeTab === 'events' && (
-            <View>
-              {MOCK_EVENTS.map((event) => (
-                <View key={event.id} style={styles.eventRow}>
-                  <Text style={styles.eventMinute}>{event.minute}'</Text>
-                  <View style={styles.eventIcon}>
-                    <Ionicons
-                      name={event.type === 'goal' ? 'football' : 'square'}
-                      size={16}
-                      color={event.type === 'goal' ? Colors.white : Colors.yellow}
-                    />
+          {statsLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+          ) : statsError ? (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>{statsError}</Text>
+            </View>
+          ) : stats.length === 0 ? (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>
+                No stats recorded for this match yet.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.statsHeaderRow}>
+                <Text style={[styles.statsHeaderCell, styles.statsNameCol]}>Player</Text>
+                <Text style={styles.statsHeaderCell}>Min</Text>
+                <Text style={styles.statsHeaderCell}>G</Text>
+                <Text style={styles.statsHeaderCell}>A</Text>
+                <Text style={styles.statsHeaderCell}>Pts</Text>
+              </View>
+              {stats.map((s) => (
+                <View key={s.id} style={styles.statsRow}>
+                  <View style={styles.statsNameCol}>
+                    <Text style={styles.statsPlayerName} numberOfLines={1}>{s.playerName}</Text>
+                    <Text style={styles.statsPlayerMeta} numberOfLines={1}>
+                      {s.clubName} · {s.position}
+                      {s.cleanSheet ? ' · CS' : ''}
+                      {s.yellowCard > 0 ? ` · ${'🟨'.repeat(Math.min(s.yellowCard, 2))}` : ''}
+                      {s.redCard ? ' · 🟥' : ''}
+                      {s.saves > 0 ? ` · ${s.saves} sv` : ''}
+                    </Text>
                   </View>
-                  <Text style={[styles.eventPlayer, { textAlign: event.side === 'home' ? 'left' : 'right', flex: 1 }]}>
-                    {event.playerName}
-                  </Text>
+                  <Text style={styles.statsCell}>{s.minutesPlayed}</Text>
+                  <Text style={styles.statsCell}>{s.goalsScored}</Text>
+                  <Text style={styles.statsCell}>{s.assists}</Text>
+                  <Text style={[styles.statsCell, styles.statsPtsCell]}>{s.fantasyPoint}</Text>
                 </View>
               ))}
-            </View>
-          )}
-
-          {activeTab === 'lineups' && (
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Lineups will be available 1 hour before kickoff.</Text>
-            </View>
-          )}
-
-          {activeTab === 'stats' && (
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Match statistics will update in real-time.</Text>
-            </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -164,54 +237,97 @@ export default function MatchDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
+function getStyles(colors: typeof Colors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white, fontFamily: fonts.display, textTransform: 'uppercase' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   scoreboard: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 32,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'space-around',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   teamContainer: { alignItems: 'center', width: '35%' },
-  badgePlaceholder: { width: 64, height: 64, borderRadius: radius.avatar, backgroundColor: Colors.border, marginBottom: 8 },
-  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: Colors.white },
+  badgeImage: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
+  teamName: { fontSize: 14, fontWeight: '700', textAlign: 'center', color: colors.textPrimary },
   scoreContainer: { alignItems: 'center' },
-  scoreText: { fontSize: 36, fontWeight: '800', color: Colors.white },
+  scoreText: { fontSize: 36, fontWeight: '800', color: colors.textPrimary },
   liveBadge: {
-    backgroundColor: Colors.red,
+    backgroundColor: colors.live,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: radius.badge,
+    borderRadius: 4,
     marginTop: 8,
   },
-  liveText: { color: Colors.white, fontSize: 12, fontWeight: '700' },
+  liveText: { color: colors.textInverse, fontSize: 12, fontWeight: '700' },
   venueInfo: { padding: 16, alignItems: 'center' },
-  venueText: { fontSize: 14, color: Colors.grey1 },
-  gameweekText: { fontSize: 12, color: Colors.grey2, marginTop: 4 },
-  tabBar: { flexDirection: 'row', backgroundColor: Colors.surface, paddingHorizontal: 16 },
-  tabItem: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: Colors.yellow },
-  tabLabel: { fontSize: 12, fontWeight: '700', color: Colors.grey2 },
-  tabLabelActive: { color: Colors.yellow },
+  venueText: { fontSize: 14, color: colors.textSecondary },
+  gameweekText: { fontSize: 12, color: colors.textTertiary, marginTop: 4 },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  actionLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  sectionHeaderRow: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sectionHeaderText: { fontSize: 12, fontWeight: '800', color: colors.textTertiary, letterSpacing: 0.5 },
   content: { padding: 16 },
-  eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  eventMinute: { width: 40, fontSize: 14, fontWeight: '700', color: Colors.grey1 },
-  eventIcon: { width: 30, alignItems: 'center' },
-  eventPlayer: { fontSize: 14, color: Colors.white },
   placeholderContainer: { paddingVertical: 40, alignItems: 'center' },
-  placeholderText: { fontSize: 14, color: Colors.grey1, textAlign: 'center' },
-});
+  placeholderText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+  statsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  statsHeaderCell: { width: 40, fontSize: 11, fontWeight: '700', color: colors.textTertiary, textAlign: 'center' },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  statsNameCol: { flex: 1, minWidth: 0, paddingRight: 8 },
+  statsPlayerName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  statsPlayerMeta: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+  statsCell: { width: 40, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+  statsPtsCell: { fontWeight: '800', color: colors.primary },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, color: colors.live, textAlign: 'center', paddingHorizontal: 32 },
+  });
+}

@@ -2,14 +2,16 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import FixturesRoot from '../screens/fixtures/FixturesRoot';
-import LeagueTableScreen from '../screens/fixtures/LeagueTableScreen';
 import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
-import type { MatchDetailsParams, LeagueTableParams } from './types';
+import MotmVoteScreen from '../screens/match/MotmVoteScreen';
+import DiscussionScreen from '../screens/match/DiscussionScreen';
+import type { MatchDetailsParams, MotmVoteParams, DiscussionParams } from './types';
 
 export type FixturesStackParamList = {
-  FixturesRoot: undefined;
-  LeagueTable: LeagueTableParams | undefined;
+  FixturesRoot: { defaultTab?: 'fixtures' | 'table' } | undefined;
   MatchDetails: MatchDetailsParams;
+  MotmVote: MotmVoteParams;
+  Discussion: DiscussionParams;
 };
 
 const Stack = createNativeStackNavigator<FixturesStackParamList>();
@@ -23,8 +25,9 @@ export default function FixturesStack() {
         animation: 'slide_from_right',
       }}>
       <Stack.Screen name="FixturesRoot" component={FixturesRoot} />
-      <Stack.Screen name="LeagueTable" component={LeagueTableScreen} />
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
+      <Stack.Screen name="MotmVote" component={MotmVoteScreen} />
+      <Stack.Screen name="Discussion" component={DiscussionScreen} />
     </Stack.Navigator>
   );
 }

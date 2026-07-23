@@ -10,8 +10,8 @@ export const Routes = {
   },
   mainTabs: {
     home: 'Home',
-    fantasy: 'Fantasy',
-    predict: 'Predict',
+    games: 'Games',
+    table: 'Table',
     news: 'News',
     fixtures: 'Fixtures',
     profile: 'Profile',
@@ -25,11 +25,12 @@ export const Routes = {
     matchDetail: 'MatchDetails',
     newsDetail: 'NewsDetail',
   },
-  fantasy: {
-    root: 'FantasyRoot',
+  games: {
+    root: 'GamesRoot',
+    myTeam: 'MyTeam',
   },
-  predict: {
-    root: 'PredictRoot',
+  table: {
+    root: 'LeagueTable',
   },
   news: {
     feed: 'NewsFeed',
@@ -37,7 +38,6 @@ export const Routes = {
   },
   fixtures: {
     root: 'FixturesRoot',
-    leagueTable: 'LeagueTable',
     matchDetails: 'MatchDetails',
   },
   profile: {
