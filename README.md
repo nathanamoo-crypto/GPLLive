@@ -11,8 +11,8 @@ The application is being developed using **React Native (Expo SDK 54)**, **TypeS
 | Layer | Status |
 |-------|--------|
 | Frontend | Active development — Expo app with navigation, services, state management |
-| Backend | Not yet started |
-| Database | Not yet started |
+| Backend |  |
+| Database |  |
 
 ---
 
