@@ -60,6 +60,23 @@ api.interceptors.response.use(
   }
 );
 
+// Thrown by authStore.login() instead of a generic Error when the account
+// exists and the password is correct but the email hasn't been verified
+// yet - lets RegisterLoginScreen route straight to VerifyEmailScreen
+// instead of just showing an error message the user can't act on.
+export class EmailNotVerifiedError extends Error {}
+
+// The /auth/login endpoint's only 403 case is EmailNotVerifiedException
+// (backend/GlobalExceptionHandler) - distinct from 401 (wrong password), so
+// the frontend can route to the verification screen instead of just
+// showing a generic error. Only meaningful when checked against a login()
+// error specifically; other endpoints use 403 for unrelated ownership
+// checks.
+export function isEmailNotVerifiedError(error: unknown): boolean {
+  const axiosError = error as AxiosError;
+  return axiosError.response?.status === 403;
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const axiosError = error as AxiosError<{ message?: string }>;
   if (axiosError.code === 'ECONNABORTED') {

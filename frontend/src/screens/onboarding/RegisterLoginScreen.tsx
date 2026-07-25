@@ -15,14 +15,22 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 
 import { useAuthStore } from '../../store/authStore';
-import { getAuthErrorMessage, validateEmail, validatePassword } from '../../utils/authValidation';
+import { EmailNotVerifiedError } from '../../services/api';
+import { getAuthErrorMessage, validateEmail, validatePassword, validateUsername } from '../../utils/authValidation';
 import { fetchClubs, RealClub } from '../../services/clubService';
 import type { AuthFlowParamList } from '../../navigation/types';
 import { Colors } from '../../constants/colors';
+import { GOOGLE_WEB_CLIENT_ID } from '../../constants/apiUrls';
 import { getAuthFormStyles } from './authFormStyles';
 import { useTheme } from '../../context/ThemeContext';
+
+// Required once per app for expo-web-browser to close the OAuth popup and
+// hand control back to the app when Google redirects after sign-in.
+WebBrowser.maybeCompleteAuthSession();
 
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
 
@@ -33,15 +41,18 @@ export default function RegisterLoginScreen() {
   const styles = useMemo(() => getAuthFormStyles(colors), [colors]);
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
+  const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
   const loginDemo = useAuthStore((state) => state.loginDemo);
 
   const [mode, setMode] = useState<'register' | 'login'>('login');
+  const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -119,10 +130,75 @@ export default function RegisterLoginScreen() {
     }
   }, [loading, loginDemo, navigation]);
 
+  // Google's Expo provider hook - request/response/promptAsync follow
+  // expo-auth-session's useAuthRequest contract. webClientId doubles as the
+  // audience the backend's GoogleTokenVerifier checks the returned ID token
+  // against, so this MUST be the same Web application Client ID configured
+  // as GOOGLE_WEB_CLIENT_ID on the backend.
+  //
+  // The provider picks its clientId by platform (ios -> iosClientId,
+  // android -> androidClientId, else webClientId) and throws if the one for
+  // the current platform is missing - it does NOT fall back to webClientId
+  // just because we're going through the Expo Go proxy. We only have one
+  // registered OAuth client (type: Web application), so iosClientId and
+  // androidClientId are set to the SAME id here purely to satisfy that
+  // per-platform check; the actual request still authenticates against the
+  // one Web application client and its registered auth.expo.io redirect.
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_WEB_CLIENT_ID,
+  });
+
   const handleGoogleSignIn = useCallback(() => {
-    // TODO: Wire expo-auth-session when Google OAuth credentials are configured.
-    setFormError('Google sign-in will be available after OAuth credentials are configured.');
-  }, []);
+    if (!GOOGLE_WEB_CLIENT_ID) {
+      setFormError('Google sign-in is not configured yet.');
+      return;
+    }
+    setFormError(null);
+    promptGoogleAsync();
+  }, [promptGoogleAsync]);
+
+  // Fires once Google redirects back with a result. A brand-new Google user
+  // comes back from the backend with no favouriteClub set, so goToNextStep()
+  // (same helper used after a manual register/login) naturally routes them
+  // to PickClub instead of straight into the app - no separate branch needed
+  // here for "new vs returning" Google users.
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') {
+      return;
+    }
+
+    const idToken = googleResponse.params?.id_token;
+    if (!idToken) {
+      setFormError('Google sign-in did not return a valid token.');
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setFormError(null);
+      try {
+        await loginWithGoogle(idToken);
+        if (!cancelled) {
+          goToNextStep();
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFormError(getAuthErrorMessage(error, 'Google sign-in failed.'));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleResponse, goToNextStep, loginWithGoogle]);
 
   const handleForgotPassword = useCallback(() => {
     setForgotMessage('Password reset will be available once the auth service endpoint is live.');
@@ -133,6 +209,7 @@ export default function RegisterLoginScreen() {
       return;
     }
 
+    const nextUsernameError = mode === 'register' ? validateUsername(username) : null;
     const nextNameError = mode === 'register' && !name.trim() ? 'Full name is required.' : null;
     const nextEmailError = validateEmail(email);
     const nextPasswordError = validatePassword(password);
@@ -141,6 +218,7 @@ export default function RegisterLoginScreen() {
     const nextClubError =
       mode === 'register' && !selectedClubId ? 'Please choose your favourite club.' : null;
 
+    setUsernameError(nextUsernameError);
     setNameError(nextNameError);
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
@@ -149,7 +227,14 @@ export default function RegisterLoginScreen() {
     setFormError(null);
     setForgotMessage(null);
 
-    if (nextNameError || nextEmailError || nextPasswordError || nextConfirmPasswordError || nextClubError) {
+    if (
+      nextUsernameError ||
+      nextNameError ||
+      nextEmailError ||
+      nextPasswordError ||
+      nextConfirmPasswordError ||
+      nextClubError
+    ) {
       return;
     }
 
@@ -157,12 +242,23 @@ export default function RegisterLoginScreen() {
 
     try {
       if (mode === 'register') {
-        await register(name.trim(), email.trim(), password, selectedClubId as number);
-      } else {
-        await login(email.trim(), password);
+        await register(username.trim(), name.trim(), email.trim(), password, selectedClubId as number);
+        // Account exists but isn't usable yet - go confirm the emailed
+        // code instead of goToNextStep() (there's no token to act on yet).
+        navigation.navigate('VerifyEmail', { email: email.trim() });
+        return;
       }
+
+      await login(email.trim(), password);
       goToNextStep();
     } catch (error) {
+      if (error instanceof EmailNotVerifiedError) {
+        // Right password, but this account never finished verifying -
+        // send them to finish that instead of just showing an error they
+        // can't act on.
+        navigation.navigate('VerifyEmail', { email: email.trim() });
+        return;
+      }
       setFormError(getAuthErrorMessage(error, 'Authentication failed. Please try again.'));
     } finally {
       setLoading(false);
@@ -173,11 +269,13 @@ export default function RegisterLoginScreen() {
     goToNextStep,
     loading,
     login,
+    navigation,
     mode,
     name,
     password,
     register,
     selectedClubId,
+    username,
   ]);
 
   const handleModeChange = useCallback((nextMode: 'register' | 'login') => {
@@ -205,6 +303,27 @@ export default function RegisterLoginScreen() {
       >
         <Text style={styles.heading}>Welcome to GPL Live</Text>
         <Text style={styles.subheading}>Sign in or create an account to continue.</Text>
+
+        {mode === 'register' && (
+          <View style={styles.field}>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={[styles.input, usernameError ? styles.inputError : null]}
+              value={username}
+              onChangeText={(value) => {
+                setUsername(value);
+                if (usernameError) {
+                  setUsernameError(null);
+                }
+              }}
+              placeholder="janedoe"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+            {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
+          </View>
+        )}
 
         {mode === 'register' && (
           <View style={styles.field}>
@@ -368,7 +487,7 @@ export default function RegisterLoginScreen() {
         <TouchableOpacity
           style={styles.googleButton}
           onPress={handleGoogleSignIn}
-          disabled={loading}
+          disabled={loading || (!!GOOGLE_WEB_CLIENT_ID && !googleRequest)}
         >
           <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>

@@ -3,7 +3,7 @@ import { AxiosError } from 'axios';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-import api, { configureApiAuth, getApiErrorMessage } from '../services/api';
+import api, { configureApiAuth, EmailNotVerifiedError, getApiErrorMessage, isEmailNotVerifiedError } from '../services/api';
 import { AuthEndpoints } from '../constants/apiUrls';
 import { AuthState, User, Club, ClubSubscription } from '../types';
 import { backendClubToLocalClub } from '../services/clubService';
@@ -91,24 +91,48 @@ export const useAuthStore = create<AuthState>()(
             // profile fetch is best-effort
           }
         } catch (error) {
+          // A correct password on an unverified account gets a distinct
+          // error type so RegisterLoginScreen can route straight to
+          // VerifyEmailScreen instead of just showing an error string.
+          if (isEmailNotVerifiedError(error)) {
+            throw new EmailNotVerifiedError(getApiErrorMessage(error, 'Please verify your email before logging in.'));
+          }
           throw new Error(getApiErrorMessage(error, 'Login failed'));
         }
       },
-      register: async (username, email, password, favouriteClubId) => {
+      // Creates the account but does NOT log the user in - the backend
+      // only returns a real token from verifyEmail() once the emailed code
+      // is confirmed. No auth state is set here; RegisterLoginScreen
+      // navigates to VerifyEmailScreen on success instead of calling
+      // goToNextStep().
+      // username is a distinct, user-typed, unique field (separate from
+      // fullName, which is never required to be unique) - the backend
+      // returns a 409 if it's already taken.
+      register: async (username, fullName, email, password, favouriteClubId) => {
+        try {
+          await api.post<{ email: string; message: string }>(
+            AuthEndpoints.REGISTER,
+            { username, email, password, fullName, favouriteClubId },
+          );
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Registration failed'));
+        }
+      },
+      verifyEmail: async (email, code) => {
         try {
           const response = await api.post<{ token: string; username: string; userId: number }>(
-            AuthEndpoints.REGISTER,
-            { username, email, password, fullName: username, favouriteClubId },
+            AuthEndpoints.VERIFY_EMAIL,
+            { email, code },
           );
-          const { token, username: returnedUsername, userId } = response.data;
+          const { token, username, userId } = response.data;
 
-          if (!token || !returnedUsername) {
-            throw new Error('Invalid register response');
+          if (!token || !username) {
+            throw new Error('Invalid verification response');
           }
 
           const user: User = {
             id: userId ?? 0,
-            username: returnedUsername,
+            username,
             email,
             predictionPoints: 0,
             reactionsPosted: 0,
@@ -117,9 +141,9 @@ export const useAuthStore = create<AuthState>()(
 
           set({ user, token, isAuthenticated: true });
 
-          // Fetch the full profile so `user.favouriteClub` is populated -
-          // RegisterLoginScreen relies on this being set to skip the
-          // fallback club-picker step after a fresh registration.
+          // Same best-effort profile fetch as login()/register() - this is
+          // where `user.favouriteClub` (already set during the registration
+          // form, before verification) actually gets populated.
           try {
             const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
               AuthEndpoints.GET_ME,
@@ -131,7 +155,58 @@ export const useAuthStore = create<AuthState>()(
             // profile fetch is best-effort
           }
         } catch (error) {
-          throw new Error(getApiErrorMessage(error, 'Registration failed'));
+          throw new Error(getApiErrorMessage(error, 'Verification failed'));
+        }
+      },
+      resendVerificationCode: async (email) => {
+        try {
+          await api.post<{ email: string; message: string }>(
+            AuthEndpoints.RESEND_VERIFICATION,
+            { email },
+          );
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Unable to resend the code'));
+        }
+      },
+      loginWithGoogle: async (idToken) => {
+        try {
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.GOOGLE,
+            { idToken },
+          );
+          const { token, username, userId } = response.data;
+
+          if (!token || !username) {
+            throw new Error('Invalid Google sign-in response');
+          }
+
+          const user: User = {
+            id: userId ?? 0,
+            username,
+            email: '',
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
+
+          set({ user, token, isAuthenticated: true });
+
+          // Same best-effort profile fetch as login()/register() - for a
+          // brand-new Google user this comes back with favouriteClub
+          // unset, which is exactly the signal RegisterLoginScreen's
+          // goToNextStep() uses to route to PickClub.
+          try {
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Google sign-in failed'));
         }
       },
       loginDemo: async () => {

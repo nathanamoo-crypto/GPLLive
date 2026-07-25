@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import OnboardingSlides from '../screens/onboarding/OnboardingSlides';
 import RegisterLoginScreen from '../screens/onboarding/RegisterLoginScreen';
+import VerifyEmailScreen from '../screens/onboarding/VerifyEmailScreen';
 import PickClubScreen from '../screens/onboarding/PickClubScreen';
 import type { OnboardingStackParamList } from './types';
 
@@ -13,6 +14,7 @@ export default function OnboardingStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Slides">
       <Stack.Screen name="Slides" component={OnboardingSlides} />
       <Stack.Screen name="RegisterLogin" component={RegisterLoginScreen} />
+      <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       <Stack.Screen name="PickClub" component={PickClubScreen} />
     </Stack.Navigator>
   );
