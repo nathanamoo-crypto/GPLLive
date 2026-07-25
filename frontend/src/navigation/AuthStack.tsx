@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import RegisterLoginScreen from '../screens/onboarding/RegisterLoginScreen';
+import VerifyEmailScreen from '../screens/onboarding/VerifyEmailScreen';
 import PickClubScreen from '../screens/onboarding/PickClubScreen';
 import type { AuthStackParamList } from './types';
 
@@ -15,6 +16,7 @@ export default function AuthStack({ initialRouteName = 'RegisterLogin' }: AuthSt
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
       <Stack.Screen name="RegisterLogin" component={RegisterLoginScreen} />
+      <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       <Stack.Screen name="PickClub" component={PickClubScreen} />
     </Stack.Navigator>
   );

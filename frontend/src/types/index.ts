@@ -276,7 +276,15 @@ export interface AuthState {
   isAuthenticated: boolean;
   splashKey: number;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, favouriteClubId: number) => Promise<void>;
+  // Creates the account but does not log in - see verifyEmail(). username
+  // must be unique; the backend returns a 409 if it's already taken.
+  register: (username: string, fullName: string, email: string, password: string, favouriteClubId: number) => Promise<void>;
+  // Confirms the emailed 6-digit code and completes login.
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendVerificationCode: (email: string) => Promise<void>;
+  // idToken is the Google-issued ID token from expo-auth-session's Google
+  // provider - verified server-side, never trusted as-is.
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetOnboarding: () => void;
   // Takes the backend's real club id + name (e.g. from clubService.fetchClubs()),
