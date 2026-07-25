@@ -16,6 +16,14 @@
 // as your dev machine). Expo picks this up automatically, no code change.
 const API_HOST = process.env.EXPO_PUBLIC_API_HOST ?? 'https://gpllivebackend.onrender.com';
 
+// "Continue with Google" - the OAuth 2.0 Client ID (type: Web application)
+// created in Google Cloud Console > APIs & Services > Credentials. Set via
+// a git-ignored `.env.local` file the same way EXPO_PUBLIC_API_HOST is (see
+// the comment above): EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-client-id.apps.googleusercontent.com
+// Left unset, the Google button shows a friendly "not configured" message
+// instead of launching a broken OAuth request.
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
+
 export const AUTH_URL = API_HOST;
 export const MATCH_URL = API_HOST;
 export const FANTASY_URL = API_HOST;
@@ -31,6 +39,9 @@ export const PAYMENT_URL = API_HOST;
 export const AuthEndpoints = {
   LOGIN: '/auth/login',
   REGISTER: '/auth/register',
+  VERIFY_EMAIL: '/auth/verify-email',
+  RESEND_VERIFICATION: '/auth/resend-verification',
+  GOOGLE: '/auth/google',
   GET_ME: '/auth/users/me',
   UPDATE_ME: '/auth/users/me',
 };
