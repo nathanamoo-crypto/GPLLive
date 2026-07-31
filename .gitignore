@@ -1,0 +1,6 @@
+# Build artifacts
+*.apk
+*.aab
+
+# macOS
+.DS_Store
