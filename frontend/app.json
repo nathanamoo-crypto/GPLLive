@@ -14,9 +14,11 @@
       "backgroundColor": "#0A0A0A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gpllive.frontend"
     },
     "android": {
+      "package": "com.gpllive.frontend",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -30,6 +32,12 @@
     "plugins": [
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fa6e543a-d6f9-48ed-8d21-f96aed171cd8"
+      }
+    },
+    "owner": "nathan.amoo"
   }
 }
