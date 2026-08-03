@@ -68,6 +68,7 @@ function mapSquadToFantasyTeam(data: any): FantasyTeam {
     startingPlayerIds: startingIds,
     formation: data.formation ?? deriveFormation(squad.filter((s) => s.isStarting)),
     chips: data.chips ?? { tripleCaptain: false, benchBoost: false, wildcard: false, wildcard2: false, freeHit: false },
+    activeChipKey: data.activeChipKey ?? null,
     totalPoints: data.totalPoints ?? data.total_points ?? 0,
     gameweekPoints: data.gameweekPoints ?? data.gameweek_points ?? 0,
     rank: data.rank ?? 0,

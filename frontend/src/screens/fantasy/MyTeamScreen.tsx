@@ -409,12 +409,17 @@ function MyTeamScreen() {
             {CHIPS.map((chip) => {
               const chipKey = (chip.chipType.charAt(0).toLowerCase() + chip.chipType.slice(1)) as keyof ChipStatus;
               const used = team.chips?.[chipKey] ?? false;
+              // A different chip is already active for this gameweek - only
+              // one can be played per gameweek, so lock the rest until the
+              // gameweek transitions (team.activeChipKey clears then).
+              const locked = !used && !!team.activeChipKey && team.activeChipKey !== chipKey;
               return (
                 <ChipCard
                   key={chip.name}
                   name={chip.name}
                   icon={chip.icon}
                   used={used}
+                  locked={locked}
                   chipType={chip.chipType}
                   fantasyTeamId={team.teamId}
                   gameweekId={currentGameweekId}
