@@ -52,6 +52,8 @@ export default function RegisterLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -201,8 +203,8 @@ export default function RegisterLoginScreen() {
   }, [googleResponse, goToNextStep, loginWithGoogle]);
 
   const handleForgotPassword = useCallback(() => {
-    setForgotMessage('Password reset will be available once the auth service endpoint is live.');
-  }, []);
+    navigation.navigate('ForgotPassword');
+  }, [navigation]);
 
   const handleSubmit = useCallback(async () => {
     if (loading) {
@@ -367,19 +369,32 @@ export default function RegisterLoginScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, passwordError ? styles.inputError : null]}
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-              if (passwordError) {
-                setPasswordError(null);
-              }
-            }}
-            placeholder="••••••••"
-            secureTextEntry
-            editable={!loading}
-          />
+          <View style={styles.passwordFieldWrapper}>
+            <TextInput
+              style={[styles.input, styles.passwordInput, passwordError ? styles.inputError : null]}
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) {
+                  setPasswordError(null);
+                }
+              }}
+              placeholder="••••••••"
+              secureTextEntry={!showPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.passwordToggle}
+              onPress={() => setShowPassword((prev) => !prev)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+          </View>
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
         </View>
 
@@ -392,19 +407,32 @@ export default function RegisterLoginScreen() {
         {mode === 'register' && (
           <View style={styles.field}>
             <Text style={styles.label}>Confirm password</Text>
-            <TextInput
-              style={[styles.input, confirmPasswordError ? styles.inputError : null]}
-              value={confirmPassword}
-              onChangeText={(value) => {
-                setConfirmPassword(value);
-                if (confirmPasswordError) {
-                  setConfirmPasswordError(null);
-                }
-              }}
-              placeholder="••••••••"
-              secureTextEntry
-              editable={!loading}
-            />
+            <View style={styles.passwordFieldWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, confirmPasswordError ? styles.inputError : null]}
+                value={confirmPassword}
+                onChangeText={(value) => {
+                  setConfirmPassword(value);
+                  if (confirmPasswordError) {
+                    setConfirmPasswordError(null);
+                  }
+                }}
+                placeholder="••••••••"
+                secureTextEntry={!showConfirmPassword}
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.passwordToggle}
+                onPress={() => setShowConfirmPassword((prev) => !prev)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            </View>
             {confirmPasswordError ? (
               <Text style={styles.errorText}>{confirmPasswordError}</Text>
             ) : null}

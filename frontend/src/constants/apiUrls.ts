@@ -44,6 +44,8 @@ export const AuthEndpoints = {
   GOOGLE: '/auth/google',
   GET_ME: '/auth/users/me',
   UPDATE_ME: '/auth/users/me',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  RESET_PASSWORD: '/auth/reset-password',
 };
 
 export const FantasyEndpoints = {

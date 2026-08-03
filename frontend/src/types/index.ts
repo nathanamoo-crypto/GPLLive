@@ -282,6 +282,13 @@ export interface AuthState {
   // Confirms the emailed 6-digit code and completes login.
   verifyEmail: (email: string, code: string) => Promise<void>;
   resendVerificationCode: (email: string) => Promise<void>;
+  // Requests a password-reset code by email. Always resolves - the backend
+  // returns the same generic message whether or not that email has an
+  // account, so this can't be used to probe for registered emails.
+  forgotPassword: (email: string) => Promise<void>;
+  // Confirms the emailed reset code and sets a new password - logs the user
+  // in immediately on success, same as verifyEmail().
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   // idToken is the Google-issued ID token from expo-auth-session's Google
   // provider - verified server-side, never trusted as-is.
   loginWithGoogle: (idToken: string) => Promise<void>;

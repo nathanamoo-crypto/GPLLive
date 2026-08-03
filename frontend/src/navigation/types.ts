@@ -1,6 +1,8 @@
 export type AuthFlowParamList = {
   RegisterLogin: undefined;
   VerifyEmail: { email: string };
+  ForgotPassword: undefined;
+  ResetPassword: { email: string };
   PickClub: undefined;
 };
 

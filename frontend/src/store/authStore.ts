@@ -168,6 +168,57 @@ export const useAuthStore = create<AuthState>()(
           throw new Error(getApiErrorMessage(error, 'Unable to resend the code'));
         }
       },
+      // Backend always returns 200 with a generic message here (never
+      // reveals whether the email has an account), so there's nothing to
+      // branch on - just surface network/validation failures.
+      forgotPassword: async (email) => {
+        try {
+          await api.post<{ email: string; message: string }>(
+            AuthEndpoints.FORGOT_PASSWORD,
+            { email },
+          );
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Unable to request a password reset'));
+        }
+      },
+      resetPassword: async (email, code, newPassword) => {
+        try {
+          const response = await api.post<{ token: string; username: string; userId: number }>(
+            AuthEndpoints.RESET_PASSWORD,
+            { email, code, newPassword },
+          );
+          const { token, username, userId } = response.data;
+
+          if (!token || !username) {
+            throw new Error('Invalid reset-password response');
+          }
+
+          const user: User = {
+            id: userId ?? 0,
+            username,
+            email,
+            predictionPoints: 0,
+            reactionsPosted: 0,
+            badges: [],
+          };
+
+          set({ user, token, isAuthenticated: true });
+
+          // Same best-effort profile fetch as login()/verifyEmail().
+          try {
+            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+              AuthEndpoints.GET_ME,
+            );
+            if (meResponse.data) {
+              set({ user: normalizeUser(meResponse.data) });
+            }
+          } catch {
+            // profile fetch is best-effort
+          }
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Unable to reset your password'));
+        }
+      },
       loginWithGoogle: async (idToken) => {
         try {
           const response = await api.post<{ token: string; username: string; userId: number }>(
