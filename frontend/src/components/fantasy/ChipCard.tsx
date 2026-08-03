@@ -49,6 +49,12 @@ export default function ChipCard({ name, icon, used = false, locked = false, chi
 
   const disabled = used || locked || activating || !gameweekId;
   const pillLabel = used ? 'Used' : locked ? 'Locked' : 'Play';
+  // Once a chip is used (permanently, for the season) or locked (a
+  // different chip is already active this gameweek), swap in a lock icon
+  // and gray it out so it visibly reads as "can't tap this" at a glance,
+  // rather than just looking slightly dimmer than an active chip.
+  const showLock = (used || locked) && !activating;
+  const iconColor = showLock ? colors.grey2 : colors.yellow;
 
   return (
     <TouchableOpacity
@@ -57,14 +63,14 @@ export default function ChipCard({ name, icon, used = false, locked = false, chi
       onPress={handlePress}
       disabled={disabled}
     >
-      <View style={styles.iconWrap}>
+      <View style={[styles.iconWrap, showLock && styles.iconWrapLocked]}>
         {activating ? (
           <ActivityIndicator size="small" color={colors.yellow} />
         ) : (
-          <Ionicons name={icon} size={20} color={colors.yellow} />
+          <Ionicons name={showLock ? 'lock-closed-outline' : icon} size={20} color={iconColor} />
         )}
       </View>
-      <Text style={styles.name} numberOfLines={1}>{name}</Text>
+      <Text style={[styles.name, showLock && styles.nameLocked]} numberOfLines={1}>{name}</Text>
       <View style={[styles.pill, pillLabel === 'Play' ? styles.pillAvailable : styles.pillUnavailable]}>
         <Text style={[styles.pillText, pillLabel === 'Play' ? styles.pillTextAvailable : styles.pillTextUnavailable]}>
           {pillLabel}
@@ -96,11 +102,17 @@ function getStyles(colors: typeof Colors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    iconWrapLocked: {
+      backgroundColor: colors.border,
+    },
     name: {
       fontSize: 10,
       fontFamily: fonts.bodySemiBold,
       color: colors.white,
       textAlign: 'center',
+    },
+    nameLocked: {
+      color: colors.grey1,
     },
     pill: {
       paddingHorizontal: 8,
