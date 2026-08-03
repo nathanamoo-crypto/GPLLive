@@ -36,6 +36,25 @@ export function getAuthFormStyles(colors: typeof Colors) {
     inputError: {
       borderColor: colors.live,
     },
+    // Wraps a password TextInput so the show/hide toggle can be absolutely
+    // positioned inside it, on top of the input, rather than as a sibling
+    // that would need its own layout math.
+    passwordFieldWrapper: {
+      justifyContent: 'center',
+    },
+    // Extra right padding on the input itself so typed text never runs
+    // under the toggle icon.
+    passwordInput: {
+      paddingRight: 46,
+    },
+    passwordToggle: {
+      position: 'absolute',
+      right: 4,
+      top: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+    },
     errorText: {
       color: colors.live,
       fontSize: 12,
