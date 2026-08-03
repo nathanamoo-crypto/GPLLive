@@ -15,8 +15,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 
 import { useAuthStore } from '../../store/authStore';
 import { EmailNotVerifiedError } from '../../services/api';
@@ -24,13 +22,9 @@ import { getAuthErrorMessage, validateEmail, validatePassword, validateUsername 
 import { fetchClubs, RealClub } from '../../services/clubService';
 import type { AuthFlowParamList } from '../../navigation/types';
 import { Colors } from '../../constants/colors';
-import { GOOGLE_WEB_CLIENT_ID } from '../../constants/apiUrls';
 import { getAuthFormStyles } from './authFormStyles';
 import { useTheme } from '../../context/ThemeContext';
 
-// Required once per app for expo-web-browser to close the OAuth popup and
-// hand control back to the app when Google redirects after sign-in.
-WebBrowser.maybeCompleteAuthSession();
 
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
 
@@ -41,7 +35,6 @@ export default function RegisterLoginScreen() {
   const styles = useMemo(() => getAuthFormStyles(colors), [colors]);
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
-  const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
 
@@ -114,76 +107,8 @@ export default function RegisterLoginScreen() {
   }, [completeOnboarding, navigation, onboardingComplete]);
 
   
-  // Google's Expo provider hook - request/response/promptAsync follow
-  // expo-auth-session's useAuthRequest contract. webClientId doubles as the
-  // audience the backend's GoogleTokenVerifier checks the returned ID token
-  // against, so this MUST be the same Web application Client ID configured
-  // as GOOGLE_WEB_CLIENT_ID on the backend.
-  //
-  // The provider picks its clientId by platform (ios -> iosClientId,
-  // android -> androidClientId, else webClientId) and throws if the one for
-  // the current platform is missing - it does NOT fall back to webClientId
-  // just because we're going through the Expo Go proxy. We only have one
-  // registered OAuth client (type: Web application), so iosClientId and
-  // androidClientId are set to the SAME id here purely to satisfy that
-  // per-platform check; the actual request still authenticates against the
-  // one Web application client and its registered auth.expo.io redirect.
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_WEB_CLIENT_ID,
-  });
-
-  const handleGoogleSignIn = useCallback(() => {
-    if (!GOOGLE_WEB_CLIENT_ID) {
-      setFormError('Google sign-in is not configured yet.');
-      return;
-    }
-    setFormError(null);
-    promptGoogleAsync();
-  }, [promptGoogleAsync]);
-
-  // Fires once Google redirects back with a result. A brand-new Google user
-  // comes back from the backend with no favouriteClub set, so goToNextStep()
-  // (same helper used after a manual register/login) naturally routes them
-  // to PickClub instead of straight into the app - no separate branch needed
-  // here for "new vs returning" Google users.
-  useEffect(() => {
-    if (googleResponse?.type !== 'success') {
-      return;
-    }
-
-    const idToken = googleResponse.params?.id_token;
-    if (!idToken) {
-      setFormError('Google sign-in did not return a valid token.');
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setFormError(null);
-      try {
-        await loginWithGoogle(idToken);
-        if (!cancelled) {
-          goToNextStep();
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setFormError(getAuthErrorMessage(error, 'Google sign-in failed.'));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [googleResponse, goToNextStep, loginWithGoogle]);
-
+  
+  
   const handleForgotPassword = useCallback(() => {
     navigation.navigate('ForgotPassword');
   }, [navigation]);
@@ -492,15 +417,6 @@ export default function RegisterLoginScreen() {
               {mode === 'register' ? 'Create account' : 'Log in'}
             </Text>
           )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.googleButton}
-          onPress={handleGoogleSignIn}
-          disabled={loading || (!!GOOGLE_WEB_CLIENT_ID && !googleRequest)}
-        >
-          <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
 
