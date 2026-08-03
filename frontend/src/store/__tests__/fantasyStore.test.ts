@@ -14,6 +14,7 @@ jest.mock('../../services/fantasyService', () => {
     startingPlayerIds: [] as number[],
     formation: '4-3-3',
     chips: { tripleCaptain: false, benchBoost: false, wildcard: false, wildcard2: false, freeHit: false },
+    activeChipKey: null,
     totalPoints: 0,
     gameweekPoints: 0,
     rank: 0,

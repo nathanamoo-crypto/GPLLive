@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { activateChip } from '../../services/fantasyService';
+import { getApiErrorMessage } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import type { ChipType } from '../../types';
 
@@ -12,32 +13,42 @@ interface ChipCardProps {
   icon: keyof typeof Ionicons.glyphMap;
   /** True once this chip has already been used this season - chips can't be undone. */
   used?: boolean;
+  /**
+   * True when a *different* chip is already active for the current
+   * gameweek - only one chip can be played per gameweek, so this one is
+   * temporarily unavailable even though it hasn't been used yet.
+   */
+  locked?: boolean;
   chipType: ChipType;
   fantasyTeamId: number;
   gameweekId: number | null;
   onActivated?: () => void;
 }
 
-export default function ChipCard({ name, icon, used = false, chipType, fantasyTeamId, gameweekId, onActivated }: ChipCardProps) {
+export default function ChipCard({ name, icon, used = false, locked = false, chipType, fantasyTeamId, gameweekId, onActivated }: ChipCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activating, setActivating] = useState(false);
 
   const handlePress = async () => {
-    if (used || activating || !gameweekId) return;
+    if (used || locked || activating || !gameweekId) return;
     setActivating(true);
     try {
       await activateChip(chipType, fantasyTeamId, gameweekId);
       onActivated?.();
-    } catch {
-      // chip activation failed - leave the card in its current state so the
-      // user can retry rather than showing a false "used" state
+    } catch (err) {
+      // Surface the real reason (e.g. "You have already used a chip for
+      // this Gameweek") instead of silently doing nothing - previously this
+      // swallowed every error, so a rejected activation looked identical to
+      // a successful no-op.
+      Alert.alert('Could not activate chip', getApiErrorMessage(err, 'Something went wrong. Please try again.'));
     } finally {
       setActivating(false);
     }
   };
 
-  const disabled = used || activating || !gameweekId;
+  const disabled = used || locked || activating || !gameweekId;
+  const pillLabel = used ? 'Used' : locked ? 'Locked' : 'Play';
 
   return (
     <TouchableOpacity
@@ -54,9 +65,9 @@ export default function ChipCard({ name, icon, used = false, chipType, fantasyTe
         )}
       </View>
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
-      <View style={[styles.pill, !used ? styles.pillAvailable : styles.pillUnavailable]}>
-        <Text style={[styles.pillText, !used ? styles.pillTextAvailable : styles.pillTextUnavailable]}>
-          {used ? 'Used' : 'Play'}
+      <View style={[styles.pill, pillLabel === 'Play' ? styles.pillAvailable : styles.pillUnavailable]}>
+        <Text style={[styles.pillText, pillLabel === 'Play' ? styles.pillTextAvailable : styles.pillTextUnavailable]}>
+          {pillLabel}
         </Text>
       </View>
     </TouchableOpacity>

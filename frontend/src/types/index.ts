@@ -87,6 +87,12 @@ export interface FantasyTeam {
   startingPlayerIds: number[];
   formation: string;
   chips: ChipStatus;
+  // camelCase key (e.g. "wildcard") of whichever chip is already active for
+  // the current gameweek, or null if none - only one chip can be active per
+  // gameweek (enforced server-side). Distinct from `chips` above, which
+  // tracks chips used *ever* (each is one-time-per-season, except
+  // wildcard/wildcard2 which are separate slots).
+  activeChipKey: string | null;
   totalPoints: number;
   gameweekPoints: number;
   rank: number;
