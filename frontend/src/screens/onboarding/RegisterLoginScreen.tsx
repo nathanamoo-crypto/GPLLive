@@ -44,7 +44,6 @@ export default function RegisterLoginScreen() {
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
-  const loginDemo = useAuthStore((state) => state.loginDemo);
 
   const [mode, setMode] = useState<'register' | 'login'>('login');
   const [username, setUsername] = useState('');
@@ -114,24 +113,7 @@ export default function RegisterLoginScreen() {
     navigation.navigate('PickClub');
   }, [completeOnboarding, navigation, onboardingComplete]);
 
-  const handleDemo = useCallback(async () => {
-    if (loading) {
-      return;
-    }
-
-    setLoading(true);
-    setFormError(null);
-
-    try {
-      await loginDemo();
-      navigation.navigate('PickClub');
-    } catch (error) {
-      setFormError(getAuthErrorMessage(error, 'Unable to start demo session.'));
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, loginDemo, navigation]);
-
+  
   // Google's Expo provider hook - request/response/promptAsync follow
   // expo-auth-session's useAuthRequest contract. webClientId doubles as the
   // audience the backend's GoogleTokenVerifier checks the returned ID token
@@ -521,9 +503,6 @@ export default function RegisterLoginScreen() {
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.demoButton} onPress={handleDemo} disabled={loading}>
-          <Text style={styles.demoButtonText}>Continue as Demo User (For Testing)</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.switchModeRow}
