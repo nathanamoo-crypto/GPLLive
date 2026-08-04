@@ -45,6 +45,11 @@ export interface Player {
   clubId: number;
   position: Position;
   price: number;
+  // price minus the price before it, in the same millions unit as price -
+  // positive means it just went up, negative means it dropped, null/undefined
+  // means there's no prior price to compare against yet. Drives the
+  // green-up/red-down arrow shown next to a player's price.
+  priceChange?: number | null;
   photoUrl?: string;
 }
 
@@ -55,6 +60,7 @@ export interface SquadPlayerDTO {
   clubId: number;
   position: Position;
   price: number;
+  priceChange?: number | null;
   isStarting: boolean;
   isCaptain: boolean;
   isViceCaptain: boolean;
@@ -186,6 +192,7 @@ export interface PlayerAnalysis {
   clubName: string;
   position: Position;
   currentPrice: number | null;
+  priceChange?: number | null;
   totalPoints: number;
   totalGoals: number;
   totalAssists: number;

@@ -32,6 +32,7 @@ function mapSquadToFantasyTeam(data: any): FantasyTeam {
     clubId: s.clubId,
     position: s.position,
     price: s.price,
+    priceChange: s.priceChange ?? null,
     isStarting: s.isStarting ?? false,
     isCaptain: s.isCaptain ?? false,
     isViceCaptain: s.isViceCaptain ?? false,
@@ -44,6 +45,7 @@ function mapSquadToFantasyTeam(data: any): FantasyTeam {
     clubId: s.clubId,
     position: s.position as any,
     price: s.price,
+    priceChange: s.priceChange,
     fantasyTeamPlayerId: s.fantasyTeamPlayerId,
     isStarting: s.isStarting,
     isCaptain: s.isCaptain,
@@ -105,6 +107,7 @@ export async function fetchPlayers(position?: string, signal?: AbortSignal): Pro
 
 function mapPlayer(p: any): Player {
   const rawPrice = p.currentPrice ?? p.current_price;
+  const rawPriceChange = p.priceChange ?? p.price_change;
   return {
     id: p.playerId ?? p.id,
     name: p.name ?? p.fullName ?? p.full_name,
@@ -113,6 +116,7 @@ function mapPlayer(p: any): Player {
     // No price record yet for this player - treat as free rather than
     // silently producing NaN budget math downstream.
     price: rawPrice != null ? Number(rawPrice) / CEDIS_PER_MILLION : 0,
+    priceChange: rawPriceChange != null ? Number(rawPriceChange) / CEDIS_PER_MILLION : null,
     photoUrl: p.photoUrl ?? p.photo_url,
   };
 }
@@ -126,6 +130,7 @@ export async function fetchPlayerAnalysis(playerId: number, signal?: AbortSignal
   // Same raw-cedis-to-millions conversion as mapPlayer() below - currentPrice
   // here comes from the exact same PlayerPrice source as the /players list.
   const rawPrice = data.currentPrice;
+  const rawPriceChange = data.priceChange;
   return {
     id: data.id,
     fullName: data.fullName,
@@ -133,6 +138,7 @@ export async function fetchPlayerAnalysis(playerId: number, signal?: AbortSignal
     clubName: data.clubName,
     position: data.position,
     currentPrice: rawPrice != null ? Number(rawPrice) / CEDIS_PER_MILLION : null,
+    priceChange: rawPriceChange != null ? Number(rawPriceChange) / CEDIS_PER_MILLION : null,
     totalPoints: data.totalPoints ?? 0,
     totalGoals: data.totalGoals ?? 0,
     totalAssists: data.totalAssists ?? 0,
@@ -186,6 +192,7 @@ export async function getMyTeam(signal?: AbortSignal): Promise<FantasyTeam | nul
         clubId: row.clubId,
         position: row.position,
         price: row.currentPrice != null ? Number(row.currentPrice) / CEDIS_PER_MILLION : 0,
+        priceChange: row.priceChange != null ? Number(row.priceChange) / CEDIS_PER_MILLION : null,
         isStarting: row.isPartOfXI ?? false,
         isCaptain: row.isCaptain ?? false,
         isViceCaptain: row.isViceCaptain ?? false,

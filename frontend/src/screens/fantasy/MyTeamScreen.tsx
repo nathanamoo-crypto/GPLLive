@@ -23,6 +23,7 @@ import { fetchClubsById, backendClubIdToLocalClub, RealClub } from '../../servic
 import SegmentedControl from '../../components/shared/SegmentedControl';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
+import PriceChangeIndicator from '../../components/shared/PriceChangeIndicator';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { FantasyPlayer, FormationKey, ChipType, ChipStatus } from '../../types';
 
@@ -512,6 +513,7 @@ function MyTeamScreen() {
                         <Text style={[styles.listPrice, !isStarter && styles.listPriceBench]}>
                           GH₵{player.price}m
                         </Text>
+                        <PriceChangeIndicator priceChange={player.priceChange} />
                       </View>
                     </View>
                   );

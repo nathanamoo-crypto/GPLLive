@@ -18,6 +18,7 @@ import { Colors } from '../../constants/colors';
 import { fonts, radius, spacing, fontSize, getScrollBottomPadding } from '../../constants/layout';
 import { fetchPlayerAnalysis } from '../../services/fantasyService';
 import { getApiErrorMessage } from '../../services/api';
+import PriceChangeIndicator from '../../components/shared/PriceChangeIndicator';
 import { useTheme } from '../../context/ThemeContext';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { PlayerAnalysis } from '../../types';
@@ -127,9 +128,12 @@ export default function PlayerDetailsScreen() {
 
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>
-                {player.currentPrice != null ? `GH₵${player.currentPrice.toFixed(1)}m` : '—'}
-              </Text>
+              <View style={styles.priceValueRow}>
+                <Text style={styles.statValue}>
+                  {player.currentPrice != null ? `GH₵${player.currentPrice.toFixed(1)}m` : '—'}
+                </Text>
+                <PriceChangeIndicator priceChange={player.priceChange} size={14} showValue />
+              </View>
               <Text style={styles.statLabel}>Price</Text>
             </View>
             <View style={styles.statCard}>
@@ -315,6 +319,7 @@ function getStyles(colors: typeof Colors) {
       alignItems: 'center',
     },
     statValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.white, fontFamily: fonts.displayBold },
+    priceValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     statLabel: { fontSize: fontSize.xs, color: colors.grey1, marginTop: 4, textTransform: 'uppercase' },
     premiumSection: {
       marginHorizontal: spacing.base,
