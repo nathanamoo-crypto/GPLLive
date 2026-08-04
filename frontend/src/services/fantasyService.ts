@@ -435,8 +435,8 @@ export async function getCurrentGameweek(signal?: AbortSignal): Promise<Gameweek
 // current season, explicit search = any season/matchday typed in).
 export async function getGameweeksBySeason(season: string, signal?: AbortSignal): Promise<Gameweek[]> {
   const { data } = await api.get<any[]>(
-    `${FantasyEndpoints.GAMEWEEK_BY_SEASON}/${encodeURIComponent(season)}`,
-    { baseURL: FANTASY_URL, signal },
+    FantasyEndpoints.GAMEWEEK_BY_SEASON,
+    { baseURL: FANTASY_URL, params: { season }, signal },
   );
   return (data ?? []).map(mapGameweek);
 }

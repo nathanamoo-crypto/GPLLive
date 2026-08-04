@@ -51,18 +51,24 @@ export default function FixturesRoot() {
     }
   }, [route.params?.defaultTab]);
 
-  // The screen defaults to the REAL current season/matchday (from the
-  // backend's is_current gameweek), not "whatever the highest matchday
+  // The screen defaults to the REAL current season/gameweek (from the
+  // backend's is_current gameweek), not "whatever the highest gameweek
   // number happens to be across every fixture ever seeded" (the old
   // behaviour, which is how a stale/finished season could show up as
   // "current"). Browsing other gameweeks within the loaded season uses the
-  // chevrons; jumping to a totally different season+matchday (including
+  // chevrons; jumping to a totally different season+gameweek (including
   // past seasons) is the explicit search below, closed by default so past
   // fixtures never show up unasked-for.
-  const [realCurrent, setRealCurrent] = useState<{ season: string; gameweekNumber: number } | null>(null);
+  //
+  // `selectedGw` (not just a number) is what actually drives the fixtures
+  // fetch below, since getCurrentGameweek()/search both already hand back a
+  // real gameweek id directly - fixtures can load as soon as THAT resolves,
+  // without waiting on the full season gameweek list too. `seasonGameweeks`
+  // loads in parallel purely to know the prev/next chevron bounds.
+  const [realCurrent, setRealCurrent] = useState<{ id: number; season: string; gameweekNumber: number } | null>(null);
   const [season, setSeason] = useState<string | null>(null);
   const [seasonGameweeks, setSeasonGameweeks] = useState<{ id: number; gameweekNumber: number }[]>([]);
-  const [selectedGwNumber, setSelectedGwNumber] = useState<number | null>(null);
+  const [selectedGw, setSelectedGw] = useState<{ id: number; gameweekNumber: number } | null>(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchSeason, setSearchSeason] = useState('');
@@ -72,8 +78,9 @@ export default function FixturesRoot() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [seasonHasNoGameweeks, setSeasonHasNoGameweeks] = useState(false);
 
-  // Bootstraps to the real current season/matchday on mount.
+  // Bootstraps to the real current season/gameweek on mount.
   useEffect(() => {
     let cancelled = false;
     getCurrentGameweek()
@@ -84,9 +91,9 @@ export default function FixturesRoot() {
           setFetchError('No current gameweek is set yet.');
           return;
         }
-        setRealCurrent({ season: gw.season, gameweekNumber: gw.gameweekNumber });
+        setRealCurrent({ id: gw.gameweekId, season: gw.season, gameweekNumber: gw.gameweekNumber });
         setSeason(gw.season);
-        setSelectedGwNumber(gw.gameweekNumber);
+        setSelectedGw({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber });
       })
       .catch((err: any) => {
         if (!cancelled) {
@@ -97,8 +104,9 @@ export default function FixturesRoot() {
     return () => { cancelled = true; };
   }, []);
 
-  // Loads every gameweek in the selected season (for chevron bounds + to
-  // resolve a matchday number to the gameweek id fixtures are keyed by).
+  // Loads every gameweek in the selected season, purely for chevron bounds -
+  // doesn't gate the fixtures fetch below, so a slow/failed load here never
+  // blocks the actual fixture list from showing.
   useEffect(() => {
     if (!season) return;
     let cancelled = false;
@@ -109,60 +117,55 @@ export default function FixturesRoot() {
           .map((gw) => ({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber }))
           .sort((a, b) => a.gameweekNumber - b.gameweekNumber);
         setSeasonGameweeks(list);
+        setSeasonHasNoGameweeks(list.length === 0);
       })
       .catch(() => { if (!cancelled) setSeasonGameweeks([]); });
     return () => { cancelled = true; };
   }, [season]);
 
-  // Fetches fixtures for whichever matchday is selected within the loaded
-  // season.
+  // Fetches fixtures for whichever gameweek is selected - the one network
+  // call actually gating the loading spinner/fixture list.
   useEffect(() => {
-    if (!season || selectedGwNumber == null || seasonGameweeks.length === 0) return;
-    const target = seasonGameweeks.find((gw) => gw.gameweekNumber === selectedGwNumber);
-    if (!target) {
-      setMatches([]);
-      setLoading(false);
-      return;
-    }
+    if (!selectedGw) return;
     let cancelled = false;
     setLoading(true);
     setFetchError(null);
-    getMatches(target.id)
+    getMatches(selectedGw.id)
       .then((data) => { if (!cancelled) setMatches(data ?? []); })
       .catch((err: any) => { if (!cancelled) setFetchError(err?.message ?? 'Failed to load fixtures.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [season, selectedGwNumber, seasonGameweeks]);
+  }, [selectedGw]);
 
-  const gwIndex = seasonGameweeks.findIndex((gw) => gw.gameweekNumber === selectedGwNumber);
+  const gwIndex = seasonGameweeks.findIndex((gw) => gw.gameweekNumber === selectedGw?.gameweekNumber);
 
   const goPrevGameweek = () => {
-    if (gwIndex > 0) setSelectedGwNumber(seasonGameweeks[gwIndex - 1].gameweekNumber);
+    if (gwIndex > 0) setSelectedGw(seasonGameweeks[gwIndex - 1]);
   };
 
   const goNextGameweek = () => {
     if (gwIndex >= 0 && gwIndex < seasonGameweeks.length - 1) {
-      setSelectedGwNumber(seasonGameweeks[gwIndex + 1].gameweekNumber);
+      setSelectedGw(seasonGameweeks[gwIndex + 1]);
     }
   };
 
   const handleSearch = useCallback(async () => {
     const targetSeason = searchSeason.trim();
-    const targetMatchday = parseInt(searchMatchday, 10);
-    if (!targetSeason || Number.isNaN(targetMatchday)) {
-      setSearchError('Enter both a season (e.g. 2025/2026) and a matchday number.');
+    const targetGameweek = parseInt(searchMatchday, 10);
+    if (!targetSeason || Number.isNaN(targetGameweek)) {
+      setSearchError('Enter both a season (e.g. 2025/2026) and a gameweek number.');
       return;
     }
     setSearchError(null);
     try {
       const gws = await getGameweeksBySeason(targetSeason);
-      const found = gws.find((gw) => gw.gameweekNumber === targetMatchday);
+      const found = gws.find((gw) => gw.gameweekNumber === targetGameweek);
       if (!found) {
-        setSearchError(`No matchday ${targetMatchday} found for ${targetSeason}.`);
+        setSearchError(`No gameweek ${targetGameweek} found for ${targetSeason}.`);
         return;
       }
       setSeason(targetSeason);
-      setSelectedGwNumber(targetMatchday);
+      setSelectedGw({ id: found.gameweekId, gameweekNumber: found.gameweekNumber });
       setSearchOpen(false);
     } catch (err: any) {
       setSearchError(err?.message ?? 'Search failed.');
@@ -172,7 +175,7 @@ export default function FixturesRoot() {
   const backToCurrent = () => {
     if (!realCurrent) return;
     setSeason(realCurrent.season);
-    setSelectedGwNumber(realCurrent.gameweekNumber);
+    setSelectedGw({ id: realCurrent.id, gameweekNumber: realCurrent.gameweekNumber });
     setSearchError(null);
     setSearchOpen(false);
   };
@@ -195,8 +198,19 @@ export default function FixturesRoot() {
     return `${min.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${max.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
   }, [matches]);
 
-  const isCurrentGw = !!realCurrent && realCurrent.season === season && realCurrent.gameweekNumber === selectedGwNumber;
+  const isCurrentGw = !!realCurrent && realCurrent.season === season && realCurrent.gameweekNumber === selectedGw?.gameweekNumber;
   const isViewingOtherSeason = !!realCurrent && season !== null && season !== realCurrent.season;
+
+  // Distinguishes "this season has no gameweeks scheduled at all yet" (e.g.
+  // the new season before anything's been entered) from "this gameweek
+  // exists but has no fixtures in it" from "fixtures exist but none match
+  // the Live/Scheduled/Completed filter" - three different reasons for an
+  // empty list that deserve different messages.
+  const emptyStateMessage = seasonHasNoGameweeks
+    ? `The ${season} season hasn't been scheduled yet - check back closer to kickoff.`
+    : matches.length === 0
+      ? `No fixtures set for Gameweek ${selectedGw?.gameweekNumber} yet.`
+      : 'No matches found for this filter.';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -213,7 +227,7 @@ export default function FixturesRoot() {
           />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{selectedGwNumber != null ? `MATCHDAY ${selectedGwNumber}` : 'FIXTURES'}</Text>
+          <Text style={styles.headerTitle}>{selectedGw != null ? `GAMEWEEK ${selectedGw.gameweekNumber}` : 'FIXTURES'}</Text>
           {isCurrentGw && (
             <View style={styles.currentBadge}>
               <Text style={styles.currentBadgeText}>CURRENT</Text>
@@ -247,7 +261,7 @@ export default function FixturesRoot() {
 
       {searchOpen ? (
         <View style={styles.searchBox}>
-          <Text style={styles.searchLabel}>Search by season and matchday</Text>
+          <Text style={styles.searchLabel}>Search by season and gameweek</Text>
           <View style={styles.searchRow}>
             <TextInput
               style={styles.searchInput}
@@ -259,7 +273,7 @@ export default function FixturesRoot() {
             />
             <TextInput
               style={[styles.searchInput, styles.searchInputSmall]}
-              placeholder="MD"
+              placeholder="GW"
               placeholderTextColor={colors.textTertiary}
               keyboardType="numeric"
               value={searchMatchday}
@@ -339,7 +353,7 @@ export default function FixturesRoot() {
             {filtered.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
-                <Text style={styles.emptyText}>No matches found</Text>
+                <Text style={styles.emptyText}>{emptyStateMessage}</Text>
               </View>
             ) : (
               filtered.map((match) => (
@@ -664,8 +678,8 @@ function getStyles(colors: typeof Colors) {
   paddingBottom: 24,
   gap: 6,
   },
-  emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 15, color: colors.grey2 },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 12 },
+  emptyText: { fontSize: 15, color: colors.grey2, textAlign: 'center' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: 16, color: colors.live, textAlign: 'center', paddingHorizontal: 32 },
   standingsContent: { padding: 16, paddingBottom: 40 },
