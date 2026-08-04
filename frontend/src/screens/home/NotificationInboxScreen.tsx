@@ -28,6 +28,7 @@ const TYPE_META: Record<Notification['type'], { label: string; icon: keyof typeo
   RANK: { label: 'Rank Update', icon: 'trophy-outline' },
   GOAL: { label: 'Goal Alert', icon: 'football-outline' },
   CAPTAIN: { label: 'Captain Pick', icon: 'star-outline' },
+  LEAGUE: { label: 'League', icon: 'people-outline' },
 };
 
 function relativeTime(isoDate: string): string {

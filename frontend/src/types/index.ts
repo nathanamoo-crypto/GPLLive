@@ -256,10 +256,47 @@ export interface PremiumStatus {
 // this used to have when the whole feature was hardcoded mock data.
 export interface Notification {
   id: number;
-  type: 'DEADLINE' | 'RANK' | 'GOAL' | 'CAPTAIN';
+  type: 'DEADLINE' | 'RANK' | 'GOAL' | 'CAPTAIN' | 'LEAGUE';
   message: string;
   read: boolean;
   createdAt: string;
+}
+
+// Backend's LeagueResponse (domain/league/dtos/LeagueResponse.java).
+// callerStatus reflects the REQUESTING user's relationship to this league -
+// drives the frontend's join-button state.
+export interface League {
+  id: number;
+  name: string;
+  isPublic: boolean;
+  // Only populated for the owner or an existing member/requester - null for
+  // a stranger browsing public search results (they don't need it; public
+  // leagues join by id, not code).
+  inviteCode: string | null;
+  memberLimit: number;
+  activeMemberCount: number;
+  creatorUsername: string;
+  createdAt: string;
+  callerStatus: 'OWNER' | 'ACTIVE' | 'PENDING' | 'NONE';
+}
+
+// Backend's LeagueMemberResponse - used both for the active member list and
+// the owner's pending-requests list (status tells them apart).
+export interface LeagueMember {
+  userId: number;
+  username: string;
+  status: 'PENDING' | 'ACTIVE';
+  requestedAt: string;
+}
+
+// Backend's LeagueLeaderboardEntry - shared shape for both of a league's
+// leaderboards. streak is only ever populated on the predictions one.
+export interface LeagueLeaderboardEntry {
+  rank: number;
+  userId: number;
+  username: string;
+  points: number;
+  streak: number | null;
 }
 
 export interface Standing {

@@ -27,6 +27,7 @@ export const NEWS_URL = API_HOST;
 export const STANDINGS_URL = API_HOST;
 export const SUBSCRIPTION_URL = API_HOST;
 export const PAYMENT_URL = API_HOST;
+export const LEAGUE_URL = API_HOST;
 
 export const AuthEndpoints = {
   LOGIN: '/auth/login',
@@ -121,4 +122,22 @@ export const PaymentEndpoints = {
   INITIALIZE: '/payments/initialize',
   // Append /{reference} when calling this.
   VERIFY: '/payments/verify',
+};
+
+export const LeagueEndpoints = {
+  CREATE: '/leagues',
+  SEARCH: '/leagues/search',
+  MINE: '/leagues/mine',
+  // Append /{id} when calling this.
+  DETAIL: '/leagues',
+  // Append /{id}/join.
+  JOIN_BY_ID: '/leagues',
+  // Append /{code}.
+  JOIN_BY_CODE: '/leagues/join',
+  // Append /{id}/members.
+  MEMBERS: '/leagues',
+  // Append /{id}/requests.
+  REQUESTS: '/leagues',
+  // Append /{id}/leaderboard/predictions or /{id}/leaderboard/fantasy.
+  LEADERBOARD: '/leagues',
 };
