@@ -16,6 +16,7 @@ import { getApiErrorMessage } from '../../services/api';
 import {
   getNotifications,
   markNotificationRead,
+  markAllNotificationsRead,
 } from '../../services/notificationService';
 import { useTheme } from '../../context/ThemeContext';
 import { Notification } from '../../types';
@@ -96,12 +97,18 @@ export default function NotificationInboxScreen() {
     }
   }, []);
 
-  const markAllRead = useCallback(() => {
-    const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
-    if (unreadIds.length === 0) return;
+  const markAllRead = useCallback(async () => {
+    const hasUnread = notifications.some((n) => !n.read);
+    if (!hasUnread) return;
+    // Optimistic, same as a single mark-as-read - revert everyone back to
+    // their real state if the bulk call fails so the UI never lies.
+    const previous = notifications;
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-    // No bulk endpoint on the backend - fire the per-id PATCH for each one.
-    Promise.allSettled(unreadIds.map((id) => markNotificationRead(id)));
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      setNotifications(previous);
+    }
   }, [notifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;

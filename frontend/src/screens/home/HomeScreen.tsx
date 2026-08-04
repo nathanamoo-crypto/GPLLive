@@ -23,9 +23,10 @@ import { getScrollBottomPadding } from '../../constants/layout';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifications } from '../../hooks/useNotifications';
 import { getMatches } from '../../services/matchService';
+import { getCurrentGameweek } from '../../services/fantasyService';
 import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
-import type { Match } from '../../types';
+import type { Match, Gameweek } from '../../types';
 
 type HomeNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'HomeFeed'>;
 
@@ -52,6 +53,11 @@ export default function HomeScreen() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [contentRefreshTrigger, setContentRefreshTrigger] = useState(0);
+  // Only used to give the "no matches today" empty state something more
+  // useful to say (e.g. the new season's actual kickoff date) - not used to
+  // gate the fetch above, so a failure here never blocks the real matches
+  // list from loading.
+  const [currentGameweek, setCurrentGameweek] = useState<Gameweek | null>(null);
 
   // Previously this only pulled status=live fixtures, which is only ever
   // non-empty in the narrow window a match is actually being played - a
@@ -73,8 +79,22 @@ export default function HomeScreen() {
       .then((data) => { if (!cancelled) setTodaysMatches(data); })
       .catch(() => { if (!cancelled) setTodaysMatches([]); })
       .finally(() => { if (!cancelled) setMatchesLoading(false); });
+    getCurrentGameweek(controller.signal)
+      .then((gw) => { if (!cancelled) setCurrentGameweek(gw); })
+      .catch(() => { if (!cancelled) setCurrentGameweek(null); });
     return () => { cancelled = true; controller.abort(); };
   }, [loadTodaysMatches]);
+
+  // "No matches today" reads as a bug the moment a brand-new season hasn't
+  // kicked off yet - naming the actual kickoff date makes it obvious this
+  // is expected, not broken.
+  const todayEmptyMessage = useMemo(() => {
+    if (!currentGameweek?.startDate) return undefined;
+    const start = new Date(currentGameweek.startDate);
+    if (Number.isNaN(start.getTime()) || start <= new Date()) return undefined;
+    const formatted = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    return `No matches today - the ${currentGameweek.season} season kicks off ${formatted}.`;
+  }, [currentGameweek]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -132,7 +152,7 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <TodayMatchesWidget matches={todaysMatches} />
+      <TodayMatchesWidget matches={todaysMatches} emptyMessage={todayEmptyMessage} />
       <LatestNewsWidget refreshTrigger={contentRefreshTrigger} />
       <LeagueTableWidget refreshTrigger={contentRefreshTrigger} />
       <FantasySnapshotWidget />

@@ -102,6 +102,7 @@ export const NotificationEndpoints = {
   UNREAD: '/notifications/unread',
   // Append /{id} when calling this.
   MARK_READ: '/notifications/marked-as-read-notification',
+  MARK_ALL_READ: '/notifications/mark-all-as-read',
 };
 
 export const NewsEndpoints = {
