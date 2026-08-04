@@ -199,7 +199,10 @@ Flyway applies all migrations automatically on startup. See
 `backend/DEPLOYMENT.md` for deploying your own instance (Render + Neon,
 free tier).
 
-### Frontend Type Check
+### # backend (C:\Users\augus\IdeaProjects\gplFantasyLeaague)
+git add src/main/java/com/augustine/gplfantasyleaague/domain/auth/service/AuthService.java src/main/java/com/augustine/gplfantasyleaague/domain/auth/entity/PendingRegistration.java src/main/java/com/augustine/gplfantasyleaague/domain/auth/repository/PendingRegistrationRepository.java src/main/java/com/augustine/gplfantasyleaague/config/PendingRegistrationCleanupScheduler.java src/main/resources/db/migration/V30__pending_registrations.sql
+git commit -m "Don't create a user until email is verified - stage registrations in pending_registrations instead"
+git push origin develop Type Check
 
 ```bash
 cd frontend

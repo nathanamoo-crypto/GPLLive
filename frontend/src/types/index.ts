@@ -37,8 +37,12 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
-  // High-stakes/rivalry fixture - carries a flat scoring bonus on
-  // predictions made against it (see PredictRoot.tsx).
+  // High-stakes/rivalry fixture - carries a flat +2 prediction-point bonus.
+  // True if the backend admin flag is set OR the matchup is a known rivalry
+  // per isDerbyMatch() in constants/derbies.ts (see PredictRoot.tsx) - the
+  // backend only actually awards the scoring bonus for fixtures it has
+  // is_derby=true on, so the local heuristic is display-only until an admin
+  // flags the fixture to match.
   isDerby?: boolean;
 }
 
@@ -125,9 +129,8 @@ export interface Prediction {
   // of what the client sends.
   locked: boolean;
   submitted: boolean;
-  // Only one Banker allowed per gameweek - doubles whatever points this
-  // fixture earns, win or lose.
-  isBanker?: boolean;
+  // Max one per gameweek - that fixture's points are doubled (win or lose).
+  isBanker: boolean;
   // Echoed back from the fixture - drives the derby bonus badge.
   isDerby?: boolean;
   // Populated once FixtureResultsService records a result for this fixture.
@@ -141,6 +144,18 @@ export interface PredictionLeaderboardEntry {
   username: string;
   predictionPoints: number;
   predictionStreak: number;
+}
+
+// Detailed breakdown of the points a single prediction earns (see
+// predictionScoring.ts). `total` is the final amount credited to the user's
+// predictionPoints.
+export interface PredictionPointsBreakdown {
+  base: number;
+  derbyBonus: number;
+  bankerMultiplier: number;
+  streakMultiplier: number;
+  earlyBonus: number;
+  total: number;
 }
 
 export interface Article {

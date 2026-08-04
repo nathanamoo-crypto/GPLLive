@@ -12,6 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
+import { isDerbyMatch } from '../../constants/derbies';
+import { streakMultiplier } from '../../utils/predictionScoring';
 import { usePredictionStore } from '../../store/predictionStore';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,6 +21,17 @@ import { getCurrentGameweek } from '../../services/fantasyService';
 import { getMatches } from '../../services/matchService';
 import { getPredictionLeaderboard } from '../../services/predictionService';
 import type { Match, PredictionLeaderboardEntry } from '../../types';
+
+const RULES = [
+  '7 pts — exact scoreline',
+  '4 pts — correct outcome + goal difference (e.g. picked 2–1, actual 3–2)',
+  '2 pts — correct outcome only',
+  '0 pts — wrong outcome',
+  "⚡ Banker pick doubles that fixture's points (win or lose)",
+  '🏟️ Derby fixtures carry a flat +2 bonus',
+  '🔥 3+ correct outcomes in a row = 1.25x points (1.5x from 6)',
+  '⏰ Submitted 24h+ before kickoff earns +1',
+];
 
 function isFixtureLocked(match: Match, backendLocked: boolean | undefined): boolean {
   if (backendLocked) return true;
@@ -92,6 +105,9 @@ export default function PredictRoot() {
   };
 
   const myEntry = leaderboard.find((entry) => entry.username === username);
+  const streak = myEntry?.predictionStreak ?? 0;
+  const stage = streakMultiplier(streak);
+  const streakBoostActive = stage > 1;
 
   return (
     <View style={styles.container}>
@@ -102,15 +118,34 @@ export default function PredictRoot() {
         </Text>
       </View>
 
+      <View style={styles.streakBanner}>
+        <Ionicons
+          name={streakBoostActive ? 'flame' : 'flame-outline'}
+          size={18}
+          color={streakBoostActive ? colors.primary : colors.textTertiary}
+        />
+        <Text style={[styles.streakText, streakBoostActive && styles.streakTextActive]}>
+          {streakBoostActive
+            ? `${streak}-game correct streak — ${stage}x points active`
+            : streak > 0
+              ? `${streak} correct in a row — hit 3 to unlock a bonus multiplier`
+              : 'No active streak — hit 3 correct in a row to unlock a 1.25x multiplier'}
+        </Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={fixturesLoading} onRefresh={loadEverything} tintColor={colors.primary} />}
       >
-        <Text style={styles.infoBox}>
-          7 pts exact score · 4 pts correct outcome + goal difference · 2 pts correct outcome.{'\n'}
-          Banker doubles a fixture's points. Derby fixtures (🔥) carry a +2 bonus. 3+ correct in a row earns a
-          streak multiplier, and picks in 24h+ before kickoff earn +1.
-        </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>How scoring works</Text>
+          {RULES.map((rule) => (
+            <Text key={rule} style={styles.infoLine}>
+              {'• '}
+              {rule}
+            </Text>
+          ))}
+        </View>
 
         {myEntry ? (
           <View style={styles.myStatsRow}>
@@ -136,7 +171,7 @@ export default function PredictRoot() {
         ) : null}
 
         {!fixturesLoading && fixtures.length === 0 && !loadError ? (
-          <Text style={styles.infoBox}>No fixtures scheduled for the current gameweek yet.</Text>
+          <Text style={styles.infoLine}>No fixtures scheduled for the current gameweek yet.</Text>
         ) : null}
 
         {fixtures.map((fixture) => {
@@ -144,14 +179,40 @@ export default function PredictRoot() {
           const locked = isFixtureLocked(fixture, prediction.locked);
           const isDirty = prediction.outcome != null && prediction.exactHomeGoals != null && prediction.exactAwayGoals != null;
           const saving = savingFixtureId === fixture.id;
+          // The backend only awards the derby scoring bonus when its own
+          // is_derby flag is set - isDerbyMatch() is a client-side fallback
+          // so well-known rivalries still show the badge even before an
+          // admin has flagged the fixture (see types/index.ts Match.isDerby).
+          const derby = !!fixture.isDerby || isDerbyMatch(fixture.homeClub, fixture.awayClub);
 
           return (
-            <View key={fixture.id} style={styles.matchCard}>
-              {fixture.isDerby ? (
-                <View style={styles.derbyBadge}>
-                  <Text style={styles.derbyBadgeText}>🔥 Derby +2</Text>
-                </View>
-              ) : null}
+            <View key={fixture.id} style={[styles.matchCard, prediction.isBanker && styles.matchCardBanker]}>
+              <View style={styles.cardTopRow}>
+                {derby ? (
+                  <View style={styles.derbyBadge}>
+                    <Ionicons name="shield" size={12} color={colors.live} />
+                    <Text style={styles.derbyBadgeText}>Derby · +2</Text>
+                  </View>
+                ) : (
+                  <View style={styles.placeholderBadge} />
+                )}
+
+                <TouchableOpacity
+                  style={[styles.bankerButton, prediction.isBanker && styles.bankerButtonActive, locked && styles.disabledButton]}
+                  onPress={() => !locked && setBanker(fixture.id)}
+                  disabled={locked}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={prediction.isBanker ? 'star' : 'star-outline'}
+                    size={16}
+                    color={prediction.isBanker ? colors.textInverse : colors.primary}
+                  />
+                  <Text style={[styles.bankerLabel, prediction.isBanker && styles.bankerLabelActive]}>
+                    {prediction.isBanker ? 'Your Banker' : 'Banker'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.teamsRow}>
                 <View style={styles.teamInfo}>
@@ -205,19 +266,6 @@ export default function PredictRoot() {
               </View>
 
               <View style={styles.footerRow}>
-                <TouchableOpacity
-                  style={[styles.bankerButton, prediction.isBanker && styles.bankerButtonActive, locked && styles.disabledButton]}
-                  onPress={() => !locked && setBanker(fixture.id)}
-                  disabled={locked}
-                >
-                  <Ionicons
-                    name={prediction.isBanker ? 'star' : 'star-outline'}
-                    size={14}
-                    color={prediction.isBanker ? colors.textInverse : colors.textSecondary}
-                  />
-                  <Text style={[styles.bankerLabel, prediction.isBanker && styles.bankerLabelActive]}>Banker</Text>
-                </TouchableOpacity>
-
                 {locked ? (
                   <View style={styles.lockedTag}>
                     <Ionicons name="lock-closed-outline" size={14} color={colors.textTertiary} />
@@ -257,31 +305,90 @@ function getStyles(colors: typeof Colors) {
     header: { padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
     headerTitle: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
     headerSubtitle: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
+    streakBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+    },
+    streakText: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+    streakTextActive: { color: colors.primary },
     content: { padding: 16 },
-    infoBox: { backgroundColor: colors.tagFE.bg, padding: 12, borderRadius: 12, color: colors.primary, fontSize: 12, fontWeight: '600', marginBottom: 16, lineHeight: 18 },
+    infoBox: { backgroundColor: colors.tagFE.bg, padding: 14, borderRadius: 12, marginBottom: 20 },
+    infoTitle: { fontSize: 13, fontWeight: '800', color: colors.primary, marginBottom: 6 },
+    infoLine: { fontSize: 12.5, fontWeight: '600', color: colors.textSecondary, marginBottom: 3, lineHeight: 18 },
     myStatsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
     myStatBox: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
     myStatValue: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
     myStatLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 2, textAlign: 'center' },
-    matchCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-    derbyBadge: { alignSelf: 'flex-start', backgroundColor: colors.tagFE.bg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10 },
-    derbyBadgeText: { fontSize: 11, fontWeight: '700', color: colors.primary },
+    matchCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    matchCardBanker: { borderColor: colors.primary, borderWidth: 1.5 },
+    cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    placeholderBadge: { flex: 1 },
+    derbyBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: 'rgba(208,2,27,0.12)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    derbyBadgeText: { fontSize: 11, fontWeight: '800', color: colors.live },
+    bankerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    bankerButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    bankerLabel: { fontSize: 11, fontWeight: '800', color: colors.primary },
+    bankerLabelActive: { color: colors.textInverse },
     teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
     teamInfo: { flex: 1 },
     teamName: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
     predictRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    scoreInput: { width: 40, height: 45, backgroundColor: colors.background, borderRadius: 8, textAlign: 'center', fontSize: 20, fontWeight: '800', color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
+    scoreInput: {
+      width: 40,
+      height: 45,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      textAlign: 'center',
+      fontSize: 20,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     vsText: { fontSize: 18, fontWeight: '800', color: colors.textTertiary },
     outcomeRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-    outcomeButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+    outcomeButton: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     outcomeButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     outcomeLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
     outcomeLabelActive: { color: colors.textInverse },
-    footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    bankerButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
-    bankerButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    bankerLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
-    bankerLabelActive: { color: colors.textInverse },
+    footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
     saveButton: { backgroundColor: colors.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 100, alignItems: 'center' },
     saveButtonDisabled: { opacity: 0.4 },
     saveButtonText: { color: colors.textInverse, fontSize: 12, fontWeight: '800' },
