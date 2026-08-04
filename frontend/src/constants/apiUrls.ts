@@ -80,6 +80,8 @@ export const MatchEndpoints = {
 
 export const PredictionEndpoints = {
   SUBMIT: '/predictions',
+  ME: '/predictions/me',
+  LEADERBOARD: '/predictions/leaderboard',
 };
 
 export const DiscussionEndpoints = {

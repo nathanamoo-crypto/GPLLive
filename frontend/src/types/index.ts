@@ -37,6 +37,9 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
+  // High-stakes/rivalry fixture - carries a flat scoring bonus on
+  // predictions made against it (see PredictRoot.tsx).
+  isDerby?: boolean;
 }
 
 export interface Player {
@@ -117,8 +120,27 @@ export interface Prediction {
   outcome: 'home' | 'draw' | 'away' | null;
   exactHomeGoals?: number;
   exactAwayGoals?: number;
+  // True once the fixture's kickoff has passed (or an admin moved it out of
+  // SCHEDULED) - the backend rejects further edits at that point regardless
+  // of what the client sends.
   locked: boolean;
   submitted: boolean;
+  // Only one Banker allowed per gameweek - doubles whatever points this
+  // fixture earns, win or lose.
+  isBanker?: boolean;
+  // Echoed back from the fixture - drives the derby bonus badge.
+  isDerby?: boolean;
+  // Populated once FixtureResultsService records a result for this fixture.
+  scored?: boolean;
+  pointsEarned?: number | null;
+}
+
+export interface PredictionLeaderboardEntry {
+  rank: number;
+  userId: number;
+  username: string;
+  predictionPoints: number;
+  predictionStreak: number;
 }
 
 export interface Article {
@@ -341,8 +363,20 @@ export interface FantasyState {
 
 export interface PredictionState {
   predictions: Record<string, Prediction>;
+  loading: boolean;
+  // Fetches this gameweek's already-saved picks from the backend (defaults
+  // to the current gameweek server-side when gameweekId is omitted) and
+  // merges them into `predictions`, so re-opening the screen shows what was
+  // already submitted instead of a blank slate.
+  loadPredictions: (gameweekId?: number) => Promise<void>;
   setPrediction: (fixtureId: number, outcome: Prediction['outcome']) => void;
   setExactScore: (fixtureId: number, home: number, away: number) => void;
-  submitAll: () => Promise<void>;
+  // Only one Banker per gameweek - setting it on one fixture clears it on
+  // every other draft prediction in `predictions` (the backend does the same
+  // on its side once saved).
+  setBanker: (fixtureId: number) => void;
+  // Saves a single fixture's current draft pick to the backend immediately -
+  // predictions can be resubmitted/edited freely up until kickoff.
+  submitPrediction: (fixtureId: number) => Promise<void>;
   reset: () => void;
 }
