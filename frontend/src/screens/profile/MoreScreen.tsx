@@ -50,7 +50,6 @@ export default function MoreScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const resetOnboarding = useAuthStore((state) => state.resetOnboarding);
   const favouriteClub = user?.favouriteClub;
 
   const handleLogOut = () => {
@@ -60,19 +59,7 @@ export default function MoreScreen() {
     ]);
   };
 
-  const handleReplayOnboarding = () => {
-    Alert.alert('Replay Onboarding?', 'This will show the intro again.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Replay',
-        onPress: () => {
-          void logout();
-          resetOnboarding();
-        },
-      },
-    ]);
-  };
-
+  
   const navigateToTabScreen = (tabName: string, screenName: string) => {
     navigation.dispatch(
       CommonActions.navigate({ name: tabName, params: { screen: screenName } })
@@ -166,13 +153,6 @@ export default function MoreScreen() {
 
       <View style={styles.menuSection}>
         <MenuItem icon="share-outline" label="Share App" onPress={handleShare} color={Colors.yellow} iconBg="#1A2A1A" />
-        <MenuItem
-          icon="refresh-outline"
-          label="Replay Onboarding"
-          onPress={handleReplayOnboarding}
-          color={Colors.yellow}
-          iconBg="#1A1A1A"
-        />
         <MenuItem icon="log-out-outline" label="Sign Out" onPress={handleLogOut} color={Colors.red} iconBg="#3A1A1A" last />
       </View>
     </ScrollView>

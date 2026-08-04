@@ -58,7 +58,6 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const resetOnboarding = useAuthStore((state) => state.resetOnboarding);
   const { theme, colors, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   // "My Team" used to push straight into the pitch-view screen, which just
@@ -78,13 +77,7 @@ export default function ProfileScreen() {
     ]);
   }, [logout]);
 
-  const handleReplayOnboarding = useCallback(() => {
-    Alert.alert('Replay onboarding?', 'This will show the splash and onboarding slides again.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Replay', onPress: () => { void logout(); resetOnboarding(); } },
-    ]);
-  }, [logout, resetOnboarding]);
-
+  
   const handleShare = useCallback(() => {
     void Share.share({ message: 'Join me on GPL Live — the ultimate Ghana Premier League companion app!' });
   }, []);
@@ -189,7 +182,6 @@ export default function ProfileScreen() {
         items={[
           { icon: 'notifications-outline', label: 'Notifications', onPress: () => navigation.navigate('Home', { screen: 'NotificationInbox' }) },
           { icon: 'share-outline', label: 'Share GPL Live', onPress: handleShare },
-          { icon: 'refresh-outline', label: 'Replay Onboarding', onPress: handleReplayOnboarding },
           { icon: 'log-out-outline', label: 'Log Out', onPress: handleLogOut },
         ]}
       />
