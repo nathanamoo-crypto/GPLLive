@@ -37,6 +37,9 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
+  // High-stakes matchup (derby/rivalry) - carries a flat +2 prediction-point
+  // bonus automatically, set on the fixture by isDerbyMatch() in constants.
+  isDerby?: boolean;
 }
 
 export interface Player {
@@ -111,8 +114,22 @@ export interface Prediction {
   outcome: 'home' | 'draw' | 'away' | null;
   exactHomeGoals?: number;
   exactAwayGoals?: number;
+  // Max one per gameweek - that fixture's points are doubled (win or lose).
+  isBanker: boolean;
   locked: boolean;
   submitted: boolean;
+}
+
+// Detailed breakdown of the points a single prediction earns (see
+// predictionScoring.ts). `total` is the final amount credited to the user's
+// predictionPoints.
+export interface PredictionPointsBreakdown {
+  base: number;
+  derbyBonus: number;
+  bankerMultiplier: number;
+  streakMultiplier: number;
+  earlyBonus: number;
+  total: number;
 }
 
 export interface Article {
@@ -338,8 +355,16 @@ export interface FantasyState {
 
 export interface PredictionState {
   predictions: Record<string, Prediction>;
+  // fixtureId of the single "Banker" pick for the current gameweek (doubles
+  // points on that fixture), or null if none chosen yet.
+  bankerFixtureId: number | null;
+  // Current correct-outcome streak (from the backend), used to apply the
+  // 1.25x-1.5x streak multiplier to new points once it reaches 3.
+  streak: number;
   setPrediction: (fixtureId: number, outcome: Prediction['outcome']) => void;
   setExactScore: (fixtureId: number, home: number, away: number) => void;
+  setBanker: (fixtureId: number) => void;
+  setStreak: (streak: number) => void;
   submitAll: () => Promise<void>;
   reset: () => void;
 }
