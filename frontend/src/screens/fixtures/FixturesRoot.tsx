@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
 import { Logos } from '../../constants/logos';
 import { getMatches } from '../../services/matchService';
+import { getCurrentGameweek, getGameweeksBySeason } from '../../services/fantasyService';
 import { fetchStandings } from '../../services/standingsService';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
@@ -48,70 +50,153 @@ export default function FixturesRoot() {
       setActiveTab(route.params.defaultTab);
     }
   }, [route.params?.defaultTab]);
+
+  // The screen defaults to the REAL current season/matchday (from the
+  // backend's is_current gameweek), not "whatever the highest matchday
+  // number happens to be across every fixture ever seeded" (the old
+  // behaviour, which is how a stale/finished season could show up as
+  // "current"). Browsing other gameweeks within the loaded season uses the
+  // chevrons; jumping to a totally different season+matchday (including
+  // past seasons) is the explicit search below, closed by default so past
+  // fixtures never show up unasked-for.
+  const [realCurrent, setRealCurrent] = useState<{ season: string; gameweekNumber: number } | null>(null);
+  const [season, setSeason] = useState<string | null>(null);
+  const [seasonGameweeks, setSeasonGameweeks] = useState<{ id: number; gameweekNumber: number }[]>([]);
+  const [selectedGwNumber, setSelectedGwNumber] = useState<number | null>(null);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSeason, setSearchSeason] = useState('');
+  const [searchMatchday, setSearchMatchday] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Bootstraps to the real current season/matchday on mount.
   useEffect(() => {
+    let cancelled = false;
+    getCurrentGameweek()
+      .then((gw) => {
+        if (cancelled) return;
+        if (!gw?.season) {
+          setLoading(false);
+          setFetchError('No current gameweek is set yet.');
+          return;
+        }
+        setRealCurrent({ season: gw.season, gameweekNumber: gw.gameweekNumber });
+        setSeason(gw.season);
+        setSelectedGwNumber(gw.gameweekNumber);
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setLoading(false);
+          setFetchError(err?.message ?? 'Failed to load the current gameweek.');
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Loads every gameweek in the selected season (for chevron bounds + to
+  // resolve a matchday number to the gameweek id fixtures are keyed by).
+  useEffect(() => {
+    if (!season) return;
+    let cancelled = false;
+    getGameweeksBySeason(season)
+      .then((gws) => {
+        if (cancelled) return;
+        const list = gws
+          .map((gw) => ({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber }))
+          .sort((a, b) => a.gameweekNumber - b.gameweekNumber);
+        setSeasonGameweeks(list);
+      })
+      .catch(() => { if (!cancelled) setSeasonGameweeks([]); });
+    return () => { cancelled = true; };
+  }, [season]);
+
+  // Fetches fixtures for whichever matchday is selected within the loaded
+  // season.
+  useEffect(() => {
+    if (!season || selectedGwNumber == null || seasonGameweeks.length === 0) return;
+    const target = seasonGameweeks.find((gw) => gw.gameweekNumber === selectedGwNumber);
+    if (!target) {
+      setMatches([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setFetchError(null);
-    getMatches()
+    getMatches(target.id)
       .then((data) => { if (!cancelled) setMatches(data ?? []); })
       .catch((err: any) => { if (!cancelled) setFetchError(err?.message ?? 'Failed to load fixtures.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [season, selectedGwNumber, seasonGameweeks]);
 
-  const gameweeks = useMemo(() => {
-    const gws = [...new Set(matches.map((m) => m.gameweek))].sort((a, b) => b - a);
-    return gws.length > 0 ? gws : [];
-  }, [matches]);
-
-  const [currentGameweek, setCurrentGameweek] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (gameweeks.length > 0 && currentGameweek === null) {
-      setCurrentGameweek(gameweeks[0]);
-    }
-  }, [gameweeks, currentGameweek]);
+  const gwIndex = seasonGameweeks.findIndex((gw) => gw.gameweekNumber === selectedGwNumber);
 
   const goPrevGameweek = () => {
-    if (currentGameweek === null) return;
-    const idx = gameweeks.indexOf(currentGameweek);
-    if (idx < gameweeks.length - 1) setCurrentGameweek(gameweeks[idx + 1]);
+    if (gwIndex > 0) setSelectedGwNumber(seasonGameweeks[gwIndex - 1].gameweekNumber);
   };
 
   const goNextGameweek = () => {
-    if (currentGameweek === null) return;
-    const idx = gameweeks.indexOf(currentGameweek);
-    if (idx > 0) setCurrentGameweek(gameweeks[idx - 1]);
+    if (gwIndex >= 0 && gwIndex < seasonGameweeks.length - 1) {
+      setSelectedGwNumber(seasonGameweeks[gwIndex + 1].gameweekNumber);
+    }
   };
 
-  const gwMatches = useMemo(
-    () => matches.filter((m) => m.gameweek === currentGameweek),
-    [currentGameweek, matches],
-  );
+  const handleSearch = useCallback(async () => {
+    const targetSeason = searchSeason.trim();
+    const targetMatchday = parseInt(searchMatchday, 10);
+    if (!targetSeason || Number.isNaN(targetMatchday)) {
+      setSearchError('Enter both a season (e.g. 2025/2026) and a matchday number.');
+      return;
+    }
+    setSearchError(null);
+    try {
+      const gws = await getGameweeksBySeason(targetSeason);
+      const found = gws.find((gw) => gw.gameweekNumber === targetMatchday);
+      if (!found) {
+        setSearchError(`No matchday ${targetMatchday} found for ${targetSeason}.`);
+        return;
+      }
+      setSeason(targetSeason);
+      setSelectedGwNumber(targetMatchday);
+      setSearchOpen(false);
+    } catch (err: any) {
+      setSearchError(err?.message ?? 'Search failed.');
+    }
+  }, [searchSeason, searchMatchday]);
+
+  const backToCurrent = () => {
+    if (!realCurrent) return;
+    setSeason(realCurrent.season);
+    setSelectedGwNumber(realCurrent.gameweekNumber);
+    setSearchError(null);
+    setSearchOpen(false);
+  };
 
   const filtered = useMemo(() => {
-    if (filter === 'All') return gwMatches;
-    if (filter === 'Live') return gwMatches.filter((m) => m.status === 'live');
-    if (filter === 'Scheduled') return gwMatches.filter((m) => m.status === 'scheduled');
-    return gwMatches.filter((m) => m.status === 'finished');
-  }, [filter, gwMatches]);
+    if (filter === 'All') return matches;
+    if (filter === 'Live') return matches.filter((m) => m.status === 'live');
+    if (filter === 'Scheduled') return matches.filter((m) => m.status === 'scheduled');
+    return matches.filter((m) => m.status === 'finished');
+  }, [filter, matches]);
 
   const gameweekDate = useMemo(() => {
-    if (gwMatches.length === 0) return '';
-    const dates = gwMatches.map((m) => new Date(m.kickoffTime));
+    if (matches.length === 0) return '';
+    const dates = matches.map((m) => new Date(m.kickoffTime));
     const min = new Date(Math.min(...dates.map(Number)));
     const max = new Date(Math.max(...dates.map(Number)));
     if (min.toDateString() === max.toDateString()) {
       return min.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
     return `${min.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${max.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-  }, [gwMatches]);
+  }, [matches]);
 
-  const isCurrentGw = currentGameweek === gameweeks[0];
+  const isCurrentGw = !!realCurrent && realCurrent.season === season && realCurrent.gameweekNumber === selectedGwNumber;
+  const isViewingOtherSeason = !!realCurrent && season !== null && season !== realCurrent.season;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -119,17 +204,17 @@ export default function FixturesRoot() {
         <TouchableOpacity
           style={styles.tableButton}
           onPress={goPrevGameweek}
-          disabled={currentGameweek === gameweeks[gameweeks.length - 1]}
+          disabled={gwIndex <= 0}
         >
           <Ionicons
             name="chevron-back"
             size={20}
-            color={currentGameweek === gameweeks[gameweeks.length - 1] ? colors.surface2 : colors.grey1}
+            color={gwIndex <= 0 ? colors.surface2 : colors.grey1}
           />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{currentGameweek != null ? `MATCHDAY ${currentGameweek}` : 'FIXTURES'}</Text>
-          {isCurrentGw && currentGameweek != null && (
+          <Text style={styles.headerTitle}>{selectedGwNumber != null ? `MATCHDAY ${selectedGwNumber}` : 'FIXTURES'}</Text>
+          {isCurrentGw && (
             <View style={styles.currentBadge}>
               <Text style={styles.currentBadgeText}>CURRENT</Text>
             </View>
@@ -138,17 +223,61 @@ export default function FixturesRoot() {
         <TouchableOpacity
           style={styles.tableButton}
           onPress={goNextGameweek}
-          disabled={currentGameweek === gameweeks[0]}
+          disabled={gwIndex < 0 || gwIndex >= seasonGameweeks.length - 1}
         >
           <Ionicons
             name="chevron-forward"
             size={20}
-            color={currentGameweek === gameweeks[0] ? colors.surface2 : colors.grey1}
+            color={gwIndex < 0 || gwIndex >= seasonGameweeks.length - 1 ? colors.surface2 : colors.grey1}
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.searchToggle}
+          onPress={() => setSearchOpen((prev) => !prev)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="search-outline" size={18} color={colors.grey1} />
+        </TouchableOpacity>
       </View>
+
+      {season ? <Text style={styles.seasonSubtitle}>{season} season</Text> : null}
       {activeTab === 'fixtures' && gameweekDate ? (
         <Text style={styles.dateSubtitle}>{gameweekDate}</Text>
+      ) : null}
+
+      {searchOpen ? (
+        <View style={styles.searchBox}>
+          <Text style={styles.searchLabel}>Search by season and matchday</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Season, e.g. 2025/2026"
+              placeholderTextColor={colors.textTertiary}
+              value={searchSeason}
+              onChangeText={setSearchSeason}
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={[styles.searchInput, styles.searchInputSmall]}
+              placeholder="MD"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="numeric"
+              value={searchMatchday}
+              onChangeText={setSearchMatchday}
+            />
+            <TouchableOpacity style={styles.searchGoButton} onPress={handleSearch}>
+              <Text style={styles.searchGoButtonText}>Go</Text>
+            </TouchableOpacity>
+          </View>
+          {searchError ? <Text style={styles.searchErrorText}>{searchError}</Text> : null}
+        </View>
+      ) : null}
+
+      {isViewingOtherSeason ? (
+        <TouchableOpacity style={styles.backToCurrentRow} onPress={backToCurrent}>
+          <Ionicons name="arrow-back-circle-outline" size={16} color={colors.yellow} />
+          <Text style={styles.backToCurrentText}>Back to current season</Text>
+        </TouchableOpacity>
       ) : null}
 
       <View style={styles.tabRow}>
@@ -384,10 +513,71 @@ function getStyles(colors: typeof Colors) {
     backgroundColor: colors.black,
   },
   headerCenter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
+  searchToggle: {
+    padding: 8,
+  },
+  seasonSubtitle: {
+    color: colors.grey2,
+    fontSize: 11,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+    marginTop: -4,
+  },
+  searchBox: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surface2,
+  },
+  searchLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.grey1,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.05,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.black,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: colors.white,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchInputSmall: { flex: 0, width: 56, textAlign: 'center' },
+  searchGoButton: {
+    backgroundColor: colors.yellow,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchGoButtonText: { fontSize: 13, fontWeight: '800', color: '#000000' },
+  backToCurrentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  backToCurrentText: { fontSize: 12, fontWeight: '700', color: colors.yellow },
+  searchErrorText: { fontSize: 12, color: colors.live, marginTop: 8 },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',

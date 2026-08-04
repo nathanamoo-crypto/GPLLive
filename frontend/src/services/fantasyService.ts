@@ -408,6 +408,7 @@ function mapGameweek(g: any): Gameweek {
   return {
     gameweekId: g.gameweekId ?? g.gameweek_id ?? g.id,
     seasonId: g.seasonId ?? g.season_id,
+    season: g.season,
     gameweekNumber: g.gameweekNumber ?? g.gameweek_number ?? g.gameweek,
     deadline: g.deadline,
     isActive: g.isActive ?? g.is_active ?? g.isCurrent ?? false,
@@ -428,6 +429,16 @@ export async function getCurrentGameweek(signal?: AbortSignal): Promise<Gameweek
     if (err.response?.status === 404) return null;
     throw err;
   }
+}
+
+// Powers the Fixtures screen's season-scoped browsing (default view =
+// current season, explicit search = any season/matchday typed in).
+export async function getGameweeksBySeason(season: string, signal?: AbortSignal): Promise<Gameweek[]> {
+  const { data } = await api.get<any[]>(
+    `${FantasyEndpoints.GAMEWEEK_BY_SEASON}/${encodeURIComponent(season)}`,
+    { baseURL: FANTASY_URL, signal },
+  );
+  return (data ?? []).map(mapGameweek);
 }
 
 export async function lockTeamForGameweek(): Promise<void> {

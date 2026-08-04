@@ -37,6 +37,9 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
+  // The real backend season string (e.g. "2026/2027") this fixture belongs
+  // to - used to keep the Fixtures screen scoped to one season at a time.
+  season?: string;
   // High-stakes/rivalry fixture - carries a flat +2 prediction-point bonus.
   // True if the backend admin flag is set OR the matchup is a known rivalry
   // per isDerbyMatch() in constants/derbies.ts (see PredictRoot.tsx) - the
@@ -285,6 +288,9 @@ export interface LeaderboardEntry {
 export interface Gameweek {
   gameweekId: number;
   seasonId: number;
+  // The backend's real free-text season string (e.g. "2026/2027") - distinct
+  // from seasonId, which nothing in this app actually populates.
+  season?: string;
   gameweekNumber: number;
   deadline: string;
   isActive: boolean;
