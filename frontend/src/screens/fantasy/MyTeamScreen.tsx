@@ -23,6 +23,7 @@ import { fetchClubsById, backendClubIdToLocalClub, RealClub } from '../../servic
 import SegmentedControl from '../../components/shared/SegmentedControl';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
+import PriceChangeIndicator from '../../components/shared/PriceChangeIndicator';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { FantasyPlayer, FormationKey, ChipType, ChipStatus } from '../../types';
 
@@ -45,15 +46,17 @@ function MyTeamScreen() {
   const team = useFantasyStore((s) => s.team);
   const hasSquad = useFantasyStore((s) => s.hasSquad);
   const setFormation = useFantasyStore((s) => s.setFormation);
-  const [gameweek, setGameweek] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('pitch');
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [formationMsg, setFormationMsg] = useState<string | null>(null);
-  // The real current-gameweek ID (as opposed to `gameweek` above, which is
-  // just a local display counter for the header chevrons) - chip activation
-  // needs the actual DB gameweek ID.
+  // The real current gameweek, fetched from the backend - id is needed for
+  // chip activation, number is shown in the header. This used to be a
+  // useState(1) local counter with +/- chevrons that never reflected real
+  // data (always started at "Gameweek 1" regardless of the actual season),
+  // which is what those chevrons did nothing but toggle.
   const [currentGameweekId, setCurrentGameweekId] = useState<number | null>(null);
+  const [currentGameweekNumber, setCurrentGameweekNumber] = useState<number | null>(null);
   // player.clubId is the backend's real club id - resolve to the local club
   // (for CLUB_COLORS, which is keyed by local id) via a live-fetched map
   // rather than trusting the id directly, since the two club lists don't
@@ -108,8 +111,14 @@ function MyTeamScreen() {
     const alreadyHaveTeam = useFantasyStore.getState().team != null;
     handleFetchTeam(alreadyHaveTeam);
     fantasyService.getCurrentGameweek()
-      .then((gw) => setCurrentGameweekId(gw?.gameweekId ?? null))
-      .catch(() => setCurrentGameweekId(null));
+      .then((gw) => {
+        setCurrentGameweekId(gw?.gameweekId ?? null);
+        setCurrentGameweekNumber(gw?.gameweekNumber ?? null);
+      })
+      .catch(() => {
+        setCurrentGameweekId(null);
+        setCurrentGameweekNumber(null);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFetchTeam]);
 
@@ -389,19 +398,9 @@ function MyTeamScreen() {
         </View>
 
         <View style={styles.gameweekBar}>
-          <TouchableOpacity
-            onPress={() => setGameweek((g) => Math.max(1, g - 1))}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.yellow} />
-          </TouchableOpacity>
-          <Text style={styles.gameweekLabel}>Gameweek {gameweek}</Text>
-          <TouchableOpacity
-            onPress={() => setGameweek((g) => g + 1)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-forward" size={20} color={colors.yellow} />
-          </TouchableOpacity>
+          <Text style={styles.gameweekLabel}>
+            {currentGameweekNumber != null ? `Gameweek ${currentGameweekNumber}` : 'Gameweek —'}
+          </Text>
         </View>
 
         <View style={styles.chipStrip}>
@@ -514,6 +513,7 @@ function MyTeamScreen() {
                         <Text style={[styles.listPrice, !isStarter && styles.listPriceBench]}>
                           GH₵{player.price}m
                         </Text>
+                        <PriceChangeIndicator priceChange={player.priceChange} />
                       </View>
                     </View>
                   );

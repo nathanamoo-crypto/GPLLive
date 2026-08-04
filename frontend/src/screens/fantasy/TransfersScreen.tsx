@@ -22,6 +22,7 @@ import { fonts, radius, getScrollBottomPadding } from '../../constants/layout';
 import * as fantasyService from '../../services/fantasyService';
 import { getApiErrorMessage } from '../../services/api';
 import { fetchClubsById, RealClub } from '../../services/clubService';
+import PriceChangeIndicator from '../../components/shared/PriceChangeIndicator';
 import type { GamesStackParamList } from '../../navigation/GamesStack';
 import type { FantasyTeam, FantasyPlayer, Player, Gameweek } from '../../types';
 import type { TransferHistoryItem } from '../../services/fantasyService';
@@ -286,7 +287,10 @@ export default function TransfersScreen() {
                         </View>
                         <View style={styles.playerInfo}>
                           <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
-                          <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                          <View style={styles.metaRow}>
+                            <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                            <PriceChangeIndicator priceChange={p.priceChange} />
+                          </View>
                         </View>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -311,7 +315,10 @@ export default function TransfersScreen() {
                   </View>
                   <View style={styles.selectedRow}>
                     <Text style={styles.selectedName}>{outgoing.name}</Text>
-                    <Text style={styles.selectedPrice}>GH₵{outgoing.price}m</Text>
+                    <View style={styles.metaRow}>
+                      <Text style={styles.selectedPrice}>GH₵{outgoing.price}m</Text>
+                      <PriceChangeIndicator priceChange={outgoing.priceChange} />
+                    </View>
                   </View>
                 </View>
 
@@ -350,7 +357,10 @@ export default function TransfersScreen() {
                               </View>
                               <View style={styles.playerInfo}>
                                 <Text style={styles.playerName} numberOfLines={1}>{p.name}</Text>
-                                <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                                <View style={styles.metaRow}>
+                                  <Text style={styles.playerMeta}>{p.position} · GH₵{p.price}m</Text>
+                                  <PriceChangeIndicator priceChange={p.priceChange} />
+                                </View>
                               </View>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -372,13 +382,19 @@ export default function TransfersScreen() {
                       <View style={styles.swapSide}>
                         <Text style={styles.swapLabel}>OUT</Text>
                         <Text style={styles.swapName} numberOfLines={1}>{outgoing.name}</Text>
-                        <Text style={styles.swapPrice}>GH₵{outgoing.price}m</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.swapPrice}>GH₵{outgoing.price}m</Text>
+                          <PriceChangeIndicator priceChange={outgoing.priceChange} />
+                        </View>
                       </View>
                       <Ionicons name="swap-horizontal" size={20} color={colors.textTertiary} />
                       <View style={styles.swapSide}>
                         <Text style={styles.swapLabel}>IN</Text>
                         <Text style={styles.swapName} numberOfLines={1}>{incoming.name}</Text>
-                        <Text style={styles.swapPrice}>GH₵{incoming.price}m</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.swapPrice}>GH₵{incoming.price}m</Text>
+                          <PriceChangeIndicator priceChange={incoming.priceChange} />
+                        </View>
                       </View>
                     </View>
 
@@ -615,6 +631,7 @@ function getStyles(colors: typeof Colors) {
     playerInfo: { flex: 1, minWidth: 0 },
     playerName: { fontSize: 14, fontWeight: '700', color: colors.white },
     playerMeta: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     selectedCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.card,
