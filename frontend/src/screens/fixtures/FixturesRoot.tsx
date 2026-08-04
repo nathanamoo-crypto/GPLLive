@@ -410,33 +410,26 @@ function StandingsView() {
   const [sortBy, setSortBy] = useState<StandingsSortKey>('pts');
   const [rows, setRows] = useState<StandingRow[]>([]);
   const [season, setSeason] = useState('');
-  const [currentSeason, setCurrentSeason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // The backend always returns the real current season here - every active
+  // club at 0 played/0 points if it hasn't kicked off yet, not a stale table
+  // from a previous season - so there's nothing to reconcile against a
+  // separately-fetched "current gameweek" call any more.
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    Promise.all([
-      fetchStandings(undefined, controller.signal),
-      getCurrentGameweek(controller.signal).catch(() => null),
-    ])
-      .then(([data, gw]) => {
+    fetchStandings(undefined, controller.signal)
+      .then((data) => {
         setRows(data.rows);
         setSeason(data.season);
-        setCurrentSeason(gw?.season ?? null);
         setError(null);
       })
       .catch((err: any) => setError(err?.message ?? 'Failed to load the league table.'))
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
-
-  // The backend falls back to the most recent season WITH results if the
-  // real current season hasn't had any games played yet (e.g. right after a
-  // new season starts) - flag that here so "2025/2026 Season" doesn't read
-  // as if it's still ongoing.
-  const isFallbackSeason = !!currentSeason && !!season && season !== currentSeason;
 
   const standings = useMemo(() => {
     const sorted = [...rows];
@@ -455,14 +448,12 @@ function StandingsView() {
   }
 
   if (error || standings.length === 0) {
+    // Genuinely only reachable if there are zero ACTIVE clubs in the league
+    // at all - a new season with no results yet still renders every club
+    // at 0, so this isn't the "season hasn't started" case any more.
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {error
-            ?? (currentSeason
-              ? `No results recorded yet for any season - the ${currentSeason} season hasn't kicked off.`
-              : 'No results recorded yet for this season.')}
-        </Text>
+        <Text style={styles.errorText}>{error ?? 'No clubs found for this league.'}</Text>
       </View>
     );
   }
@@ -473,11 +464,7 @@ function StandingsView() {
       contentContainerStyle={styles.standingsContent}
       showsVerticalScrollIndicator={false}
     >
-      {season ? (
-        <Text style={styles.seasonLabel}>
-          {season} Season{isFallbackSeason ? ' (final - next season not yet underway)' : ''}
-        </Text>
-      ) : null}
+      {season ? <Text style={styles.seasonLabel}>{season} Season</Text> : null}
 
       <ScrollView
         horizontal
