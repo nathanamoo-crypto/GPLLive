@@ -19,6 +19,9 @@ export const GPL_CLUBS: Club[] = [
   { id: 16, slug: 'nations_fc', name: 'Nations FC', shortName: 'Nations', badgeUrl: 'local://nations_fc', logoUrl: undefined, city: 'Kumasi', stadium: 'Dr. Kwame Kyei Sports Complex', stadiumCapacity: 12000 },
   { id: 17, slug: 'hohoe_united', name: 'Hohoe United', shortName: 'Hohoe', badgeUrl: 'local://hohoe_united', logoUrl: undefined, city: 'Hohoe', stadium: '', stadiumCapacity: 0 },
   { id: 18, slug: 'eleven_wonders', name: 'Eleven Wonders', shortName: 'Wonders', badgeUrl: 'local://eleven_wonders', logoUrl: undefined, city: 'Techiman', stadium: 'Ohene Ameyaw Park', stadiumCapacity: 2000 },
+  { id: 19, slug: 'debibi_united', name: 'Debibi United', shortName: 'Debibi', badgeUrl: 'local://debibi_united', logoUrl: undefined, city: 'Debibi', stadium: 'Debibi Presby Park', stadiumCapacity: 1000 },
+  { id: 20, slug: 'port_city_fc', name: 'Port City FC', shortName: 'Port City', badgeUrl: 'local://port_city', logoUrl: undefined, city: 'Akim Kukurantumi', stadium: 'Kukurantumi Ohene Park', stadiumCapacity: 3000 },
+  { id: 21, slug: 'fc_ashantigold_04', name: 'FC Ashantigold 04', shortName: 'Ashgold', badgeUrl: 'local://fc_ashantigold_04', logoUrl: undefined, city: 'Obuasi', stadium: 'Len Clay Stadium', stadiumCapacity: 15000 },
 ];
 
 export const CLUB_LOOKUP: Record<number, Club> = {};
@@ -59,4 +62,7 @@ export const CLUB_COLORS: Record<number, string> = {
   16: '#2F4F4F',
   17: '#008080',
   18: '#4A0E4E',
+  19: '#0096FF',
+  20: '#027DFA',
+  21: '#FEBB0C',
 };
