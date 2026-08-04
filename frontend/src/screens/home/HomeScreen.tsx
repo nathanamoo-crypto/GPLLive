@@ -123,6 +123,13 @@ export default function HomeScreen() {
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.iconButton}
+            onPress={() => navigation.navigate('MyLeagues')}
+          >
+            <Ionicons name="people-outline" size={22} color={colors.grey1} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconButton}
             onPress={() => navigation.navigate('Search')}
           >
             <Ionicons name="search" size={22} color={colors.grey1} />

@@ -8,6 +8,7 @@ import PaymentScreen from '../screens/home/PaymentScreen';
 import SearchScreen from '../screens/home/SearchScreen';
 import CreateLeagueScreen from '../screens/home/CreateLeagueScreen';
 import LeagueDetailScreen from '../screens/home/LeagueDetailScreen';
+import MyLeaguesScreen from '../screens/home/MyLeaguesScreen';
 import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
 import NewsDetailScreen from '../screens/news/NewsDetailScreen';
 import MotmVoteScreen from '../screens/match/MotmVoteScreen';
@@ -25,6 +26,9 @@ export type HomeStackParamList = {
   Search: undefined;
   CreateLeague: undefined;
   LeagueDetail: { leagueId: number };
+  // Direct entry point into leagues the caller owns/joined, so they don't
+  // have to open Search every time - see MyLeaguesScreen.tsx.
+  MyLeagues: undefined;
   MatchDetails: MatchDetailsParams;
   NewsDetail: NewsDetailParams;
   MotmVote: MotmVoteParams;
@@ -48,6 +52,7 @@ export default function HomeStack() {
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="CreateLeague" component={CreateLeagueScreen} />
       <Stack.Screen name="LeagueDetail" component={LeagueDetailScreen} />
+      <Stack.Screen name="MyLeagues" component={MyLeaguesScreen} />
       <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
       <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <Stack.Screen name="MotmVote" component={MotmVoteScreen} />

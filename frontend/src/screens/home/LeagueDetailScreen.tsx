@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Share,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -56,6 +57,7 @@ export default function LeagueDetailScreen() {
   const [leaderboardKind, setLeaderboardKind] = useState<LeaderboardKind>('predictions');
   const [leaderboard, setLeaderboard] = useState<LeagueLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -73,6 +75,9 @@ export default function LeagueDetailScreen() {
           const requests = await getPendingRequests(leagueId).catch(() => []);
           setPending(requests);
         }
+      } else {
+        setMembers([]);
+        setPending([]);
       }
     } catch (err: any) {
       setError(getApiErrorMessage(err, 'Could not load this league.'));
@@ -109,6 +114,19 @@ export default function LeagueDetailScreen() {
     }
   }, [leagueId]);
 
+  // Pull-to-refresh, for updates without leaving the screen (new join
+  // requests coming in while you're looking at the screen, member count
+  // changing, etc).
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+      await loadLeaderboard(leaderboardKind);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load, loadLeaderboard, leaderboardKind]);
+
   useEffect(() => {
     const canSeeLeaderboard = league?.callerStatus === 'OWNER' || league?.callerStatus === 'ACTIVE' || league?.callerStatus === 'PENDING';
     if (canSeeLeaderboard) loadLeaderboard(leaderboardKind);
@@ -126,25 +144,34 @@ export default function LeagueDetailScreen() {
     }
   };
 
-  const handleLeave = () => {
-    Alert.alert('Leave league?', `You'll need to rejoin to be part of "${league?.name}" again.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave',
-        style: 'destructive',
-        onPress: async () => {
-          setActionBusy(true);
-          try {
-            await leaveLeague(leagueId);
-            navigation.goBack();
-          } catch (err: any) {
-            Alert.alert('Could not leave', getApiErrorMessage(err, 'Please try again.'));
-          } finally {
-            setActionBusy(false);
-          }
+  // Same endpoint handles both: an ACTIVE member leaving, or a PENDING
+  // requester withdrawing their request before the creator has acted on it.
+  const handleLeave = (mode: 'leave' | 'cancel') => {
+    const isCancel = mode === 'cancel';
+    Alert.alert(
+      isCancel ? 'Cancel request?' : 'Leave league?',
+      isCancel
+        ? `This withdraws your request to join "${league?.name}".`
+        : `You'll need to rejoin to be part of "${league?.name}" again.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isCancel ? 'Cancel Request' : 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            setActionBusy(true);
+            try {
+              await leaveLeague(leagueId);
+              navigation.goBack();
+            } catch (err: any) {
+              Alert.alert(isCancel ? 'Could not cancel' : 'Could not leave', getApiErrorMessage(err, 'Please try again.'));
+            } finally {
+              setActionBusy(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleDelete = () => {
@@ -239,7 +266,12 @@ export default function LeagueDetailScreen() {
         <View style={{ width: 30 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Ionicons name={league.isPublic ? 'earth-outline' : 'lock-closed-outline'} size={16} color={colors.grey1} />
@@ -370,8 +402,14 @@ export default function LeagueDetailScreen() {
         ) : null}
 
         {isActiveMember ? (
-          <TouchableOpacity style={styles.leaveButton} onPress={handleLeave} disabled={actionBusy}>
+          <TouchableOpacity style={styles.leaveButton} onPress={() => handleLeave('leave')} disabled={actionBusy}>
             <Text style={styles.leaveButtonText}>Leave League</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {isPendingRequester ? (
+          <TouchableOpacity style={styles.leaveButton} onPress={() => handleLeave('cancel')} disabled={actionBusy}>
+            <Text style={styles.leaveButtonText}>Cancel Request</Text>
           </TouchableOpacity>
         ) : null}
 
