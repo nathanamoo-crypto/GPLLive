@@ -65,8 +65,10 @@ export const FantasyEndpoints = {
 };
 
 // Backend has no generic "/chips/{type}/activate" route - each chip is its
-// own named endpoint (see ChipController). No deactivation endpoint exists
-// for any chip except an internal (not-yet-exposed) Free Hit restore.
+// own named endpoint (see ChipController). Cancelling is the one shared
+// route, DELETE /chips/{fantasyTeamId}/{gameweekId} - only works for
+// Bench Boost/Triple Captain and only before the Gameweek deadline, same
+// rule the real FPL uses (see ChipService.cancelChip).
 export const ChipEndpoints: Record<
   'TripleCaptain' | 'BenchBoost' | 'Wildcard' | 'Wildcard2' | 'FreeHit',
   string
@@ -77,6 +79,8 @@ export const ChipEndpoints: Record<
   Wildcard2: '/chips/wildcard2',
   FreeHit: '/chips/free-hit',
 };
+
+export const CHIP_CANCEL_URL = '/chips';
 
 export const MatchEndpoints = {
   FIXTURES: '/fixtures',

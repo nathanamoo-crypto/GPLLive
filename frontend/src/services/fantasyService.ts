@@ -1,5 +1,5 @@
 import api from './api';
-import { FantasyEndpoints, ChipEndpoints, FANTASY_URL } from '../constants/apiUrls';
+import { FantasyEndpoints, ChipEndpoints, CHIP_CANCEL_URL, FANTASY_URL } from '../constants/apiUrls';
 import type {
   Player, SquadPlayerDTO, FantasyTeam, ChipType,
   ScoringStats, PlayerPrice, Gameweek, PlayerAnalysis,
@@ -314,13 +314,20 @@ export async function getTransferHistory(fantasyTeamId: number, signal?: AbortSi
   })).sort((a, b) => new Date(b.transferredAt).getTime() - new Date(a.transferredAt).getTime());
 }
 
-// Chips are one-time-use per season on this backend - there is no way to
-// deactivate/undo one once played (Free Hit has an internal restore path,
-// but it isn't exposed as an endpoint yet). fantasyTeamId/gameweekId are
-// required by the backend (ChipRequest) even though the old signature here
-// didn't send them, which would have 400'd on every real call.
+// Chips are one-time-use per season on this backend. fantasyTeamId/
+// gameweekId are required by the backend (ChipRequest) even though the old
+// signature here didn't send them, which would have 400'd on every real call.
 export async function activateChip(chipType: ChipType, fantasyTeamId: number, gameweekId: number): Promise<void> {
   await api.post(ChipEndpoints[chipType], { fantasyTeamId, gameweekId }, { baseURL: FANTASY_URL });
+}
+
+// Only works for Triple Captain/Bench Boost, and only before the Gameweek
+// deadline - same rule the real FPL uses (Wildcard/Free Hit are tied to a
+// transfer transaction and can't be undone once confirmed, there or here).
+// The backend 400s with a clear message if you try it on the wrong chip
+// type or after the deadline - surface that message as-is to the user.
+export async function cancelChip(fantasyTeamId: number, gameweekId: number): Promise<void> {
+  await api.delete(`${CHIP_CANCEL_URL}/${fantasyTeamId}/${gameweekId}`, { baseURL: FANTASY_URL });
 }
 
 // NOTE: getPlayerStats/getPlayerScoringHistory below don't have a real
