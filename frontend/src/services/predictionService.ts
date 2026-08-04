@@ -8,6 +8,7 @@ export async function submitPredictions(predictions: Record<string, Prediction>)
     outcome: p.outcome,
     exactHomeGoals: p.exactHomeGoals,
     exactAwayGoals: p.exactAwayGoals,
+    isBanker: p.isBanker,
   }));
 
   const { data } = await api.post(
