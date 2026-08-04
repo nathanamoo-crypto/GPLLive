@@ -56,8 +56,11 @@ export const FantasyEndpoints = {
   SCORING_FIXTURE: '/scoring/fixture',
   PLAYER_PRICE: '/player-price',
   GAMEWEEK_CURRENT: '/gameweeks/current',
-  // Append /{season} when calling this (e.g. /gameweeks/season/2026%2F2027).
+  // season is a query param on this one (?season=2026%2F2027), not a path
+  // segment - see GameweekController's comment on why.
   GAMEWEEK_BY_SEASON: '/gameweeks/season',
+  // Every season that has any gameweek data, oldest first.
+  GAMEWEEK_SEASONS: '/gameweeks/seasons',
 };
 
 // Backend has no generic "/chips/{type}/activate" route - each chip is its

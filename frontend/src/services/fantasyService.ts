@@ -442,6 +442,17 @@ export async function getGameweeksBySeason(season: string, signal?: AbortSignal)
   return (data ?? []).map(mapGameweek);
 }
 
+// Every season that has any gameweek data, oldest first - powers the
+// Fixtures/Table screens' season chevrons and lets them tell "no data for
+// this season yet" apart from "this season doesn't exist in our records".
+export async function getAllSeasons(signal?: AbortSignal): Promise<string[]> {
+  const { data } = await api.get<string[]>(
+    FantasyEndpoints.GAMEWEEK_SEASONS,
+    { baseURL: FANTASY_URL, signal },
+  );
+  return data ?? [];
+}
+
 export async function lockTeamForGameweek(): Promise<void> {
   await api.post('/fantasy-teams/lock', undefined, { baseURL: FANTASY_URL });
 }
