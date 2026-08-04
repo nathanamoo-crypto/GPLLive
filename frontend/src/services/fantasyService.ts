@@ -410,6 +410,7 @@ function mapGameweek(g: any): Gameweek {
     seasonId: g.seasonId ?? g.season_id,
     season: g.season,
     gameweekNumber: g.gameweekNumber ?? g.gameweek_number ?? g.gameweek,
+    startDate: g.startDate ?? g.start_date,
     deadline: g.deadline,
     isActive: g.isActive ?? g.is_active ?? g.isCurrent ?? false,
     isFinished: g.isFinished ?? g.is_finished ?? false,

@@ -25,6 +25,7 @@ import { Logos } from '../../constants/logos';
 import { getMatches } from '../../services/matchService';
 import { getCurrentGameweek, getGameweeksBySeason } from '../../services/fantasyService';
 import { fetchStandings } from '../../services/standingsService';
+import { getApiErrorMessage } from '../../services/api';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
 type FixturesRootRouteProp = RouteProp<FixturesStackParamList, 'FixturesRoot'>;
@@ -65,7 +66,7 @@ export default function FixturesRoot() {
   // real gameweek id directly - fixtures can load as soon as THAT resolves,
   // without waiting on the full season gameweek list too. `seasonGameweeks`
   // loads in parallel purely to know the prev/next chevron bounds.
-  const [realCurrent, setRealCurrent] = useState<{ id: number; season: string; gameweekNumber: number } | null>(null);
+  const [realCurrent, setRealCurrent] = useState<{ id: number; season: string; gameweekNumber: number; startDate?: string } | null>(null);
   const [season, setSeason] = useState<string | null>(null);
   const [seasonGameweeks, setSeasonGameweeks] = useState<{ id: number; gameweekNumber: number }[]>([]);
   const [selectedGw, setSelectedGw] = useState<{ id: number; gameweekNumber: number } | null>(null);
@@ -79,6 +80,11 @@ export default function FixturesRoot() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [seasonHasNoGameweeks, setSeasonHasNoGameweeks] = useState(false);
+  // Surfaces the real backend error when the season-scoped gameweek list
+  // (chevron bounds) fails to load, instead of silently leaving the
+  // chevrons disabled with no explanation - that silence is exactly what
+  // made a real backend 500 look like "the toggle just doesn't work".
+  const [seasonLoadError, setSeasonLoadError] = useState<string | null>(null);
 
   // Bootstraps to the real current season/gameweek on mount.
   useEffect(() => {
@@ -91,7 +97,7 @@ export default function FixturesRoot() {
           setFetchError('No current gameweek is set yet.');
           return;
         }
-        setRealCurrent({ id: gw.gameweekId, season: gw.season, gameweekNumber: gw.gameweekNumber });
+        setRealCurrent({ id: gw.gameweekId, season: gw.season, gameweekNumber: gw.gameweekNumber, startDate: gw.startDate });
         setSeason(gw.season);
         setSelectedGw({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber });
       })
@@ -110,6 +116,7 @@ export default function FixturesRoot() {
   useEffect(() => {
     if (!season) return;
     let cancelled = false;
+    setSeasonLoadError(null);
     getGameweeksBySeason(season)
       .then((gws) => {
         if (cancelled) return;
@@ -119,7 +126,14 @@ export default function FixturesRoot() {
         setSeasonGameweeks(list);
         setSeasonHasNoGameweeks(list.length === 0);
       })
-      .catch(() => { if (!cancelled) setSeasonGameweeks([]); });
+      .catch((err: any) => {
+        if (cancelled) return;
+        setSeasonGameweeks([]);
+        // Chevrons rely on this list, so a failure here is exactly why
+        // prev/next stops working even though the fixture list itself
+        // loaded fine - show it instead of failing silently.
+        setSeasonLoadError(getApiErrorMessage(err, 'Failed to load this season\'s gameweeks.'));
+      });
     return () => { cancelled = true; };
   }, [season]);
 
@@ -168,7 +182,7 @@ export default function FixturesRoot() {
       setSelectedGw({ id: found.gameweekId, gameweekNumber: found.gameweekNumber });
       setSearchOpen(false);
     } catch (err: any) {
-      setSearchError(err?.message ?? 'Search failed.');
+      setSearchError(getApiErrorMessage(err, 'Search failed.'));
     }
   }, [searchSeason, searchMatchday]);
 
@@ -201,6 +215,13 @@ export default function FixturesRoot() {
   const isCurrentGw = !!realCurrent && realCurrent.season === season && realCurrent.gameweekNumber === selectedGw?.gameweekNumber;
   const isViewingOtherSeason = !!realCurrent && season !== null && season !== realCurrent.season;
 
+  // The gameweek stays flagged "current" on the backend right up until its
+  // deadline (predictions/transfers/chips all depend on that), but showing
+  // a "CURRENT" badge before a ball's even been kicked reads as wrong -
+  // label it "UPCOMING" until the gameweek's actual start date arrives.
+  const currentGwHasStarted = !realCurrent?.startDate || Date.parse(realCurrent.startDate) <= Date.now();
+  const currentBadgeLabel = currentGwHasStarted ? 'CURRENT' : 'UPCOMING';
+
   // Distinguishes "this season has no gameweeks scheduled at all yet" (e.g.
   // the new season before anything's been entered) from "this gameweek
   // exists but has no fixtures in it" from "fixtures exist but none match
@@ -230,7 +251,7 @@ export default function FixturesRoot() {
           <Text style={styles.headerTitle}>{selectedGw != null ? `GAMEWEEK ${selectedGw.gameweekNumber}` : 'FIXTURES'}</Text>
           {isCurrentGw && (
             <View style={styles.currentBadge}>
-              <Text style={styles.currentBadgeText}>CURRENT</Text>
+              <Text style={styles.currentBadgeText}>{currentBadgeLabel}</Text>
             </View>
           )}
         </View>
@@ -258,6 +279,7 @@ export default function FixturesRoot() {
       {activeTab === 'fixtures' && gameweekDate ? (
         <Text style={styles.dateSubtitle}>{gameweekDate}</Text>
       ) : null}
+      {seasonLoadError ? <Text style={styles.errorText}>{seasonLoadError}</Text> : null}
 
       {searchOpen ? (
         <View style={styles.searchBox}>
@@ -388,22 +410,33 @@ function StandingsView() {
   const [sortBy, setSortBy] = useState<StandingsSortKey>('pts');
   const [rows, setRows] = useState<StandingRow[]>([]);
   const [season, setSeason] = useState('');
+  const [currentSeason, setCurrentSeason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    fetchStandings(undefined, controller.signal)
-      .then((data) => {
+    Promise.all([
+      fetchStandings(undefined, controller.signal),
+      getCurrentGameweek(controller.signal).catch(() => null),
+    ])
+      .then(([data, gw]) => {
         setRows(data.rows);
         setSeason(data.season);
+        setCurrentSeason(gw?.season ?? null);
         setError(null);
       })
       .catch((err: any) => setError(err?.message ?? 'Failed to load the league table.'))
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
+
+  // The backend falls back to the most recent season WITH results if the
+  // real current season hasn't had any games played yet (e.g. right after a
+  // new season starts) - flag that here so "2025/2026 Season" doesn't read
+  // as if it's still ongoing.
+  const isFallbackSeason = !!currentSeason && !!season && season !== currentSeason;
 
   const standings = useMemo(() => {
     const sorted = [...rows];
@@ -424,7 +457,12 @@ function StandingsView() {
   if (error || standings.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'No results recorded yet for this season.'}</Text>
+        <Text style={styles.errorText}>
+          {error
+            ?? (currentSeason
+              ? `No results recorded yet for any season - the ${currentSeason} season hasn't kicked off.`
+              : 'No results recorded yet for this season.')}
+        </Text>
       </View>
     );
   }
@@ -435,7 +473,11 @@ function StandingsView() {
       contentContainerStyle={styles.standingsContent}
       showsVerticalScrollIndicator={false}
     >
-      {season ? <Text style={styles.seasonLabel}>{season} Season</Text> : null}
+      {season ? (
+        <Text style={styles.seasonLabel}>
+          {season} Season{isFallbackSeason ? ' (final - next season not yet underway)' : ''}
+        </Text>
+      ) : null}
 
       <ScrollView
         horizontal

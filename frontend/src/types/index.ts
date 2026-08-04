@@ -292,6 +292,10 @@ export interface Gameweek {
   // from seasonId, which nothing in this app actually populates.
   season?: string;
   gameweekNumber: number;
+  // ISO string - when this gameweek's fixtures actually kick off. Used to
+  // tell "the upcoming gameweek, not started yet" apart from "genuinely
+  // in progress right now" for display purposes (see FixturesRoot.tsx).
+  startDate?: string;
   deadline: string;
   isActive: boolean;
   isFinished: boolean;
