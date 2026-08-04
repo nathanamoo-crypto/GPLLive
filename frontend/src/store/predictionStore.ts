@@ -46,7 +46,13 @@ export const usePredictionStore = create<PredictionState>((set, get) => ({
       },
     }));
   },
+  // Outcome is derived from the scoreline itself rather than picked
+  // separately - typing 5-0 sets the outcome to 'home' automatically, so
+  // there's no way to end up with a scoreline and an outcome that
+  // contradict each other (e.g. picking "Draw" with a 5-3 scoreline typed
+  // in).
   setExactScore: (fixtureId, home, away) => {
+    const outcome = home === away ? 'draw' : home > away ? 'home' : 'away';
     set((state) => ({
       predictions: {
         ...state.predictions,
@@ -54,18 +60,26 @@ export const usePredictionStore = create<PredictionState>((set, get) => ({
           ...draftFor(fixtureId, state.predictions[String(fixtureId)]),
           exactHomeGoals: home,
           exactAwayGoals: away,
+          outcome,
         },
       },
     }));
   },
+  // Tapping the current Banker again clears it (no Banker set this
+  // gameweek); tapping a different fixture moves the tag there instead.
+  // Only a local draft change - like outcome/score edits, it needs a
+  // Save/Update Pick tap to actually persist to the backend.
   setBanker: (fixtureId) => {
     set((state) => {
-      const updated: Record<string, Prediction> = {};
-      Object.entries(state.predictions).forEach(([key, prediction]) => {
-        updated[key] = { ...prediction, isBanker: false };
-      });
       const key = String(fixtureId);
-      updated[key] = { ...draftFor(fixtureId, updated[key]), isBanker: true };
+      const wasBanker = !!state.predictions[key]?.isBanker;
+
+      const updated: Record<string, Prediction> = {};
+      Object.entries(state.predictions).forEach(([k, prediction]) => {
+        updated[k] = { ...prediction, isBanker: false };
+      });
+
+      updated[key] = { ...draftFor(fixtureId, updated[key]), isBanker: !wasBanker };
       return { predictions: updated };
     });
   },
