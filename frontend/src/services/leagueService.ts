@@ -47,9 +47,11 @@ export async function createLeague(input: CreateLeagueInput): Promise<League> {
   return mapLeague(data);
 }
 
-// Blank/omitted query returns every public league - the Search screen's
-// "browse" state before the user types anything.
-export async function searchPublicLeagues(query?: string, signal?: AbortSignal): Promise<League[]> {
+// Blank/omitted query returns every league (public AND private) - the
+// Search screen's "browse" state before the user types anything. Private
+// leagues are discoverable by name here too - joining one still requires
+// the creator's approval, see joinLeagueById below.
+export async function searchLeagues(query?: string, signal?: AbortSignal): Promise<League[]> {
   const { data } = await api.get<any[]>(LeagueEndpoints.SEARCH, {
     baseURL: LEAGUE_URL,
     params: query ? { query } : undefined,
@@ -68,7 +70,9 @@ export async function getLeague(id: number, signal?: AbortSignal): Promise<Leagu
   return mapLeague(data);
 }
 
-// Public league only, joining straight to ACTIVE from a search result.
+// Works for either kind of league - ACTIVE immediately if public, PENDING
+// (awaiting the creator) if private. Used from a search result or the
+// league detail screen's Join button.
 export async function joinLeagueById(id: number): Promise<League> {
   const { data } = await api.post(`${LeagueEndpoints.JOIN_BY_ID}/${id}/join`, null, { baseURL: LEAGUE_URL });
   return mapLeague(data);

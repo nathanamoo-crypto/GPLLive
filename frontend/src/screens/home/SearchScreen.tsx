@@ -18,7 +18,7 @@ import { Colors } from '../../constants/colors';
 import { fonts, radius } from '../../constants/layout';
 import { useTheme } from '../../context/ThemeContext';
 import { getApiErrorMessage } from '../../services/api';
-import { searchPublicLeagues, getMyLeagues, joinLeagueByCode } from '../../services/leagueService';
+import { searchLeagues, getMyLeagues, joinLeagueByCode } from '../../services/leagueService';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 import type { League } from '../../types';
 
@@ -44,7 +44,7 @@ export default function SearchScreen() {
 
   const loadAll = useCallback(async (q: string) => {
     const [publicLeagues, mine] = await Promise.all([
-      searchPublicLeagues(q),
+      searchLeagues(q),
       getMyLeagues(),
     ]);
     return { publicLeagues, mine };
@@ -153,7 +153,7 @@ export default function SearchScreen() {
           <Ionicons name="search" size={18} color={colors.grey2} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search public leagues..."
+            placeholder="Search leagues by name..."
             placeholderTextColor={colors.grey2}
             value={query}
             onChangeText={setQuery}
@@ -197,7 +197,7 @@ export default function SearchScreen() {
             </TouchableOpacity>
           </View>
           {codeError ? <Text style={styles.codeErrorText}>{codeError}</Text> : null}
-          <Text style={styles.codeHint}>Public leagues join instantly. Private leagues send the owner a request.</Text>
+          <Text style={styles.codeHint}>Or just search by name above - private leagues show up too, joining always sends the owner a request to approve.</Text>
         </View>
       ) : null}
 
@@ -222,11 +222,11 @@ export default function SearchScreen() {
                 <Text style={styles.sectionHeading}>My Leagues</Text>
                 {myLeagues.map(renderLeagueCard)}
                 <Text style={[styles.sectionHeading, { marginTop: 18 }]}>
-                  {query.trim() ? 'Search Results' : 'Public Leagues'}
+                  {query.trim() ? 'Search Results' : 'Other Leagues'}
                 </Text>
               </View>
             ) : (
-              <Text style={styles.sectionHeading}>{query.trim() ? 'Search Results' : 'Public Leagues'}</Text>
+              <Text style={styles.sectionHeading}>{query.trim() ? 'Search Results' : 'All Leagues'}</Text>
             )
           }
           renderItem={({ item }) => renderLeagueCard(item)}
@@ -234,7 +234,7 @@ export default function SearchScreen() {
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color={colors.grey2} />
               <Text style={styles.emptyText}>
-                {query.trim() ? `No public leagues match "${query}"` : 'No public leagues yet - be the first to create one.'}
+                {query.trim() ? `No leagues match "${query}"` : 'No leagues yet - be the first to create one.'}
               </Text>
             </View>
           }
