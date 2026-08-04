@@ -25,7 +25,6 @@ import { Colors } from '../../constants/colors';
 import { getAuthFormStyles } from './authFormStyles';
 import { useTheme } from '../../context/ThemeContext';
 
-
 type RegisterLoginNavigationProp = NativeStackNavigationProp<AuthFlowParamList, 'RegisterLogin'>;
 
 export default function RegisterLoginScreen() {
@@ -106,9 +105,6 @@ export default function RegisterLoginScreen() {
     navigation.navigate('PickClub');
   }, [completeOnboarding, navigation, onboardingComplete]);
 
-  
-  
-  
   const handleForgotPassword = useCallback(() => {
     navigation.navigate('ForgotPassword');
   }, [navigation]);
@@ -418,7 +414,6 @@ export default function RegisterLoginScreen() {
             </Text>
           )}
         </TouchableOpacity>
-
 
         <TouchableOpacity
           style={styles.switchModeRow}

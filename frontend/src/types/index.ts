@@ -37,8 +37,12 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
-  // High-stakes matchup (derby/rivalry) - carries a flat +2 prediction-point
-  // bonus automatically, set on the fixture by isDerbyMatch() in constants.
+  // High-stakes/rivalry fixture - carries a flat +2 prediction-point bonus.
+  // True if the backend admin flag is set OR the matchup is a known rivalry
+  // per isDerbyMatch() in constants/derbies.ts (see PredictRoot.tsx) - the
+  // backend only actually awards the scoring bonus for fixtures it has
+  // is_derby=true on, so the local heuristic is display-only until an admin
+  // flags the fixture to match.
   isDerby?: boolean;
 }
 
@@ -120,10 +124,26 @@ export interface Prediction {
   outcome: 'home' | 'draw' | 'away' | null;
   exactHomeGoals?: number;
   exactAwayGoals?: number;
-  // Max one per gameweek - that fixture's points are doubled (win or lose).
-  isBanker: boolean;
+  // True once the fixture's kickoff has passed (or an admin moved it out of
+  // SCHEDULED) - the backend rejects further edits at that point regardless
+  // of what the client sends.
   locked: boolean;
   submitted: boolean;
+  // Max one per gameweek - that fixture's points are doubled (win or lose).
+  isBanker: boolean;
+  // Echoed back from the fixture - drives the derby bonus badge.
+  isDerby?: boolean;
+  // Populated once FixtureResultsService records a result for this fixture.
+  scored?: boolean;
+  pointsEarned?: number | null;
+}
+
+export interface PredictionLeaderboardEntry {
+  rank: number;
+  userId: number;
+  username: string;
+  predictionPoints: number;
+  predictionStreak: number;
 }
 
 // Detailed breakdown of the points a single prediction earns (see
@@ -319,16 +339,12 @@ export interface AuthState {
   // Confirms the emailed reset code and sets a new password - logs the user
   // in immediately on success, same as verifyEmail().
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  // idToken is the Google-issued ID token from expo-auth-session's Google
-  // provider - verified server-side, never trusted as-is.
-  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetOnboarding: () => void;
   // Takes the backend's real club id + name (e.g. from clubService.fetchClubs()),
   // not this app's local/hardcoded Club - those use different, mismatched ids.
   setFavouriteClub: (club: { id: number; fullName: string }) => Promise<void>;
   completeOnboarding: () => void;
-  loginDemo: () => Promise<void>;
 }
 
 export interface FantasyState {
@@ -362,16 +378,20 @@ export interface FantasyState {
 
 export interface PredictionState {
   predictions: Record<string, Prediction>;
-  // fixtureId of the single "Banker" pick for the current gameweek (doubles
-  // points on that fixture), or null if none chosen yet.
-  bankerFixtureId: number | null;
-  // Current correct-outcome streak (from the backend), used to apply the
-  // 1.25x-1.5x streak multiplier to new points once it reaches 3.
-  streak: number;
+  loading: boolean;
+  // Fetches this gameweek's already-saved picks from the backend (defaults
+  // to the current gameweek server-side when gameweekId is omitted) and
+  // merges them into `predictions`, so re-opening the screen shows what was
+  // already submitted instead of a blank slate.
+  loadPredictions: (gameweekId?: number) => Promise<void>;
   setPrediction: (fixtureId: number, outcome: Prediction['outcome']) => void;
   setExactScore: (fixtureId: number, home: number, away: number) => void;
+  // Only one Banker per gameweek - setting it on one fixture clears it on
+  // every other draft prediction in `predictions` (the backend does the same
+  // on its side once saved).
   setBanker: (fixtureId: number) => void;
-  setStreak: (streak: number) => void;
-  submitAll: () => Promise<void>;
+  // Saves a single fixture's current draft pick to the backend immediately -
+  // predictions can be resubmitted/edited freely up until kickoff.
+  submitPrediction: (fixtureId: number) => Promise<void>;
   reset: () => void;
 }
