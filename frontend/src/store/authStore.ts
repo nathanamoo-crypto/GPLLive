@@ -219,59 +219,6 @@ export const useAuthStore = create<AuthState>()(
           throw new Error(getApiErrorMessage(error, 'Unable to reset your password'));
         }
       },
-      loginWithGoogle: async (idToken) => {
-        try {
-          const response = await api.post<{ token: string; username: string; userId: number }>(
-            AuthEndpoints.GOOGLE,
-            { idToken },
-          );
-          const { token, username, userId } = response.data;
-
-          if (!token || !username) {
-            throw new Error('Invalid Google sign-in response');
-          }
-
-          const user: User = {
-            id: userId ?? 0,
-            username,
-            email: '',
-            predictionPoints: 0,
-            reactionsPosted: 0,
-            badges: [],
-          };
-
-          set({ user, token, isAuthenticated: true });
-
-          // Same best-effort profile fetch as login()/register() - for a
-          // brand-new Google user this comes back with favouriteClub
-          // unset, which is exactly the signal RegisterLoginScreen's
-          // goToNextStep() uses to route to PickClub.
-          try {
-            const meResponse = await api.get<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
-              AuthEndpoints.GET_ME,
-            );
-            if (meResponse.data) {
-              set({ user: normalizeUser(meResponse.data) });
-            }
-          } catch {
-            // profile fetch is best-effort
-          }
-        } catch (error) {
-          throw new Error(getApiErrorMessage(error, 'Google sign-in failed'));
-        }
-      },
-      loginDemo: async () => {
-        const demoUser: User = {
-          id: 999,
-          username: 'Demo User',
-          email: 'demo@example.com',
-          predictionPoints: 0,
-          reactionsPosted: 0,
-          badges: [],
-        };
-
-        set({ user: demoUser, token: 'demo-token', isAuthenticated: true });
-      },
       logout: async () => {
         set({ user: null, token: null, isAuthenticated: false });
       },
@@ -288,12 +235,6 @@ export const useAuthStore = create<AuthState>()(
         const saveLocally = () => {
           set({ user: { ...currentUser, favouriteClub: localClub } });
         };
-
-        const token = get().token;
-        if (token === 'demo-token') {
-          saveLocally();
-          return;
-        }
 
         try {
           const response = await api.patch<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(

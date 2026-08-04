@@ -302,16 +302,12 @@ export interface AuthState {
   // Confirms the emailed reset code and sets a new password - logs the user
   // in immediately on success, same as verifyEmail().
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  // idToken is the Google-issued ID token from expo-auth-session's Google
-  // provider - verified server-side, never trusted as-is.
-  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetOnboarding: () => void;
   // Takes the backend's real club id + name (e.g. from clubService.fetchClubs()),
   // not this app's local/hardcoded Club - those use different, mismatched ids.
   setFavouriteClub: (club: { id: number; fullName: string }) => Promise<void>;
   completeOnboarding: () => void;
-  loginDemo: () => Promise<void>;
 }
 
 export interface FantasyState {
