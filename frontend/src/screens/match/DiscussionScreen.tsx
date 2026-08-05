@@ -21,15 +21,32 @@ import SubScreenHeader from '../../components/shared/SubScreenHeader';
 import PremiumBadge from '../../components/shared/PremiumBadge';
 import {
   getDiscussionMessages,
+  getDiscussionStatus,
   sendDiscussionMessage,
 } from '../../services/discussionService';
-import type { DiscussionMessage } from '../../services/discussionService';
+import type { DiscussionMessage, DiscussionStatus } from '../../services/discussionService';
 import { getApiErrorMessage } from '../../services/api';
 import { getMatchDetails } from '../../services/matchService';
 import { useTheme } from '../../context/ThemeContext';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 type DiscussionRouteProp = RouteProp<HomeStackParamList, 'Discussion'>;
+
+// "today at 18:00" / "Sat 9 Aug, 18:00" depending on how far off the
+// deadline is - matches how the app already phrases other deadline-relative
+// times (e.g. the season kickoff message on Home).
+function formatOpensAt(isoDate: string): string {
+  const date = new Date(isoDate);
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return `today at ${timeStr}`;
+  const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${dateStr}, ${timeStr}`;
+}
 
 function relativeTime(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -55,21 +72,25 @@ export default function DiscussionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // Discussion closes once the match itself is over - mirrors how Transfers
-  // locks at the gameweek deadline. Past messages stay visible either way.
-  const [isFinished, setIsFinished] = useState(false);
+  // Discussion opens once the gameweek deadline passes (squads are locked
+  // in) and closes once the match itself is over - mirrors how Transfers
+  // locks at the same deadline. Past messages stay visible either way.
+  // Defaults to open so the composer doesn't flash closed while the status
+  // call is in flight.
+  const [status, setStatus] = useState<DiscussionStatus | null>(null);
 
   const loadMessages = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const [data, match] = await Promise.all([
+      const [data, , discussionStatus] = await Promise.all([
         getDiscussionMessages(matchId, signal),
         getMatchDetails(matchId, signal),
+        getDiscussionStatus(matchId, signal).catch(() => null),
       ]);
       if (signal?.aborted) return;
       setMessages(data);
-      setIsFinished(match?.status === 'finished');
+      setStatus(discussionStatus);
     } catch (err) {
       if (signal?.aborted) return;
       setError(getApiErrorMessage(err, 'Failed to load discussion. Check your connection and try again.'));
@@ -94,6 +115,10 @@ export default function DiscussionScreen() {
       setInputText('');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to send message. Please try again.'));
+      // The backend enforces the same open/close window this screen shows -
+      // if a post got rejected, our cached status is stale (e.g. the window
+      // just closed), so re-check it to swap the composer for the banner.
+      getDiscussionStatus(matchId).then(setStatus).catch(() => {});
     } finally {
       setSubmitting(false);
     }
@@ -162,10 +187,14 @@ export default function DiscussionScreen() {
               }
             />
 
-            {isFinished ? (
+            {status && !status.open ? (
               <View style={[styles.closedBanner, { paddingBottom: insets.bottom + 12 }]}>
-                <Ionicons name="lock-closed-outline" size={16} color={colors.grey2} />
-                <Text style={styles.closedText}>This discussion is closed - the match has ended.</Text>
+                <Ionicons name={status.opensAt ? 'time-outline' : 'lock-closed-outline'} size={16} color={colors.grey2} />
+                <Text style={styles.closedText}>
+                  {status.opensAt
+                    ? `Discussion opens ${formatOpensAt(status.opensAt)}`
+                    : status.reason ?? 'This discussion is closed.'}
+                </Text>
               </View>
             ) : (
               <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}>

@@ -20,6 +20,11 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
     hour: '2-digit',
     minute: '2-digit',
   });
+  // Fixture cards only showed the kickoff time, not the date - fine when
+  // every card on screen is for the same day, but this list spans a whole
+  // gameweek's fixtures (often several different days), so "18:00" alone
+  // didn't say which day it was for.
+  const dateStr = matchDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
   const isLive = match.status === 'live';
   const isFT = match.status === 'finished';
@@ -65,7 +70,7 @@ export default function FixtureRow({ match, onPress }: FixtureRowProps) {
 
       {!isLive && !isFT && (
         <View style={styles.timeRow}>
-          <Badge label={timeStr} variant="upcoming" />
+          <Badge label={`${dateStr}, ${timeStr}`} variant="upcoming" />
         </View>
       )}
 
@@ -119,14 +124,17 @@ function getStyles(colors: typeof Colors) {
       color: colors.white,
       flexShrink: 1,
     },
+    // 28x28 to match the club badge size used everywhere else a club logo
+    // appears in a list/card context (MatchCard on Home, the Table tab, the
+    // League Table screen) - was 20, noticeably smaller than the rest.
     badge: {
-      width: 20,
-      height: 20,
+      width: 28,
+      height: 28,
     },
     badgePlaceholder: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       backgroundColor: colors.surface2,
     },
     scoreWrap: {

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -50,6 +51,12 @@ export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
   const [todaysMatches, setTodaysMatches] = useState<Match[]>([]);
+  // Fallback for when nothing's on today - the next handful of scheduled
+  // fixtures (any future day), so the widget always has something useful to
+  // show instead of reading as broken/empty. Live matches are already
+  // covered by todaysMatches (a live match is, by definition, happening
+  // today), so this only ever kicks in when today truly has nothing.
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [contentRefreshTrigger, setContentRefreshTrigger] = useState(0);
@@ -71,23 +78,63 @@ export default function HomeScreen() {
     return (all ?? []).filter((m) => isSameLocalDay(m.kickoffTime, today));
   }, []);
 
+  // Next few scheduled fixtures, earliest first - only used when today has
+  // nothing at all (see upcomingMatches above).
+  const loadUpcomingMatches = useCallback(async (signal?: AbortSignal) => {
+    const scheduled = await getMatches(undefined, 'scheduled', signal);
+    return (scheduled ?? [])
+      .slice()
+      .sort((a, b) => new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime())
+      .slice(0, 5);
+  }, []);
+
+  // Resolves BOTH lists before either is committed to state - the previous
+  // version called setTodaysMatches(data) immediately, then (only when today
+  // was empty) awaited loadUpcomingMatches() before calling
+  // setUpcomingMatches(). That gap between the two state updates meant a
+  // render could briefly happen with an emptied todaysMatches but a
+  // not-yet-refreshed upcomingMatches, which is what showed up as the
+  // widget visibly reordering/settling a beat after a refresh completed.
+  // Fetching everything first and setting both states back-to-back (no
+  // await in between) collapses that into a single, consistent update.
+  const loadMatchesData = useCallback(async (signal?: AbortSignal) => {
+    const today = await loadTodaysMatches(signal);
+    let upcoming: Match[] = [];
+    if (today.length === 0) {
+      try {
+        upcoming = await loadUpcomingMatches(signal);
+      } catch {
+        upcoming = [];
+      }
+    }
+    return { today, upcoming };
+  }, [loadTodaysMatches, loadUpcomingMatches]);
+
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     setMatchesLoading(true);
-    loadTodaysMatches(controller.signal)
-      .then((data) => { if (!cancelled) setTodaysMatches(data); })
-      .catch(() => { if (!cancelled) setTodaysMatches([]); })
+    loadMatchesData(controller.signal)
+      .then(({ today, upcoming }) => {
+        if (cancelled) return;
+        setTodaysMatches(today);
+        setUpcomingMatches(upcoming);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTodaysMatches([]);
+        setUpcomingMatches([]);
+      })
       .finally(() => { if (!cancelled) setMatchesLoading(false); });
     getCurrentGameweek(controller.signal)
       .then((gw) => { if (!cancelled) setCurrentGameweek(gw); })
       .catch(() => { if (!cancelled) setCurrentGameweek(null); });
     return () => { cancelled = true; controller.abort(); };
-  }, [loadTodaysMatches]);
+  }, [loadMatchesData]);
 
-  // "No matches today" reads as a bug the moment a brand-new season hasn't
-  // kicked off yet - naming the actual kickoff date makes it obvious this
-  // is expected, not broken.
+  // Only reachable when there were no matches today AND nothing scheduled
+  // in the future either (e.g. before the season's fixtures are seeded) -
+  // naming the actual kickoff date makes that read as expected, not broken.
   const todayEmptyMessage = useMemo(() => {
     if (!currentGameweek?.startDate) return undefined;
     const start = new Date(currentGameweek.startDate);
@@ -95,6 +142,9 @@ export default function HomeScreen() {
     const formatted = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
     return `No matches today - the ${currentGameweek.season} season kicks off ${formatted}.`;
   }, [currentGameweek]);
+
+  const displayMatches = todaysMatches.length > 0 ? todaysMatches : upcomingMatches;
+  const matchesWidgetTitle = todaysMatches.length > 0 ? "Today's Matches" : upcomingMatches.length > 0 ? 'Upcoming Matches' : "Today's Matches";
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -104,11 +154,12 @@ export default function HomeScreen() {
     // whatever they first loaded.
     setContentRefreshTrigger((n) => n + 1);
     try {
-      const data = await loadTodaysMatches();
-      setTodaysMatches(data);
+      const { today, upcoming } = await loadMatchesData();
+      setTodaysMatches(today);
+      setUpcomingMatches(upcoming);
     } catch { /* keep current */ }
     setRefreshing(false);
-  }, [loadTodaysMatches]);
+  }, [loadMatchesData]);
 
   return (
     <View style={styles.container}>
@@ -149,6 +200,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Fixed under the header, above the ScrollView - a page-level "this
+          is refreshing" cue for the whole Home screen (not just the matches
+          widget), covering the rest of the time content is still settling
+          after the native pull-to-refresh spinner retracts. */}
+      {refreshing && (
+        <View style={styles.refreshBar}>
+          <ActivityIndicator size="large" color={colors.yellow} />
+        </View>
+      )}
+
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[
@@ -159,7 +220,7 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <TodayMatchesWidget matches={todaysMatches} emptyMessage={todayEmptyMessage} />
+      <TodayMatchesWidget matches={displayMatches} title={matchesWidgetTitle} emptyMessage={todayEmptyMessage} loading={matchesLoading} />
       <LatestNewsWidget refreshTrigger={contentRefreshTrigger} />
       <LeagueTableWidget refreshTrigger={contentRefreshTrigger} />
       <FantasySnapshotWidget />
@@ -185,6 +246,11 @@ function getStyles(colors: typeof Colors) {
     logoImage: {
       width: 90,
       height: 38,
+    },
+    refreshBar: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
     },
     headerRight: {
       flexDirection: 'row',

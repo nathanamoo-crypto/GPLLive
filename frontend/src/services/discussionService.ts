@@ -26,6 +26,38 @@ function mapDiscussion(raw: any): DiscussionMessage {
   };
 }
 
+export interface DiscussionStatus {
+  fixtureId: number;
+  open: boolean;
+  // ISO string - only present when `open` is false because the window
+  // hasn't started yet (null once open, or when closed post-match).
+  opensAt: string | null;
+  reason: string | null;
+}
+
+function mapDiscussionStatus(raw: any): DiscussionStatus {
+  return {
+    fixtureId: raw.fixtureId ?? raw.fixture_id,
+    open: !!raw.open,
+    opensAt: raw.opensAt ?? raw.opens_at ?? null,
+    reason: raw.reason ?? null,
+  };
+}
+
+// Lets the screen decide upfront whether to show the composer, the
+// "opens at X" notice, or the "closed - full time" banner, instead of only
+// finding out a post is rejected after the user's typed a message.
+export async function getDiscussionStatus(
+  fixtureId: number,
+  signal?: AbortSignal,
+): Promise<DiscussionStatus> {
+  const { data } = await api.get<any>(
+    `${DiscussionEndpoints.MESSAGES}/fixture/${fixtureId}/status`,
+    { baseURL: DISCUSSION_URL, signal },
+  );
+  return mapDiscussionStatus(data);
+}
+
 // DiscussionController's GET/POST responses are plain array/object - they
 // were never wrapped in {messages: [...]} / {message: {...}} envelopes like
 // this used to assume, which meant loading a discussion always came back

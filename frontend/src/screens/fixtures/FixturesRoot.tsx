@@ -927,9 +927,11 @@ function getStyles(colors: typeof Colors) {
   cellPos: { fontSize: 12, fontWeight: '800', color: colors.grey2, fontFamily: fonts.display },
   cellClub: { fontSize: 13, fontWeight: '600', color: colors.white },
   cellGd: { fontSize: 12, fontWeight: '700', color: colors.grey2 },
+  // 28x28 - matches the club badge size used everywhere else (Home's match
+  // cards, Fixtures rows, League Table screen), was 24 here.
   clubLogo: {
-  width: 24,
-  height: 24,
+  width: 28,
+  height: 28,
 },
   });
 }

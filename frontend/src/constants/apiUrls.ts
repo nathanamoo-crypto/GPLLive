@@ -36,6 +36,8 @@ export const AuthEndpoints = {
   RESEND_VERIFICATION: '/auth/resend-verification',
   GET_ME: '/auth/users/me',
   UPDATE_ME: '/auth/users/me',
+  UPDATE_USERNAME: '/auth/users/me/username',
+  CHANGE_PASSWORD: '/auth/users/me/password',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
 };

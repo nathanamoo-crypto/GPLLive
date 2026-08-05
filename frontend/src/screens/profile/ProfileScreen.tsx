@@ -87,19 +87,28 @@ export default function ProfileScreen() {
   }, []);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: insets.top + 24,
-          paddingBottom: getScrollBottomPadding(insets.bottom),
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.heading}>Profile</Text>
+    <View style={styles.container}>
+      {/* Fixed outside the ScrollView, like Home's own header bar - the
+          heading used to scroll away with the rest of the content, leaving
+          nothing solid painted over the status bar area, so scrolling (and
+          especially the iOS overscroll bounce) could show content bleeding
+          up into the phone's time/battery notch instead of stopping cleanly
+          below it. */}
+      <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.heading}>Profile</Text>
+      </View>
 
+      <ScrollView
+        style={styles.scrollFlex}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: 20,
+            paddingBottom: getScrollBottomPadding(insets.bottom),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.card}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -124,8 +133,10 @@ export default function ProfileScreen() {
         colors={colors}
         styles={styles}
         items={[
+          // Payment Methods used to live here too, but it just routed to the
+          // same Paystack flow Subscribe already opens - a separate entry for
+          // the same destination was redundant, so it's gone.
           { icon: 'diamond-outline', label: 'Subscribe', onPress: () => navigation.navigate('Home', { screen: 'Subscribe' }) },
-          { icon: 'card-outline', label: 'Payment Methods', onPress: () => navigation.navigate('Home', { screen: 'Payment' }) },
         ]}
       />
 
@@ -142,7 +153,7 @@ export default function ProfileScreen() {
               navigation.navigate('Fixtures', { screen: 'FixturesRoot', params: { defaultTab: 'table' } }),
           },
           { icon: 'newspaper-outline', label: 'All News', onPress: () => navigation.navigate('News') },
-          { icon: 'search-outline', label: 'News Search', onPress: () => navigation.navigate('Home', { screen: 'Search' }) },
+          { icon: 'search-outline', label: 'League Search', onPress: () => navigation.navigate('Home', { screen: 'Search' }) },
         ]}
       />
 
@@ -151,7 +162,10 @@ export default function ProfileScreen() {
         colors={colors}
         styles={styles}
         items={[
-          { icon: 'game-controller-outline', label: 'Fantasy League', onPress: () => navigation.navigate('Games') },
+          // "Fantasy League" used to sit above "My Team" as a separate entry,
+          // but both landed on the same Games screen - one plain, one routed
+          // to the fantasy tab specifically. Keeping just "My Team" (the more
+          // precise route) removes the duplicate without losing the entry point.
           { icon: 'people-outline', label: 'My Team', onPress: handleMyTeamPress, accent: true },
           { icon: 'bulb-outline', label: 'Predictions', onPress: () => navigation.navigate('Games', { screen: 'GamesRoot', params: { defaultTab: 'predictions' } }) },
         ]}
@@ -180,24 +194,33 @@ export default function ProfileScreen() {
         colors={colors}
         styles={styles}
         items={[
+          { icon: 'person-outline', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile') },
           { icon: 'notifications-outline', label: 'Notifications', onPress: () => navigation.navigate('Home', { screen: 'NotificationInbox' }) },
           { icon: 'share-outline', label: 'Share GPL Live', onPress: handleShare },
           { icon: 'log-out-outline', label: 'Log Out', onPress: handleLogOut },
         ]}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 function getStyles(colors: typeof Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.black },
+    scrollFlex: { flex: 1 },
+    // Fixed above the ScrollView - always opaque and covers the status bar
+    // area, regardless of scroll position (see the comment where it's used).
+    headerBar: {
+      backgroundColor: colors.black,
+      paddingHorizontal: 24,
+      paddingBottom: 16,
+    },
     content: { paddingHorizontal: 24 },
     heading: {
       fontSize: 24,
       fontWeight: '800',
       fontFamily: fonts.display,
-      marginBottom: 24,
       color: colors.white,
       textTransform: 'uppercase',
     },
