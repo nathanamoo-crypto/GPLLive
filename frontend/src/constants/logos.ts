@@ -19,4 +19,7 @@ export const Logos: Record<number, ImageSourcePropType> = {
   16: require('../../assets/badges/nations_fc.png'),
   17: require('../../assets/badges/hohoe_united.png'),
   18: require('../../assets/badges/eleven_wonders.png'),
+  19: require('../../assets/badges/debibi_united.png'),
+  20: require('../../assets/badges/port_city.png'),
+  21: require('../../assets/badges/fc_ashantigold_04.png'),
 };
