@@ -21,6 +21,7 @@ import * as fantasyService from '../../services/fantasyService';
 import { getApiErrorMessage } from '../../services/api';
 import { fetchClubsById, backendClubIdToLocalClub, RealClub } from '../../services/clubService';
 import SegmentedControl from '../../components/shared/SegmentedControl';
+import ActionSheet from '../../components/shared/ActionSheet';
 import PitchView from '../../components/fantasy/PitchView';
 import ChipCard from '../../components/fantasy/ChipCard';
 import PriceChangeIndicator from '../../components/shared/PriceChangeIndicator';
@@ -78,6 +79,9 @@ function MyTeamScreen() {
   const [swapSourceId, setSwapSourceId] = useState<number | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Drives the custom ActionSheet (see showPlayerOptions below) - null when
+  // no player's options menu is open.
+  const [actionSheetPlayer, setActionSheetPlayer] = useState<FantasyPlayer | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -169,28 +173,31 @@ function MyTeamScreen() {
     [handleFetchTeam]
   );
 
-  const showPlayerOptions = useCallback(
-    (player: FantasyPlayer) => {
-      const isCaptain = player.id === team?.captainId;
-      const isVice = player.id === team?.viceCaptainId;
-      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [];
-      if (!isCaptain) {
-        buttons.push({ text: 'Make Captain', onPress: () => handleSetRole(player, 'captain') });
-      }
-      if (!isVice) {
-        buttons.push({ text: 'Make Vice-Captain', onPress: () => handleSetRole(player, 'vice') });
-      }
-      buttons.push({ text: 'Swap with Bench', onPress: () => setSwapSourceId(player.id) });
-      buttons.push({ text: 'View Details', onPress: () => navigation.navigate('PlayerDetails', { playerId: player.id }) });
-      buttons.push({ text: 'Cancel', style: 'cancel' });
-      Alert.alert(
-        player.name,
-        isCaptain ? 'Currently your captain' : isVice ? 'Currently your vice-captain' : undefined,
-        buttons
-      );
-    },
-    [team, handleSetRole, navigation]
-  );
+  // Was Alert.alert() with up to 5 buttons - fine on iOS (renders as a full
+  // action sheet) but Android's native Alert only has 3 button slots, so
+  // "View Details" and "Cancel" were silently missing there. Opens the
+  // custom ActionSheet component instead (rendered at the bottom of this
+  // screen's JSX), which looks and behaves identically on both platforms.
+  const showPlayerOptions = useCallback((player: FantasyPlayer) => {
+    setActionSheetPlayer(player);
+  }, []);
+
+  const isActionSheetPlayerCaptain = actionSheetPlayer?.id === team?.captainId;
+  const isActionSheetPlayerVice = actionSheetPlayer?.id === team?.viceCaptainId;
+  const playerActionSheetOptions = useMemo(() => {
+    if (!actionSheetPlayer) return [];
+    const player = actionSheetPlayer;
+    const options: { label: string; onPress: () => void }[] = [];
+    if (!isActionSheetPlayerCaptain) {
+      options.push({ label: 'Make Captain', onPress: () => handleSetRole(player, 'captain') });
+    }
+    if (!isActionSheetPlayerVice) {
+      options.push({ label: 'Make Vice-Captain', onPress: () => handleSetRole(player, 'vice') });
+    }
+    options.push({ label: 'Swap with Bench', onPress: () => setSwapSourceId(player.id) });
+    options.push({ label: 'View Details', onPress: () => navigation.navigate('PlayerDetails', { playerId: player.id }) });
+    return options;
+  }, [actionSheetPlayer, isActionSheetPlayerCaptain, isActionSheetPlayerVice, handleSetRole, navigation]);
 
   // Swaps one starter for one bench player. The min/max-per-position rules
   // (GK-for-GK only, DEF/MID/FWD floors) are enforced server-side by the
@@ -542,6 +549,20 @@ function MyTeamScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ActionSheet
+        visible={!!actionSheetPlayer}
+        title={actionSheetPlayer?.name}
+        subtitle={
+          isActionSheetPlayerCaptain
+            ? 'Currently your captain'
+            : isActionSheetPlayerVice
+              ? 'Currently your vice-captain'
+              : undefined
+        }
+        options={playerActionSheetOptions}
+        onClose={() => setActionSheetPlayer(null)}
+      />
     </View>
   );
 }

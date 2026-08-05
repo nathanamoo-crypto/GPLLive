@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Share, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,7 +58,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const { theme, colors, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   // "My Team" used to push straight into the pitch-view screen, which just
   // shows a dead-end "No Squad Yet" message for anyone who hasn't built a
@@ -171,23 +171,9 @@ export default function ProfileScreen() {
         ]}
       />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <View style={styles.sectionContent}>
-          <View style={[styles.option, styles.optionLast]}>
-            <View style={styles.optionLeft}>
-              <Ionicons name={theme === 'dark' ? 'moon-outline' : 'sunny-outline'} size={18} color={colors.grey1} />
-              <Text style={styles.optionText}>Dark Mode</Text>
-            </View>
-            <Switch
-              value={theme === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.border, true: colors.yellow }}
-              thumbColor={colors.white}
-            />
-          </View>
-        </View>
-      </View>
+      {/* Settings section used to live here with just a Dark Mode toggle -
+          the app is dark-mode only now, so there's nothing left to put in
+          it. */}
 
       <MenuGroup
         title="App"

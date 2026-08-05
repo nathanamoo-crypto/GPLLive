@@ -47,11 +47,14 @@ export default function SubscribeScreen() {
   // inside the Home stack) - a plain goBack() only pops within that stack,
   // landing on the Home feed instead of back where the user actually came
   // from. Jumping to the Profile tab directly on the parent (tab) navigator
-  // fixes that regardless of which stack Subscribe was pushed from.
-  const returnToProfile = useCallback(
-    () => navigation.getParent()?.navigate('Profile' as never),
-    [navigation]
-  );
+  // fixes that. popToTop() first resets the Home stack back to just
+  // HomeFeed - without it, Subscribe (or Payment, pushed on top of it)
+  // stayed at the top of the Home stack's own history, so switching to the
+  // Home tab afterward showed Subscribe again instead of the actual feed.
+  const returnToProfile = useCallback(() => {
+    navigation.popToTop();
+    navigation.getParent()?.navigate('Profile' as never);
+  }, [navigation]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Image, Animated, Easing } from 'react-native';
+import { StyleSheet, Image, Text, Animated, Easing } from 'react-native';
 
 import { Colors } from '../../constants/colors';
 import { useTheme } from '../../context/ThemeContext';
@@ -67,6 +67,7 @@ export default function SplashScreen() {
           resizeMode="contain"
           accessibilityLabel="GPL Live logo"
         />
+        <Text style={styles.wordmark}>GPL Live</Text>
       </Animated.View>
 
       {/* Sweep bar — uses non-native driver, separate view from native-driven elements */}
@@ -89,6 +90,17 @@ function getStyles(colors: typeof Colors) {
     logoImage: {
       width: 280,
       height: 280,
+    },
+    // White on the screen's existing dark (#0A0A0A) background - the "GPL
+    // Live" text you'd expect during launch, on the one splash screen we
+    // actually control (the native OS boot screen only supports an image +
+    // background color, no text of its own).
+    wordmark: {
+      marginTop: 4,
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.white,
+      letterSpacing: 0.5,
     },
     line: {
       height: 2,

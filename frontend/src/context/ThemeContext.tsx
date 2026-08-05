@@ -1,9 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
 
 import { Colors, Themes, ThemeName } from '../constants/colors';
-
-const THEME_STORAGE_KEY = 'gpl-live-theme-v1';
 
 interface ThemeContextValue {
   theme: ThemeName;
@@ -14,29 +11,19 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+// Dark mode only now - light mode (and the toggle for it) has been removed
+// from the app. theme/toggleTheme/setTheme are kept on the context shape
+// (rather than ripping useTheme() out of the ~50 screens/components that
+// call it) so every existing `colors.x` lookup keeps working unchanged;
+// toggleTheme/setTheme are just no-ops since there's nothing to switch to.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>('dark');
-
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_STORAGE_KEY).then((stored) => {
-      if (stored === 'light' || stored === 'dark') {
-        setThemeState(stored);
-      }
-    });
-  }, []);
-
-  const setTheme = useCallback((next: ThemeName) => {
-    setThemeState(next);
-    void AsyncStorage.setItem(THEME_STORAGE_KEY, next);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  }, [theme, setTheme]);
+  const theme: ThemeName = 'dark';
+  const setTheme = useCallback((_next: ThemeName) => {}, []);
+  const toggleTheme = useCallback(() => {}, []);
 
   const value = useMemo<ThemeContextValue>(
     () => ({ theme, colors: Themes[theme], toggleTheme, setTheme }),
-    [theme, toggleTheme, setTheme]
+    [toggleTheme, setTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
