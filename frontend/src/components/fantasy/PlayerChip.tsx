@@ -74,10 +74,17 @@ export default function PlayerChip({
   // Bench chips already wrap onto extra lines when there isn't room, so they
   // never need shrinking - only pitch chips (fixed one-per-row-slot) do.
   const s = isBench ? 1 : scale;
+  // Jersey box is 62x62 (was 56x56) with a 54x54 jersey (was 46x46) - the
+  // jersey source photos are full-bleed now (background removed, see
+  // Jerseys/GoalkeeperJerseys), mostly portrait (2:3) instead of the old
+  // padded squares, so with resizeMode="contain" they were being scaled
+  // down to fit the shorter square box and looked noticeably smaller than
+  // before. Sizing the box up gives them more room to render at a
+  // comparable visual size to before the background removal.
   const scaledStyle = s === 1 ? null : {
     wrapper: { width: 78 * s },
-    box: { width: 56 * s, height: 56 * s, borderRadius: Math.max(6, 10 * s) },
-    jersey: { width: 46 * s, height: 46 * s },
+    box: { width: 62 * s, height: 62 * s, borderRadius: Math.max(6, 10 * s) },
+    jersey: { width: 54 * s, height: 54 * s },
     name: { fontSize: 13 * s },
     posTag: { paddingHorizontal: 7 * s, paddingVertical: 2 * s },
     posText: { fontSize: 10 * s },
@@ -141,8 +148,8 @@ function getStyles(colors: typeof Colors) {
       opacity: 0.65,
     },
     shirtCircle: {
-      width: 56,
-      height: 56,
+      width: 62,
+      height: 62,
       borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
@@ -152,8 +159,8 @@ function getStyles(colors: typeof Colors) {
       backgroundColor: 'transparent',
     },
     shirtCircleBench: {
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
       borderRadius: 8,
       borderWidth: 1.5,
     },
@@ -161,13 +168,16 @@ function getStyles(colors: typeof Colors) {
       borderColor: colors.yellow,
       borderWidth: 3,
     },
+    // Jersey photos are full-bleed (background removed) and mostly portrait
+    // now, so these boxes are sized up from the old 46/36 - see the
+    // scaledStyle comment above for why.
     jerseyImage: {
-      width: 46,
-      height: 46,
+      width: 54,
+      height: 54,
     },
     jerseyImageBench: {
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
     },
     armband: {
       position: 'absolute',
