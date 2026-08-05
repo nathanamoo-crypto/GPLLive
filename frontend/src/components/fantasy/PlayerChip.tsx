@@ -149,11 +149,7 @@ function getStyles(colors: typeof Colors) {
       marginBottom: 4,
       borderWidth: 1.5,
       borderColor: 'rgba(0,0,0,0.1)',
-      // Plain white box behind every jersey - a couple of the source photos
-      // weren't shot on a clean white backdrop, so a neutral/dark chip
-      // background let their backdrop color show through. White keeps every
-      // jersey looking consistent regardless of what the source photo used.
-      backgroundColor: colors.white,
+      backgroundColor: 'transparent',
     },
     shirtCircleBench: {
       width: 44,
@@ -198,10 +194,14 @@ function getStyles(colors: typeof Colors) {
       color: colors.black,
     },
     name: {
-      fontSize: 13,
-      fontFamily: fonts.bodySemiBold,
-      color: colors.white,
-      textAlign: 'center',
+    fontSize: 13,
+    fontFamily: fonts.bodySemiBold,
+    color: colors.white,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
     },
     nameBench: {
       fontSize: 12,

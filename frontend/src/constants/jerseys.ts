@@ -11,25 +11,25 @@ import { ImageSourcePropType } from 'react-native';
 // back to the generated JerseyIcon in PlayerChip, so this map is safe to
 // leave partial.
 export const Jerseys: Record<number, ImageSourcePropType> = {
-  1: require('../assets/jerseys/Medeama.jpeg'),
+  1: require('../assets/jerseys/Medeama.png'),
   // bibiani.jpeg has a smoky green photo backdrop baked into the image
   // itself (not fixable with a CSS background change) - gold_stars_jersey
   // is the same Bibiani Gold Stars / Asante Gold Corp kit sponsor branding,
   // shot on a clean white backdrop like every other club's photo.
-  2: require('../assets/jerseys/gold_stars_jersey.jpeg'),
-  3: require('../assets/jerseys/hearts_of_oak.jpeg'),
-  4: require('../assets/jerseys/drems fc.jpeg'),
-  5: require('../assets/jerseys/samartex.jpeg'),
-  6: require('../assets/jerseys/aduana.jpeg'),
-  7: require('../assets/jerseys/Berekum_Chelsea_FC.jpeg'),
+  2: require('../assets/jerseys/gold_stars_jersey.png'),
+  3: require('../assets/jerseys/hearts_of_oak.png'),
+  4: require('../assets/jerseys/drems fc.png'),
+  5: require('../assets/jerseys/samartex.png'),
+  6: require('../assets/jerseys/aduana.png'),
+  7: require('../assets/jerseys/Berekum_Chelsea_FC.png'),
   8: require('../assets/jerseys/Asante_Kotoko.png'),
-  9: require('../assets/jerseys/karela.jpeg'),
-  10: require('../assets/jerseys/Bechem_United_FC.jpeg'),
+  9: require('../assets/jerseys/karela.png'),
+  10: require('../assets/jerseys/Bechem_United_FC.png'),
   11: require('../assets/jerseys/visionFc.png'),
   12: require('../assets/jerseys/Basake_Holy_Stars_Fc.png'),
-  13: require('../assets/jerseys/young_apostles.jpeg'),
-  14: require('../assets/jerseys/hearts_of_lions.jpeg'),
-  15: require('../assets/jerseys/Swedru All Blacks United FC.jpeg'),
+  13: require('../assets/jerseys/young_apostles.png'),
+  14: require('../assets/jerseys/hearts_of_lions.png'),
+  15: require('../assets/jerseys/Swedru All Blacks United FC.png'),
 };
 
 export const GoalkeeperJerseys: Record<number, ImageSourcePropType> = {

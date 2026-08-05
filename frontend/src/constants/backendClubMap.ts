@@ -31,4 +31,8 @@ export const BACKEND_CLUB_NAME_TO_SLUG: Record<string, string> = {
   'Vision FC': 'vision_fc',
   'Eleven Wonders FC': 'eleven_wonders',
   'Hearts of Lions': 'heart_of_lions',
+  'Debibi United FC': 'debibi_united',
+  'Port City FC': 'port_city_fc',
+  'FC Ashantigold': 'fc_ashantigold_04',
+  'FC Ashantigold 04': 'fc_ashantigold_04',
 };
