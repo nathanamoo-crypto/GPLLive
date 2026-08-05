@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,7 +23,9 @@ import type { FixturesStackParamList } from '../../navigation/FixturesStack';
 import FixtureRow from '../../components/shared/FixtureRow';
 import { Logos } from '../../constants/logos';
 import { getMatches } from '../../services/matchService';
+import { getCurrentGameweek, getGameweeksBySeason, getAllSeasons } from '../../services/fantasyService';
 import { fetchStandings } from '../../services/standingsService';
+import { getApiErrorMessage } from '../../services/api';
 
 type FixturesNavProp = NativeStackNavigationProp<FixturesStackParamList, 'FixturesRoot'>;
 type FixturesRootRouteProp = RouteProp<FixturesStackParamList, 'FixturesRoot'>;
@@ -48,107 +51,285 @@ export default function FixturesRoot() {
       setActiveTab(route.params.defaultTab);
     }
   }, [route.params?.defaultTab]);
+
+  // The screen defaults to the REAL current season/gameweek (from the
+  // backend's is_current gameweek), not "whatever the highest gameweek
+  // number happens to be across every fixture ever seeded" (the old
+  // behaviour, which is how a stale/finished season could show up as
+  // "current"). Browsing other gameweeks within the loaded season uses the
+  // chevrons; jumping to a totally different season+gameweek (including
+  // past seasons) is the explicit search below, closed by default so past
+  // fixtures never show up unasked-for.
+  //
+  // `selectedGw` (not just a number) is what actually drives the fixtures
+  // fetch below, since getCurrentGameweek()/search both already hand back a
+  // real gameweek id directly - fixtures can load as soon as THAT resolves,
+  // without waiting on the full season gameweek list too. `seasonGameweeks`
+  // loads in parallel purely to know the prev/next chevron bounds.
+  const [realCurrent, setRealCurrent] = useState<{ id: number; season: string; gameweekNumber: number; startDate?: string } | null>(null);
+  const [season, setSeason] = useState<string | null>(null);
+  const [seasonGameweeks, setSeasonGameweeks] = useState<{ id: number; gameweekNumber: number }[]>([]);
+  const [selectedGw, setSelectedGw] = useState<{ id: number; gameweekNumber: number } | null>(null);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSeason, setSearchSeason] = useState('');
+  const [searchMatchday, setSearchMatchday] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [seasonHasNoGameweeks, setSeasonHasNoGameweeks] = useState(false);
+  // Surfaces the real backend error when the season-scoped gameweek list
+  // (chevron bounds) fails to load, instead of silently leaving the
+  // chevrons disabled with no explanation - that silence is exactly what
+  // made a real backend 500 look like "the toggle just doesn't work".
+  const [seasonLoadError, setSeasonLoadError] = useState<string | null>(null);
 
+  // Every season that has any gameweek data at all - lets the search box
+  // tell "that season doesn't exist in our records" (e.g. 2017/2018) apart
+  // from "that season exists but doesn't have gameweek N".
+  const [allSeasons, setAllSeasons] = useState<string[]>([]);
+
+  // Bootstraps to the real current season/gameweek on mount.
   useEffect(() => {
+    let cancelled = false;
+    getCurrentGameweek()
+      .then((gw) => {
+        if (cancelled) return;
+        if (!gw?.season) {
+          setLoading(false);
+          setFetchError('No current gameweek is set yet.');
+          return;
+        }
+        setRealCurrent({ id: gw.gameweekId, season: gw.season, gameweekNumber: gw.gameweekNumber, startDate: gw.startDate });
+        setSeason(gw.season);
+        setSelectedGw({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber });
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setLoading(false);
+          setFetchError(err?.message ?? 'Failed to load the current gameweek.');
+        }
+      });
+    getAllSeasons().then((seasons) => { if (!cancelled) setAllSeasons(seasons); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Loads every gameweek in the selected season, purely for chevron bounds -
+  // doesn't gate the fixtures fetch below, so a slow/failed load here never
+  // blocks the actual fixture list from showing.
+  useEffect(() => {
+    if (!season) return;
+    let cancelled = false;
+    setSeasonLoadError(null);
+    getGameweeksBySeason(season)
+      .then((gws) => {
+        if (cancelled) return;
+        const list = gws
+          .map((gw) => ({ id: gw.gameweekId, gameweekNumber: gw.gameweekNumber }))
+          .sort((a, b) => a.gameweekNumber - b.gameweekNumber);
+        setSeasonGameweeks(list);
+        setSeasonHasNoGameweeks(list.length === 0);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setSeasonGameweeks([]);
+        // Chevrons rely on this list, so a failure here is exactly why
+        // prev/next stops working even though the fixture list itself
+        // loaded fine - show it instead of failing silently.
+        setSeasonLoadError(getApiErrorMessage(err, 'Failed to load this season\'s gameweeks.'));
+      });
+    return () => { cancelled = true; };
+  }, [season]);
+
+  // Fetches fixtures for whichever gameweek is selected - the one network
+  // call actually gating the loading spinner/fixture list.
+  useEffect(() => {
+    if (!selectedGw) return;
     let cancelled = false;
     setLoading(true);
     setFetchError(null);
-    getMatches()
+    getMatches(selectedGw.id)
       .then((data) => { if (!cancelled) setMatches(data ?? []); })
       .catch((err: any) => { if (!cancelled) setFetchError(err?.message ?? 'Failed to load fixtures.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedGw]);
 
-  const gameweeks = useMemo(() => {
-    const gws = [...new Set(matches.map((m) => m.gameweek))].sort((a, b) => b - a);
-    return gws.length > 0 ? gws : [];
-  }, [matches]);
-
-  const [currentGameweek, setCurrentGameweek] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (gameweeks.length > 0 && currentGameweek === null) {
-      setCurrentGameweek(gameweeks[0]);
-    }
-  }, [gameweeks, currentGameweek]);
+  const gwIndex = seasonGameweeks.findIndex((gw) => gw.gameweekNumber === selectedGw?.gameweekNumber);
 
   const goPrevGameweek = () => {
-    if (currentGameweek === null) return;
-    const idx = gameweeks.indexOf(currentGameweek);
-    if (idx < gameweeks.length - 1) setCurrentGameweek(gameweeks[idx + 1]);
+    if (gwIndex > 0) setSelectedGw(seasonGameweeks[gwIndex - 1]);
   };
 
   const goNextGameweek = () => {
-    if (currentGameweek === null) return;
-    const idx = gameweeks.indexOf(currentGameweek);
-    if (idx > 0) setCurrentGameweek(gameweeks[idx - 1]);
+    if (gwIndex >= 0 && gwIndex < seasonGameweeks.length - 1) {
+      setSelectedGw(seasonGameweeks[gwIndex + 1]);
+    }
   };
 
-  const gwMatches = useMemo(
-    () => matches.filter((m) => m.gameweek === currentGameweek),
-    [currentGameweek, matches],
-  );
+  const handleSearch = useCallback(async () => {
+    const targetSeason = searchSeason.trim();
+    const targetGameweek = parseInt(searchMatchday, 10);
+    if (!targetSeason || Number.isNaN(targetGameweek)) {
+      setSearchError('Enter both a season (e.g. 2025/2026) and a gameweek number.');
+      return;
+    }
+    setSearchError(null);
+    try {
+      const gws = await getGameweeksBySeason(targetSeason);
+      const found = gws.find((gw) => gw.gameweekNumber === targetGameweek);
+      if (!found) {
+        // Season genuinely doesn't exist in our records at all (e.g.
+        // someone tries 2017/2018) vs. it exists but doesn't go up to
+        // gameweek N - two different reasons for coming up empty that
+        // deserve two different messages.
+        if (allSeasons.length > 0 && !allSeasons.includes(targetSeason)) {
+          setSearchError(`We don't have any records for the ${targetSeason} season - our data starts from ${allSeasons[0]}.`);
+        } else {
+          setSearchError(`No gameweek ${targetGameweek} found for ${targetSeason}.`);
+        }
+        return;
+      }
+      setSeason(targetSeason);
+      setSelectedGw({ id: found.gameweekId, gameweekNumber: found.gameweekNumber });
+      setSearchOpen(false);
+    } catch (err: any) {
+      setSearchError(getApiErrorMessage(err, 'Search failed.'));
+    }
+  }, [searchSeason, searchMatchday, allSeasons]);
+
+  const backToCurrent = () => {
+    if (!realCurrent) return;
+    setSeason(realCurrent.season);
+    setSelectedGw({ id: realCurrent.id, gameweekNumber: realCurrent.gameweekNumber });
+    setSearchError(null);
+    setSearchOpen(false);
+  };
 
   const filtered = useMemo(() => {
-    if (filter === 'All') return gwMatches;
-    if (filter === 'Live') return gwMatches.filter((m) => m.status === 'live');
-    if (filter === 'Scheduled') return gwMatches.filter((m) => m.status === 'scheduled');
-    return gwMatches.filter((m) => m.status === 'finished');
-  }, [filter, gwMatches]);
+    if (filter === 'All') return matches;
+    if (filter === 'Live') return matches.filter((m) => m.status === 'live');
+    if (filter === 'Scheduled') return matches.filter((m) => m.status === 'scheduled');
+    return matches.filter((m) => m.status === 'finished');
+  }, [filter, matches]);
 
   const gameweekDate = useMemo(() => {
-    if (gwMatches.length === 0) return '';
-    const dates = gwMatches.map((m) => new Date(m.kickoffTime));
+    if (matches.length === 0) return '';
+    const dates = matches.map((m) => new Date(m.kickoffTime));
     const min = new Date(Math.min(...dates.map(Number)));
     const max = new Date(Math.max(...dates.map(Number)));
     if (min.toDateString() === max.toDateString()) {
       return min.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
     return `${min.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${max.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-  }, [gwMatches]);
+  }, [matches]);
 
-  const isCurrentGw = currentGameweek === gameweeks[0];
+  const isCurrentGw = !!realCurrent && realCurrent.season === season && realCurrent.gameweekNumber === selectedGw?.gameweekNumber;
+  const isViewingOtherSeason = !!realCurrent && season !== null && season !== realCurrent.season;
+
+  // The gameweek stays flagged "current" on the backend right up until its
+  // deadline (predictions/transfers/chips all depend on that), but showing
+  // a "CURRENT" badge before a ball's even been kicked reads as wrong -
+  // label it "UPCOMING" until the gameweek's actual start date arrives.
+  const currentGwHasStarted = !realCurrent?.startDate || Date.parse(realCurrent.startDate) <= Date.now();
+  const currentBadgeLabel = currentGwHasStarted ? 'CURRENT' : 'UPCOMING';
+
+  // Distinguishes "this season has no gameweeks scheduled at all yet" (e.g.
+  // the new season before anything's been entered) from "this gameweek
+  // exists but has no fixtures in it" from "fixtures exist but none match
+  // the Live/Scheduled/Completed filter" - three different reasons for an
+  // empty list that deserve different messages.
+  const emptyStateMessage = seasonHasNoGameweeks
+    ? `The ${season} season hasn't been scheduled yet - check back closer to kickoff.`
+    : matches.length === 0
+      ? `No fixtures set for Gameweek ${selectedGw?.gameweekNumber} yet.`
+      : 'No matches found for this filter.';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.tableButton}
-          onPress={goPrevGameweek}
-          disabled={currentGameweek === gameweeks[gameweeks.length - 1]}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={20}
-            color={currentGameweek === gameweeks[gameweeks.length - 1] ? colors.surface2 : colors.grey1}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{currentGameweek != null ? `MATCHDAY ${currentGameweek}` : 'FIXTURES'}</Text>
-          {isCurrentGw && currentGameweek != null && (
-            <View style={styles.currentBadge}>
-              <Text style={styles.currentBadgeText}>CURRENT</Text>
+      {activeTab === 'fixtures' ? (
+        <>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.tableButton}
+              onPress={goPrevGameweek}
+              disabled={gwIndex <= 0}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={20}
+                color={gwIndex <= 0 ? colors.surface2 : colors.grey1}
+              />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>{selectedGw != null ? `GAMEWEEK ${selectedGw.gameweekNumber}` : 'FIXTURES'}</Text>
+              {isCurrentGw && (
+                <View style={styles.currentBadge}>
+                  <Text style={styles.currentBadgeText}>{currentBadgeLabel}</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.tableButton}
-          onPress={goNextGameweek}
-          disabled={currentGameweek === gameweeks[0]}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={currentGameweek === gameweeks[0] ? colors.surface2 : colors.grey1}
-          />
-        </TouchableOpacity>
-      </View>
-      {activeTab === 'fixtures' && gameweekDate ? (
-        <Text style={styles.dateSubtitle}>{gameweekDate}</Text>
+            <TouchableOpacity
+              style={styles.tableButton}
+              onPress={goNextGameweek}
+              disabled={gwIndex < 0 || gwIndex >= seasonGameweeks.length - 1}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={gwIndex < 0 || gwIndex >= seasonGameweeks.length - 1 ? colors.surface2 : colors.grey1}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.searchToggle}
+              onPress={() => setSearchOpen((prev) => !prev)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="search-outline" size={18} color={colors.grey1} />
+            </TouchableOpacity>
+          </View>
+
+          {season ? <Text style={styles.seasonSubtitle}>{season} season</Text> : null}
+          {gameweekDate ? <Text style={styles.dateSubtitle}>{gameweekDate}</Text> : null}
+          {seasonLoadError ? <Text style={styles.errorText}>{seasonLoadError}</Text> : null}
+
+          {searchOpen ? (
+            <View style={styles.searchBox}>
+              <Text style={styles.searchLabel}>Search by season and gameweek</Text>
+              <View style={styles.searchRow}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Season, e.g. 2025/2026"
+                  placeholderTextColor={colors.textTertiary}
+                  value={searchSeason}
+                  onChangeText={setSearchSeason}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.searchInput, styles.searchInputSmall]}
+                  placeholder="GW"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="numeric"
+                  value={searchMatchday}
+                  onChangeText={setSearchMatchday}
+                />
+                <TouchableOpacity style={styles.searchGoButton} onPress={handleSearch}>
+                  <Text style={styles.searchGoButtonText}>Go</Text>
+                </TouchableOpacity>
+              </View>
+              {searchError ? <Text style={styles.searchErrorText}>{searchError}</Text> : null}
+            </View>
+          ) : null}
+
+          {isViewingOtherSeason ? (
+            <TouchableOpacity style={styles.backToCurrentRow} onPress={backToCurrent}>
+              <Ionicons name="arrow-back-circle-outline" size={16} color={colors.yellow} />
+              <Text style={styles.backToCurrentText}>Back to current season</Text>
+            </TouchableOpacity>
+          ) : null}
+        </>
       ) : null}
 
       <View style={styles.tabRow}>
@@ -210,7 +391,7 @@ export default function FixturesRoot() {
             {filtered.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
-                <Text style={styles.emptyText}>No matches found</Text>
+                <Text style={styles.emptyText}>{emptyStateMessage}</Text>
               </View>
             ) : (
               filtered.map((match) => (
@@ -244,23 +425,103 @@ function StandingsView() {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [sortBy, setSortBy] = useState<StandingsSortKey>('pts');
   const [rows, setRows] = useState<StandingRow[]>([]);
-  const [season, setSeason] = useState('');
+
+  // `defaultSeason` is the real current season (resolved once on mount, via
+  // the current gameweek - not by asking Standings, since Standings itself
+  // needs a season to already know what "current" means). `season` is
+  // whichever season is actually on screen right now - chevrons/search move
+  // this around; `defaultSeason` never changes, so "back to current" always
+  // has somewhere to return to. `allSeasons` (every season with any
+  // gameweek data, oldest first) drives the chevron bounds, same pattern as
+  // the Fixtures screen's gameweek chevrons.
+  const [defaultSeason, setDefaultSeason] = useState<string | null>(null);
+  const [season, setSeason] = useState<string | null>(null);
+  const [allSeasons, setAllSeasons] = useState<string[]>([]);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSeason, setSearchSeason] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Bootstraps to the real current season - doesn't fetch the table itself,
+  // just resolves which season to load first and the full list of seasons
+  // for the chevrons. Setting `season` below hands off to the fetch effect.
   useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    fetchStandings(undefined, controller.signal)
-      .then((data) => {
-        setRows(data.rows);
-        setSeason(data.season);
-        setError(null);
+    let cancelled = false;
+    Promise.all([
+      getCurrentGameweek().catch(() => null),
+      getAllSeasons(),
+    ])
+      .then(([gw, seasons]) => {
+        if (cancelled) return;
+        const current = gw?.season ?? seasons[seasons.length - 1] ?? null;
+        setAllSeasons(seasons);
+        setDefaultSeason(current);
+        if (current) {
+          setSeason(current);
+        } else {
+          setLoading(false);
+          setError('No seasons found.');
+        }
       })
-      .catch((err: any) => setError(err?.message ?? 'Failed to load the league table.'))
-      .finally(() => setLoading(false));
-    return () => controller.abort();
+      .catch((err: any) => {
+        if (cancelled) return;
+        setLoading(false);
+        setError(getApiErrorMessage(err, 'Failed to load the league table.'));
+      });
+    return () => { cancelled = true; };
   }, []);
+
+  // The one fetch that actually loads table rows - re-runs whenever the
+  // displayed season changes, whether from a chevron tap, a search, or
+  // "back to current". A season with no results yet still comes back with
+  // every active club at 0 (StandingsService.buildZeroStandings) - a real
+  // 404 here means the season itself has no record at all (e.g. 2017/2018).
+  useEffect(() => {
+    if (!season) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchStandings(season)
+      .then((data) => {
+        if (cancelled) return;
+        setRows(data.rows);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setRows([]);
+        setError(getApiErrorMessage(err, 'Failed to load the league table.'));
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [season]);
+
+  const seasonIndex = allSeasons.indexOf(season ?? '');
+
+  const goPrevSeason = () => {
+    if (seasonIndex > 0) setSeason(allSeasons[seasonIndex - 1]);
+  };
+
+  const goNextSeason = () => {
+    if (seasonIndex >= 0 && seasonIndex < allSeasons.length - 1) {
+      setSeason(allSeasons[seasonIndex + 1]);
+    }
+  };
+
+  const handleSearch = () => {
+    const target = searchSeason.trim();
+    if (!target) return;
+    setSeason(target);
+    setSearchOpen(false);
+  };
+
+  const backToCurrentSeason = () => {
+    if (defaultSeason) setSeason(defaultSeason);
+    setSearchOpen(false);
+  };
+
+  const isViewingOtherSeason = !!defaultSeason && !!season && season !== defaultSeason;
 
   const standings = useMemo(() => {
     const sorted = [...rows];
@@ -270,30 +531,100 @@ function StandingsView() {
     return sorted.map((row, i) => ({ ...row, position: i + 1 }));
   }, [rows, sortBy]);
 
+  const seasonHeader = (
+    <>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.tableButton} onPress={goPrevSeason} disabled={seasonIndex <= 0}>
+          <Ionicons name="chevron-back" size={20} color={seasonIndex <= 0 ? colors.surface2 : colors.grey1} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{season ? `${season} TABLE` : 'TABLE'}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.tableButton}
+          onPress={goNextSeason}
+          disabled={seasonIndex < 0 || seasonIndex >= allSeasons.length - 1}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={seasonIndex < 0 || seasonIndex >= allSeasons.length - 1 ? colors.surface2 : colors.grey1}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.searchToggle}
+          onPress={() => setSearchOpen((prev) => !prev)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="search-outline" size={18} color={colors.grey1} />
+        </TouchableOpacity>
+      </View>
+
+      {searchOpen ? (
+        <View style={styles.searchBox}>
+          <Text style={styles.searchLabel}>Search by season</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Season, e.g. 2025/2026"
+              placeholderTextColor={colors.textTertiary}
+              value={searchSeason}
+              onChangeText={setSearchSeason}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity style={styles.searchGoButton} onPress={handleSearch}>
+              <Text style={styles.searchGoButtonText}>Go</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      {isViewingOtherSeason ? (
+        <TouchableOpacity style={styles.backToCurrentRow} onPress={backToCurrentSeason}>
+          <Ionicons name="arrow-back-circle-outline" size={16} color={colors.yellow} />
+          <Text style={styles.backToCurrentText}>Back to current season</Text>
+        </TouchableOpacity>
+      ) : null}
+    </>
+  );
+
+  // The header (season title, chevrons, search) stays visible through
+  // every state below - losing it while a season change is loading, or
+  // when a searched-for season 404s, would leave no way to chevron/search
+  // back out without a re-mount.
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.container}>
+        {seasonHeader}
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </View>
     );
   }
 
   if (error || standings.length === 0) {
+    // A real 404 (season doesn't exist at all) lands here with the
+    // backend's own message; zero ACTIVE clubs in the league (should never
+    // actually happen) is the only other way to reach an empty table now.
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'No results recorded yet for this season.'}</Text>
+      <View style={styles.container}>
+        {seasonHeader}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'No clubs found for this league.'}</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.list}
-      contentContainerStyle={styles.standingsContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {season ? <Text style={styles.seasonLabel}>{season} Season</Text> : null}
-
+    <View style={styles.container}>
+      {seasonHeader}
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={styles.standingsContent}
+        showsVerticalScrollIndicator={false}
+      >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -368,7 +699,8 @@ function StandingsView() {
           <Text style={[styles.cellPts, { width: 32, textAlign: 'center' }]}>{s.points}</Text>
         </View>
       ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -384,10 +716,71 @@ function getStyles(colors: typeof Colors) {
     backgroundColor: colors.black,
   },
   headerCenter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
+  searchToggle: {
+    padding: 8,
+  },
+  seasonSubtitle: {
+    color: colors.grey2,
+    fontSize: 11,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+    marginTop: -4,
+  },
+  searchBox: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surface2,
+  },
+  searchLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.grey1,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.05,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.black,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: colors.white,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchInputSmall: { flex: 0, width: 56, textAlign: 'center' },
+  searchGoButton: {
+    backgroundColor: colors.yellow,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchGoButtonText: { fontSize: 13, fontWeight: '800', color: '#000000' },
+  backToCurrentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  backToCurrentText: { fontSize: 12, fontWeight: '700', color: colors.yellow },
+  searchErrorText: { fontSize: 12, color: colors.live, marginTop: 8 },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
@@ -474,8 +867,8 @@ function getStyles(colors: typeof Colors) {
   paddingBottom: 24,
   gap: 6,
   },
-  emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 15, color: colors.grey2 },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 12 },
+  emptyText: { fontSize: 15, color: colors.grey2, textAlign: 'center' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: 16, color: colors.live, textAlign: 'center', paddingHorizontal: 32 },
   standingsContent: { padding: 16, paddingBottom: 40 },

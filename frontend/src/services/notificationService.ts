@@ -36,3 +36,13 @@ export async function markNotificationRead(id: number): Promise<void> {
     baseURL: NOTIFICATION_URL,
   });
 }
+
+// Real bulk mark-read - one request instead of firing markNotificationRead
+// per unread id. Returns how many were actually flipped (not needed by
+// callers today, but harmless to hand back).
+export async function markAllNotificationsRead(): Promise<number> {
+  const { data } = await api.patch<number>(NotificationEndpoints.MARK_ALL_READ, null, {
+    baseURL: NOTIFICATION_URL,
+  });
+  return data;
+}

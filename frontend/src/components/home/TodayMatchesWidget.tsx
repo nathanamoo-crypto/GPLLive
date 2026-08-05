@@ -11,11 +11,12 @@ import type { HomeStackParamList } from '../../navigation/HomeStack';
 
 interface TodayMatchesWidgetProps {
   matches: Match[];
+  emptyMessage?: string;
 }
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
-export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps) {
+export default function TodayMatchesWidget({ matches, emptyMessage }: TodayMatchesWidgetProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -40,7 +41,7 @@ export default function TodayMatchesWidget({ matches }: TodayMatchesWidgetProps)
       <Text style={styles.widgetTitle}>Today&apos;s Matches</Text>
       {matches.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No matches today</Text>
+          <Text style={styles.emptyText}>{emptyMessage ?? 'No matches today'}</Text>
         </View>
       ) : (
         <FlatList

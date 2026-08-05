@@ -5,6 +5,7 @@ import GamesRoot from '../screens/games/GamesRoot';
 import MyTeamScreen from '../screens/fantasy/MyTeamScreen';
 import TransfersScreen from '../screens/fantasy/TransfersScreen';
 import PlayerDetailsScreen from '../screens/fantasy/PlayerDetailsScreen';
+import PredictionLeaderboardScreen from '../screens/predict/PredictionLeaderboardScreen';
 
 export type GamesStackParamList = {
   GamesRoot: { defaultTab?: 'fantasy' | 'predictions' } | undefined;
@@ -13,6 +14,7 @@ export type GamesStackParamList = {
   // Reused across all three player-tap entry points (Draft/Browse,
   // Transfers, Pitch view/My Team) - see PlayerDetailsScreen.tsx.
   PlayerDetails: { playerId: number };
+  PredictionLeaderboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<GamesStackParamList>();
@@ -29,6 +31,7 @@ export default function GamesStack() {
       <Stack.Screen name="MyTeam" component={MyTeamScreen} />
       <Stack.Screen name="Transfers" component={TransfersScreen} />
       <Stack.Screen name="PlayerDetails" component={PlayerDetailsScreen} />
+      <Stack.Screen name="PredictionLeaderboard" component={PredictionLeaderboardScreen} />
     </Stack.Navigator>
   );
 }

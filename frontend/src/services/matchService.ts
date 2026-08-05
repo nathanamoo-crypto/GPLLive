@@ -41,6 +41,7 @@ function mapFixture(data: any): Match {
     venue: data.venue ?? '',
     round: data.gameweekNumber ?? data.gameweek ?? 0,
     gameweek: data.gameweekNumber ?? data.gameweek ?? 0,
+    season: data.season,
     isDerby: data.isDerby ?? false,
   };
 }

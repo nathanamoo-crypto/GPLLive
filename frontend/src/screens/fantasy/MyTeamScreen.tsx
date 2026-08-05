@@ -57,6 +57,10 @@ function MyTeamScreen() {
   // which is what those chevrons did nothing but toggle.
   const [currentGameweekId, setCurrentGameweekId] = useState<number | null>(null);
   const [currentGameweekNumber, setCurrentGameweekNumber] = useState<number | null>(null);
+  // Only needed to gate the chip Cancel button client-side (the backend is
+  // the real authority - it 400s past the deadline regardless) so tapping
+  // an already-locked-in chip doesn't even offer a cancel that would fail.
+  const [currentGameweekDeadline, setCurrentGameweekDeadline] = useState<string | null>(null);
   // player.clubId is the backend's real club id - resolve to the local club
   // (for CLUB_COLORS, which is keyed by local id) via a live-fetched map
   // rather than trusting the id directly, since the two club lists don't
@@ -114,10 +118,12 @@ function MyTeamScreen() {
       .then((gw) => {
         setCurrentGameweekId(gw?.gameweekId ?? null);
         setCurrentGameweekNumber(gw?.gameweekNumber ?? null);
+        setCurrentGameweekDeadline(gw?.deadline ?? null);
       })
       .catch(() => {
         setCurrentGameweekId(null);
         setCurrentGameweekNumber(null);
+        setCurrentGameweekDeadline(null);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFetchTeam]);
@@ -408,10 +414,20 @@ function MyTeamScreen() {
             {CHIPS.map((chip) => {
               const chipKey = (chip.chipType.charAt(0).toLowerCase() + chip.chipType.slice(1)) as keyof ChipStatus;
               const used = team.chips?.[chipKey] ?? false;
+              // This is THE chip active for the current gameweek (as
+              // opposed to `used`, which stays true forever once a chip is
+              // spent - active is what distinguishes "still cancellable"
+              // from "gone for the season").
+              const active = team.activeChipKey === chipKey;
               // A different chip is already active for this gameweek - only
               // one can be played per gameweek, so lock the rest until the
               // gameweek transitions (team.activeChipKey clears then).
               const locked = !used && !!team.activeChipKey && team.activeChipKey !== chipKey;
+              const deadlinePassed = currentGameweekDeadline != null && new Date(currentGameweekDeadline).getTime() <= Date.now();
+              // Matches the backend's ChipService.cancelChip rule exactly:
+              // only Bench Boost/Triple Captain, only while still active for
+              // this gameweek, only before the deadline.
+              const cancellable = active && !deadlinePassed && (chip.chipType === 'TripleCaptain' || chip.chipType === 'BenchBoost');
               return (
                 <ChipCard
                   key={chip.name}
@@ -419,10 +435,13 @@ function MyTeamScreen() {
                   icon={chip.icon}
                   used={used}
                   locked={locked}
+                  active={active}
+                  cancellable={cancellable}
                   chipType={chip.chipType}
                   fantasyTeamId={team.teamId}
                   gameweekId={currentGameweekId}
                   onActivated={() => handleFetchTeam()}
+                  onCancelled={() => handleFetchTeam()}
                 />
               );
             })}

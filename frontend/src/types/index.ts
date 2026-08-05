@@ -37,6 +37,9 @@ export interface Match {
   venue: string;
   round: number;
   gameweek: number;
+  // The real backend season string (e.g. "2026/2027") this fixture belongs
+  // to - used to keep the Fixtures screen scoped to one season at a time.
+  season?: string;
   // High-stakes/rivalry fixture - carries a flat +2 prediction-point bonus.
   // True if the backend admin flag is set OR the matchup is a known rivalry
   // per isDerbyMatch() in constants/derbies.ts (see PredictRoot.tsx) - the
@@ -253,10 +256,47 @@ export interface PremiumStatus {
 // this used to have when the whole feature was hardcoded mock data.
 export interface Notification {
   id: number;
-  type: 'DEADLINE' | 'RANK' | 'GOAL' | 'CAPTAIN';
+  type: 'DEADLINE' | 'RANK' | 'GOAL' | 'CAPTAIN' | 'LEAGUE';
   message: string;
   read: boolean;
   createdAt: string;
+}
+
+// Backend's LeagueResponse (domain/league/dtos/LeagueResponse.java).
+// callerStatus reflects the REQUESTING user's relationship to this league -
+// drives the frontend's join-button state.
+export interface League {
+  id: number;
+  name: string;
+  isPublic: boolean;
+  // Only populated for the owner or an existing member/requester - null for
+  // a stranger browsing public search results (they don't need it; public
+  // leagues join by id, not code).
+  inviteCode: string | null;
+  memberLimit: number;
+  activeMemberCount: number;
+  creatorUsername: string;
+  createdAt: string;
+  callerStatus: 'OWNER' | 'ACTIVE' | 'PENDING' | 'NONE';
+}
+
+// Backend's LeagueMemberResponse - used both for the active member list and
+// the owner's pending-requests list (status tells them apart).
+export interface LeagueMember {
+  userId: number;
+  username: string;
+  status: 'PENDING' | 'ACTIVE';
+  requestedAt: string;
+}
+
+// Backend's LeagueLeaderboardEntry - shared shape for both of a league's
+// leaderboards. streak is only ever populated on the predictions one.
+export interface LeagueLeaderboardEntry {
+  rank: number;
+  userId: number;
+  username: string;
+  points: number;
+  streak: number | null;
 }
 
 export interface Standing {
@@ -285,7 +325,14 @@ export interface LeaderboardEntry {
 export interface Gameweek {
   gameweekId: number;
   seasonId: number;
+  // The backend's real free-text season string (e.g. "2026/2027") - distinct
+  // from seasonId, which nothing in this app actually populates.
+  season?: string;
   gameweekNumber: number;
+  // ISO string - when this gameweek's fixtures actually kick off. Used to
+  // tell "the upcoming gameweek, not started yet" apart from "genuinely
+  // in progress right now" for display purposes (see FixturesRoot.tsx).
+  startDate?: string;
   deadline: string;
   isActive: boolean;
   isFinished: boolean;

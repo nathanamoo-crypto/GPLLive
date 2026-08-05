@@ -27,6 +27,7 @@ export const NEWS_URL = API_HOST;
 export const STANDINGS_URL = API_HOST;
 export const SUBSCRIPTION_URL = API_HOST;
 export const PAYMENT_URL = API_HOST;
+export const LEAGUE_URL = API_HOST;
 
 export const AuthEndpoints = {
   LOGIN: '/auth/login',
@@ -56,11 +57,18 @@ export const FantasyEndpoints = {
   SCORING_FIXTURE: '/scoring/fixture',
   PLAYER_PRICE: '/player-price',
   GAMEWEEK_CURRENT: '/gameweeks/current',
+  // season is a query param on this one (?season=2026%2F2027), not a path
+  // segment - see GameweekController's comment on why.
+  GAMEWEEK_BY_SEASON: '/gameweeks/season',
+  // Every season that has any gameweek data, oldest first.
+  GAMEWEEK_SEASONS: '/gameweeks/seasons',
 };
 
 // Backend has no generic "/chips/{type}/activate" route - each chip is its
-// own named endpoint (see ChipController). No deactivation endpoint exists
-// for any chip except an internal (not-yet-exposed) Free Hit restore.
+// own named endpoint (see ChipController). Cancelling is the one shared
+// route, DELETE /chips/{fantasyTeamId}/{gameweekId} - only works for
+// Bench Boost/Triple Captain and only before the Gameweek deadline, same
+// rule the real FPL uses (see ChipService.cancelChip).
 export const ChipEndpoints: Record<
   'TripleCaptain' | 'BenchBoost' | 'Wildcard' | 'Wildcard2' | 'FreeHit',
   string
@@ -71,6 +79,8 @@ export const ChipEndpoints: Record<
   Wildcard2: '/chips/wildcard2',
   FreeHit: '/chips/free-hit',
 };
+
+export const CHIP_CANCEL_URL = '/chips';
 
 export const MatchEndpoints = {
   FIXTURES: '/fixtures',
@@ -97,6 +107,7 @@ export const NotificationEndpoints = {
   UNREAD: '/notifications/unread',
   // Append /{id} when calling this.
   MARK_READ: '/notifications/marked-as-read-notification',
+  MARK_ALL_READ: '/notifications/mark-all-as-read',
 };
 
 export const NewsEndpoints = {
@@ -115,4 +126,22 @@ export const PaymentEndpoints = {
   INITIALIZE: '/payments/initialize',
   // Append /{reference} when calling this.
   VERIFY: '/payments/verify',
+};
+
+export const LeagueEndpoints = {
+  CREATE: '/leagues',
+  SEARCH: '/leagues/search',
+  MINE: '/leagues/mine',
+  // Append /{id} when calling this.
+  DETAIL: '/leagues',
+  // Append /{id}/join.
+  JOIN_BY_ID: '/leagues',
+  // Append /{code}.
+  JOIN_BY_CODE: '/leagues/join',
+  // Append /{id}/members.
+  MEMBERS: '/leagues',
+  // Append /{id}/requests.
+  REQUESTS: '/leagues',
+  // Append /{id}/leaderboard/predictions or /{id}/leaderboard/fantasy.
+  LEADERBOARD: '/leagues',
 };
