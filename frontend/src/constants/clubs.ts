@@ -21,7 +21,7 @@ export const GPL_CLUBS: Club[] = [
   { id: 18, slug: 'eleven_wonders', name: 'Eleven Wonders', shortName: 'Wonders', badgeUrl: 'local://eleven_wonders', logoUrl: undefined, city: 'Techiman', stadium: 'Ohene Ameyaw Park', stadiumCapacity: 2000 },
   { id: 19, slug: 'debibi_united', name: 'Debibi United', shortName: 'Debibi', badgeUrl: 'local://debibi_united', logoUrl: undefined, city: 'Debibi', stadium: 'Debibi Presby Park', stadiumCapacity: 1000 },
   { id: 20, slug: 'port_city_fc', name: 'Port City FC', shortName: 'Port City', badgeUrl: 'local://port_city', logoUrl: undefined, city: 'Akim Kukurantumi', stadium: 'Kukurantumi Ohene Park', stadiumCapacity: 3000 },
-  { id: 21, slug: 'fc_ashantigold_04', name: 'FC Ashantigold 04', shortName: 'Ashgold', badgeUrl: 'local://fc_ashantigold_04', logoUrl: undefined, city: 'Obuasi', stadium: 'Len Clay Stadium', stadiumCapacity: 15000 },
+  { id: 21, slug: 'fc_ashantigold_04', name: 'FC Ashantigold 04', shortName: 'Ashgold', badgeUrl: 'local://asante_kotoko', logoUrl: undefined, city: 'Obuasi', stadium: 'Len Clay Stadium', stadiumCapacity: 15000 },
 ];
 
 export const CLUB_LOOKUP: Record<number, Club> = {};
@@ -41,6 +41,7 @@ export const CLUB_BY_LEGACY_ID: Record<string, Club> = {
   bechem: CLUB_LOOKUP[10], vision: CLUB_LOOKUP[11], basake: CLUB_LOOKUP[12],
   apostles: CLUB_LOOKUP[13], lions: CLUB_LOOKUP[14], allblacks: CLUB_LOOKUP[15],
   nations: CLUB_LOOKUP[16], hohoe: CLUB_LOOKUP[17], wonders: CLUB_LOOKUP[18],
+  debibi: CLUB_LOOKUP[19], portcity: CLUB_LOOKUP[20], ashgold: CLUB_LOOKUP[21],
 };
 
 export const CLUB_COLORS: Record<number, string> = {
