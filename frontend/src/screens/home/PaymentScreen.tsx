@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,6 +20,9 @@ import { getMyPremiumStatus, initializePremiumPayment, verifyPremiumPayment } fr
 import { getApiErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../context/ThemeContext';
+import type { HomeStackParamList } from '../../navigation/HomeStack';
+
+type PaymentNavProp = NativeStackNavigationProp<HomeStackParamList, 'Payment'>;
 
 // Real Paystack checkout (no card form here - card details never touch this
 // app). Flow: initialize on the backend -> open Paystack's own hosted
@@ -33,7 +37,7 @@ type Stage = 'idle' | 'opening' | 'awaiting' | 'verifying' | 'success' | 'error'
 
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<PaymentNavProp>();
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [stage, setStage] = useState<Stage>('idle');
@@ -139,7 +143,14 @@ export default function PaymentScreen() {
         </Text>
         <TouchableOpacity
           style={styles.startButton}
-          onPress={() => navigation.getParent()?.navigate('Profile' as never)}
+          onPress={() => {
+            // Reset the Home stack back to just HomeFeed first - otherwise
+            // Payment (and Subscribe underneath it) stayed at the top of
+            // Home's own history, so switching to the Home tab later showed
+            // this screen again instead of the actual feed.
+            navigation.popToTop();
+            navigation.getParent()?.navigate('Profile' as never);
+          }}
         >
           <Text style={styles.startButtonText}>{alreadyPremium && stage !== 'success' ? 'DONE' : 'START EXPLORING'}</Text>
         </TouchableOpacity>

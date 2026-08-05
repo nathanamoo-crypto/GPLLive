@@ -41,7 +41,26 @@ export default function RootNavigator() {
     };
   }, []);
 
+  // The branded splash used to play its full 2s animation on every launch,
+  // logged-in or not - someone who already has a session just wants to land
+  // on Home, not sit through the same intro every time. Now it only plays
+  // for the logged-out path (first launch, or after logging out); a
+  // returning logged-in user skips straight to the app. hasHydrated has to
+  // be true first since isAuthenticated is meaningless before the persisted
+  // token has actually loaded from storage.
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
+    if (isAuthenticated) {
+      setShowSplash(false);
+      if (splashTimerRef.current) {
+        clearTimeout(splashTimerRef.current);
+      }
+      return;
+    }
+
     setShowSplash(true);
 
     if (splashTimerRef.current) {
@@ -57,7 +76,7 @@ export default function RootNavigator() {
         clearTimeout(splashTimerRef.current);
       }
     };
-  }, [splashKey]);
+  }, [hasHydrated, isAuthenticated, splashKey]);
 
   const renderAppNavigator = () => {
     if (!hasHydrated) {
