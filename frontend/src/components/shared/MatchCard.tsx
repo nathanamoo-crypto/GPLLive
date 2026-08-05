@@ -21,6 +21,10 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
     hour: '2-digit',
     minute: '2-digit',
   });
+  // Card shows up wherever a match might not be "today" (e.g. the Home
+  // widget falling back to upcoming fixtures) - just a time with no date is
+  // ambiguous ("18:00" on what day?), so scheduled matches always show both.
+  const dateStr = matchDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
   const statusColor =
     match.status === 'live'
@@ -34,7 +38,7 @@ export default function MatchCard({ match, onPress, testID }: MatchCardProps) {
       ? 'LIVE'
       : match.status === 'finished'
         ? 'FT'
-        : timeStr;
+        : `${dateStr}, ${timeStr}`;
 
   return (
     <TouchableOpacity
@@ -111,10 +115,12 @@ function getStyles(colors: typeof Colors) {
       flex: 1,
       alignItems: 'center',
     },
+    // Circle sized up from 32 (with a 24 image inside) to 36/28 - matches
+    // the 28px club badge size used consistently across Fixtures/Table too.
     badge: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: colors.surface2,
       alignItems: 'center',
       justifyContent: 'center',
@@ -122,14 +128,22 @@ function getStyles(colors: typeof Colors) {
       overflow: 'hidden',
     },
     badgeImage: {
-      width: 24,
-      height: 24,
+      width: 28,
+      height: 28,
     },
+    // Fixed to exactly 2 lines' worth of height (numberOfLines={2} below) -
+    // without this, a short club name ("Bofoakwa") renders one line while a
+    // longer one ("Nsoatreman FC") wraps to two, so cards in the same
+    // horizontal row ended up visibly different heights. Reserving the
+    // space up front makes every card the same height regardless of name
+    // length.
     clubName: {
       fontSize: 12,
       fontWeight: '600',
       color: colors.white,
       textAlign: 'center',
+      lineHeight: 15,
+      height: 30,
     },
     scoreBlock: {
       paddingHorizontal: 8,

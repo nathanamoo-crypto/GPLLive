@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -43,6 +43,16 @@ export default function SubscribeScreen() {
   const [checking, setChecking] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
 
+  // Subscribe is opened from Profile (`Home > Subscribe`, a screen nested
+  // inside the Home stack) - a plain goBack() only pops within that stack,
+  // landing on the Home feed instead of back where the user actually came
+  // from. Jumping to the Profile tab directly on the parent (tab) navigator
+  // fixes that regardless of which stack Subscribe was pushed from.
+  const returnToProfile = useCallback(
+    () => navigation.getParent()?.navigate('Profile' as never),
+    [navigation]
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     getMyPremiumStatus(controller.signal)
@@ -68,7 +78,7 @@ export default function SubscribeScreen() {
         </View>
         <Text style={styles.screenTitle}>YOU'RE ALREADY PRO</Text>
         <Text style={styles.screenSub}>Your GPL Live Premium is active - enjoy full player analysis everywhere.</Text>
-        <TouchableOpacity style={styles.cta} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.cta} onPress={returnToProfile}>
           <Text style={styles.ctaText}>DONE</Text>
         </TouchableOpacity>
       </View>
@@ -78,7 +88,7 @@ export default function SubscribeScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={returnToProfile}>
           <Text style={styles.closeText}>Not now</Text>
         </TouchableOpacity>
       </View>
@@ -133,7 +143,7 @@ export default function SubscribeScreen() {
           <Image source={badgeImage} style={styles.crownCtaImage} resizeMode="contain" />
           <Text style={styles.ctaText}>SUBSCRIBE NOW - GH₵1.00</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.laterButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.laterButton} onPress={returnToProfile}>
           <Text style={styles.laterText}>Maybe later</Text>
         </TouchableOpacity>
       </View>

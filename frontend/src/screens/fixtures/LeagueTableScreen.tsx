@@ -231,9 +231,11 @@ function getStyles(colors: typeof Colors) {
     cellPts: { fontSize: 16, fontWeight: '800', color: colors.fantasyGold, fontFamily: fonts.display, textAlign: 'center' },
     cellPos: { fontSize: 12, fontWeight: '800', color: colors.grey2, fontFamily: fonts.display },
     cellClub: { fontSize: 13, fontWeight: '600', color: colors.white },
+    // 28x28 - matches the club badge size used everywhere else (Home's
+    // match cards, Fixtures rows/table), was 24 here.
     badgeSmall: {
-      width: 24,
-      height: 24,
+      width: 28,
+      height: 28,
       marginRight: 4,
     },
   });

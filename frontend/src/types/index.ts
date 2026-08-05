@@ -392,6 +392,12 @@ export interface AuthState {
   // not this app's local/hardcoded Club - those use different, mismatched ids.
   setFavouriteClub: (club: { id: number; fullName: string }) => Promise<void>;
   completeOnboarding: () => void;
+  // Username uniqueness is enforced server-side (409 if taken) - same
+  // pattern as register().
+  updateUsername: (username: string) => Promise<void>;
+  // Requires the current password - the backend verifies it before
+  // accepting the new one, same as any account-settings password change.
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 export interface FantasyState {

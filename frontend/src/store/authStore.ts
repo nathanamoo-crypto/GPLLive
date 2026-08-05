@@ -257,6 +257,35 @@ export const useAuthStore = create<AuthState>()(
       completeOnboarding: () => {
         set({ onboardingComplete: true });
       },
+      // Unlike setFavouriteClub, this never falls back to an offline local
+      // save - the server is the only source of truth for username
+      // uniqueness (a locally-saved rename could silently collide with
+      // someone else's real username once back online).
+      updateUsername: async (username: string) => {
+        const currentUser = get().user;
+        if (!currentUser) {
+          throw new Error('No user available');
+        }
+
+        try {
+          const response = await api.patch<Partial<User> & { fullName?: string; favouriteClub?: { id?: number; fullName?: string } }>(
+            AuthEndpoints.UPDATE_USERNAME, { username },
+          );
+          const updatedUser = response.data
+            ? normalizeUser(response.data)
+            : { ...currentUser, username };
+          set({ user: updatedUser });
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Unable to update username'));
+        }
+      },
+      changePassword: async (currentPassword: string, newPassword: string) => {
+        try {
+          await api.patch(AuthEndpoints.CHANGE_PASSWORD, { currentPassword, newPassword });
+        } catch (error) {
+          throw new Error(getApiErrorMessage(error, 'Unable to change password'));
+        }
+      },
     }),
     {
       name: 'gpl-live-auth-storage-v2',

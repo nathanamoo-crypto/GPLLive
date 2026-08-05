@@ -137,7 +137,10 @@ export default function PaymentScreen() {
             ? 'Your GPL Live Premium is already active - no need to pay again.'
             : 'Welcome to GPL Live Premium'}
         </Text>
-        <TouchableOpacity style={styles.startButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={() => navigation.getParent()?.navigate('Profile' as never)}
+        >
           <Text style={styles.startButtonText}>{alreadyPremium && stage !== 'success' ? 'DONE' : 'START EXPLORING'}</Text>
         </TouchableOpacity>
       </View>
